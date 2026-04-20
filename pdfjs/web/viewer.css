@@ -8807,3 +8807,61 @@ dialog :link{
     display:none;
   }
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+:root {
+  --main-color: #e0e0e0 !important;
+  --body-bg-color: #0b0b0b !important;
+  --toolbar-bg-color: #0b0b0b !important;
+  --toolbar-border-color: #1a1a1a !important;
+  --sidebar-bg-color: #0b0b0b !important;
+  --loading-bar-bg-color: #2a4a7a !important;
+}
+
+body {
+  background-color: #0b0b0b !important;
+}
+
+#outerContainer {
+  background-color: #0b0b0b !important;
+}
+
+/* Hide ALL UI elements */
+#toolbarContainer,
+#toolbarSidebar,
+#secondaryToolbar,
+#sidebarContainer,
+#findbar,
+#loadingBar,
+#errorWrapper,
+.toolbar,
+#toolbarViewer,
+#toolbarViewerLeft,
+#toolbarViewerRight,
+#toolbarViewerMiddle,
+.dropdownToolbarButton,
+#viewBookmark,
+#viewFind,
+#viewThumbnail,
+#viewOutline,
+#viewAttachments,
+#viewLayers,
+#previous,
+#next,
+#pageNumber,
+#numPages,
+#zoomOut,
+#zoomIn,
+#scaleSelect,
+#scaleSelectContainer,
+#presentationMode,
+#openFile,
+#print,
+#download,
+#viewBookmarkSeparator,
+#secondaryToolbarToggle,
+.splitToolbarButtonSeparator,
+#editorModeButtons,
+#editorModeSeparator {
+  display: none !important;
+}
