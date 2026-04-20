@@ -20217,6 +20217,31 @@ if (document.readyState === "interactive" || document.readyState === "complete")
   webViewerLoad();
 } else {
   document.addEventListener("DOMContentLoaded", webViewerLoad, true);
+
+  // ===== CUSTOM DARK MODE PDF LOADER =====
+(function() {
+  // Wait for viewer to be fully initialized
+  document.addEventListener('webviewerloaded', () => {
+    // Disable sidebar and preferences storage
+    window.PDFViewerApplicationOptions.set('sidebarViewOnLoad', 0);
+    window.PDFViewerApplicationOptions.set('disablePreferences', true);
+    window.PDFViewerApplicationOptions.set('defaultUrl', '');
+  });
+
+  // Load the PDF from the query parameter or fallback
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pdfPath = urlParams.get('file') || '../../pdf/resume.pdf';
+    
+    // Small delay to ensure viewer is ready
+    setTimeout(() => {
+      window.PDFViewerApplication.open({
+        url: pdfPath,
+        originalUrl: pdfPath
+      });
+    }, 50);
+  });
+})();
 }
 
 export { PDFViewerApplication, AppConstants as PDFViewerApplicationConstants, AppOptions as PDFViewerApplicationOptions };
