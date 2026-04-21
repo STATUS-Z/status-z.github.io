@@ -3,17 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Trippy Dark Resume</title>
+  <title>Fun Darkmode Resume</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
+        body {
       background: #050505;
-      background-image: radial-gradient(circle at 30% 40%, #1a1f2a 0%, #020202 100%);
       min-height: 100vh;
       overflow-x: hidden;
       perspective: 1200px;
       font-family: system-ui, sans-serif;
+      animation: pulseBackground 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseBackground {
+      0% {
+        background: radial-gradient(circle at 30% 40%, #1a0a0a 0%, #050505 100%);
+      }
+      25% {
+        background: radial-gradient(circle at 35% 45%, #2a0f1a 0%, #080505 100%);
+      }
+      50% {
+        background: radial-gradient(circle at 40% 35%, #1a0f2a 0%, #050508 100%);
+      }
+      75% {
+        background: radial-gradient(circle at 25% 50%, #1a1a1a 0%, #030303 100%);
+      }
+      100% {
+        background: radial-gradient(circle at 30% 40%, #1a0a0a 0%, #050505 100%);
+      }
     }
 
     #cloud {
@@ -120,7 +138,7 @@
 </div>
 
 <div class="dl">
-  <a href="/pdf/resume.pdf" target="_blank">📄 open pdf with hyperlinks available</a>
+  <a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a>
 </div>
 
 <!-- Try local PDF.js first; if missing, fallback to CDN -->
@@ -156,7 +174,7 @@
       const overlay = document.getElementById('overlay');
       const expandedCanvas = document.getElementById('expanded-canvas');
 
-      const COPIES_PER_PAGE = 100;   // ← increased density
+      const COPIES_PER_PAGE = 88;   // ← cosmic double-digit density
       const THUMB_SCALE = 0.35;
 
       try {
@@ -218,6 +236,7 @@
 
         overlay.addEventListener('click', () => overlay.style.display = 'none');
         expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+        expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());  // 🔒 NEW: Disables right-click
         document.addEventListener('keydown', (e) => {
           if (e.key === 'Escape') overlay.style.display = 'none';
         });
