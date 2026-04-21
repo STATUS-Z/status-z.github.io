@@ -20222,3 +20222,13 @@ if (document.readyState === "interactive" || document.readyState === "complete")
 export { PDFViewerApplication, AppConstants as PDFViewerApplicationConstants, AppOptions as PDFViewerApplicationOptions };
 
 //# sourceMappingURL=viewer.mjs.map
+
+document.addEventListener('webviewerloaded',()=>{
+  window.PDFViewerApplicationOptions.set('sidebarViewOnLoad',0);
+  window.PDFViewerApplicationOptions.set('disablePreferences',!0);
+});
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    window.PDFViewerApplication.open({url:'/pdf/resume.pdf'});
+  },50);
+});
