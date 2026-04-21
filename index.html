@@ -56,7 +56,7 @@
       height: 100%;
       border-radius: 4px;
       background: #000;
-      animation: slowSpin 20s linear infinite;
+      animation: slowSpin 33s linear infinite;
       transform-origin: center center;
       image-rendering: crisp-edges;
       box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(80,80,80,0.2);
@@ -91,7 +91,7 @@
     #overlay canvas {
       max-width: 90vw;
       max-height: 90vh;
-      box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.4);
+      box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.6);
       border-radius: 6px;
       cursor: default;
       background: #000;
@@ -101,7 +101,7 @@
 
     @keyframes dreamGlow {
       0% {
-        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(0,0,0,0.4);
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #000000, 0 0 120px rgba(0,0,0,0.9);
       }
       33% {
         box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ccff00, 0 0 120px rgba(204,255,0,0.4);
@@ -110,7 +110,7 @@
         box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #790b3e, 0 0 120px rgba(121,11,62,0.4);
       }
       100% {
-        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(0,0,0,0.4);
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #000000, 0 0 120px rgba(0,0,0,0.9);
       }
     }
 
@@ -206,7 +206,7 @@
 
         const COPIES_PER_PAGE = 33;
         const THUMB_SCALE = 0.35;     // smaller thumbs → static void visible
-        const STAGGER_DELAY = 1000;    // one per second – proven hypnotic pace
+        const STAGGER_DELAY = 400;    // ~13 seconds total emergence (moderate trance)
 
         const pageViewports = [];
         const allFloaters = [];
