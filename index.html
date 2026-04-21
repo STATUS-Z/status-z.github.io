@@ -92,16 +92,35 @@
       cursor: zoom-out;
     }
 
-    #overlay canvas {
+        #overlay canvas {
       max-width: 90vw;
       max-height: 90vh;
-      box-shadow: 0 0 80px rgba(0,0,0,1);
+      box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.4);
       border-radius: 6px;
       cursor: default;
       background: #000;
-      animation: none;  /* no spin on expanded view */
+      animation: none;
+      transition: box-shadow 0.3s ease;
     }
 
+    @keyframes dreamGlow {
+      0% {
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.4);
+      }
+      33% {
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ccff00, 0 0 120px rgba(204,255,0,0.4);
+      }
+      66% {
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #790b3e, 0 0 120px rgba(121,11,62,0.4);
+      }
+      100% {
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.4);
+      }
+    }
+
+    #overlay canvas.dream-glow {
+      animation: dreamGlow 8s ease-in-out infinite;
+    }
     .dl {
       position: fixed;
       bottom: 20px;
@@ -247,18 +266,25 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
+                expandedCanvas.classList.add('dream-glow');
               });
 
               cloud.appendChild(floater);
             }
           }
 
-          overlay.addEventListener('click', () => overlay.style.display = 'none');
-          expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
-          expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
-          document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') overlay.style.display = 'none';
-          });
+                  overlay.addEventListener('click', () => {
+          overlay.style.display = 'none';
+          expandedCanvas.classList.remove('dream-glow'); // ← ADD
+        });
+        expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+        expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            overlay.style.display = 'none';
+            expandedCanvas.classList.remove('dream-glow'); // ← ADD
+          }
+        });
 
           // Handle window resize – reposition floaters
           window.addEventListener('resize', () => {
