@@ -2,62 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Fun Darkmode Resume</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      background: #000; /* fallback */
-      min-height: 100vh;
-      overflow-x: hidden;
-      perspective: 1200px;
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      padding: 0;
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;  /* kills scrollbars */
+      background: #000;
     }
 
-    /* Full‑screen canvas for the hypnotic TV static */
+    body {
+      perspective: 1200px;
+      font-family: system-ui, sans-serif;
+      position: fixed;   /* locks viewport */
+      top: 0;
+      left: 0;
+    }
+
+    /* Hypnotic static canvas – behind everything */
     #bg-canvas {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: -1;        /* keeps it behind the floating PDFs */
+      z-index: -1;
       display: block;
-      pointer-events: none; /* lets you click through to the PDFs */
+      pointer-events: none;
     }
 
+    /* Fixed container – exactly viewport size, no overflow */
     #cloud {
       position: relative;
-      width: 100%;
-      min-height: 100vh;
-      padding: 2rem;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
     }
 
+    /* Each floating page – absolute position */
     .floating-page {
       position: absolute;
       cursor: pointer;
-      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1), box-shadow 0.3s;
+      transition: box-shadow 0.3s;
       box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
       border-radius: 4px;
       will-change: transform;
       background: #000;
+      transform-style: preserve-3d;  /* for nested transforms */
     }
 
     .floating-page:hover {
-      transform: scale(1.05) translateZ(20px);
       box-shadow: 0 30px 60px rgba(0,0,0,0.9), 0 0 20px rgba(100,150,255,0.2);
       z-index: 100;
     }
 
+    /* Canvas spins slowly – hypnotic rotation */
     .floating-page canvas {
       display: block;
       width: 100%;
       height: 100%;
       border-radius: 4px;
       background: #0b0b0b;
+      animation: slowSpin 20s linear infinite;
+      transform-origin: center center;
+    }
+
+    @keyframes slowSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
     }
 
     #overlay {
@@ -82,6 +97,7 @@
       border-radius: 6px;
       cursor: default;
       background: #000;
+      animation: none;  /* no spin on expanded view */
     }
 
     .dl {
@@ -128,170 +144,178 @@
   <!-- Hypnotic TV static canvas -->
   <canvas id="bg-canvas"></canvas>
 
-<div id="cloud"></div>
-<div id="loading">Manifesting...</div>
+  <div id="cloud"></div>
+  <div id="loading">Manifesting...</div>
 
-<div id="overlay">
-  <canvas id="expanded-canvas"></canvas>
-</div>
+  <div id="overlay">
+    <canvas id="expanded-canvas"></canvas>
+  </div>
 
-<div class="dl">
-  <a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a>
-</div>
+  <div class="dl">
+    <a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a>
+  </div>
 
-<!-- Try local PDF.js first; if missing, fallback to CDN -->
-<script>
-  window.PDFJS_LOCAL = true;
-</script>
-<script src="/pdfjs/build/pdf.min.js"></script>
-<script>
-  if (typeof pdfjsLib === 'undefined') {
-    console.warn('Local pdf.min.js not found, using CDN fallback.');
-    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
-    window.PDFJS_LOCAL = false;
-  }
-</script>
-
-<script>
-  (async function() {
-    function waitForPDFJS(cb) {
-      if (typeof pdfjsLib !== 'undefined') cb();
-      else setTimeout(() => waitForPDFJS(cb), 50);
+  <!-- PDF.js libraries -->
+  <script>
+    window.PDFJS_LOCAL = true;
+  </script>
+  <script src="/pdfjs/build/pdf.min.js"></script>
+  <script>
+    if (typeof pdfjsLib === 'undefined') {
+      console.warn('Local pdf.min.js not found, using CDN fallback.');
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
+      window.PDFJS_LOCAL = false;
     }
+  </script>
 
-    waitForPDFJS(async () => {
-      if (window.PDFJS_LOCAL) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
-      } else {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  <script>
+    (async function() {
+      function waitForPDFJS(cb) {
+        if (typeof pdfjsLib !== 'undefined') cb();
+        else setTimeout(() => waitForPDFJS(cb), 50);
       }
 
-      const pdfPath = '/pdf/resume.pdf';
-      const cloud = document.getElementById('cloud');
-      const loading = document.getElementById('loading');
-      const overlay = document.getElementById('overlay');
-      const expandedCanvas = document.getElementById('expanded-canvas');
-
-      const COPIES_PER_PAGE = 88;   // ← cosmic double-digit density
-      const THUMB_SCALE = 0.35;
-
-      try {
-        const pdf = await pdfjsLib.getDocument(pdfPath).promise;
-        const totalPages = pdf.numPages;
-        loading.style.display = 'none';
-
-        const pageViewports = [];
-
-        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-          const page = await pdf.getPage(pageNum);
-          const originalViewport = page.getViewport({ scale: 2.0 });
-          pageViewports[pageNum] = { page, viewport: originalViewport };
-
-          for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
-            const canvas = document.createElement('canvas');
-            const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
-            canvas.width = thumbViewport.width;
-            canvas.height = thumbViewport.height;
-
-            const context = canvas.getContext('2d');
-            await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
-
-            const floater = document.createElement('div');
-            floater.className = 'floating-page';
-            floater.appendChild(canvas);
-
-            const winW = window.innerWidth - thumbViewport.width - 40;
-            const winH = window.innerHeight - thumbViewport.height - 100;
-            const left = Math.max(20, Math.random() * winW);
-            const top = Math.max(20, Math.random() * (winH + 200));
-
-            floater.style.left = left + 'px';
-            floater.style.top = top + 'px';
-            floater.style.width = thumbViewport.width + 'px';
-            floater.style.height = thumbViewport.height + 'px';
-
-            const rotX = (Math.random() - 0.5) * 8;
-            const rotY = (Math.random() - 0.5) * 8;
-            const rotZ = (Math.random() - 0.5) * 6;
-            floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
-
-            floater.dataset.page = pageNum;
-
-            floater.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const pageNum = parseInt(floater.dataset.page);
-              const { page, viewport } = pageViewports[pageNum];
-              expandedCanvas.width = viewport.width;
-              expandedCanvas.height = viewport.height;
-              const ctx = expandedCanvas.getContext('2d');
-              await page.render({ canvasContext: ctx, viewport }).promise;
-              overlay.style.display = 'flex';
-            });
-
-            cloud.appendChild(floater);
-          }
+      waitForPDFJS(async () => {
+        if (window.PDFJS_LOCAL) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+        } else {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
 
-        overlay.addEventListener('click', () => overlay.style.display = 'none');
-        expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
-        expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());  // 🔒 Disables right-click
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape') overlay.style.display = 'none';
-        });
+        const pdfPath = '/pdf/resume.pdf';
+        const cloud = document.getElementById('cloud');
+        const loading = document.getElementById('loading');
+        const overlay = document.getElementById('overlay');
+        const expandedCanvas = document.getElementById('expanded-canvas');
 
-      } catch (err) {
-        console.error(err);
-        loading.innerHTML = `🌀 ${err.message}<br><small>Check console</small>`;
-        loading.style.color = '#c66';
+        // TRANCE SETTINGS
+        const COPIES_PER_PAGE = 33;   // auspicious double‑digit, lighter on resources
+        const THUMB_SCALE = 0.5;      // larger thumbnails
+
+        try {
+          const pdf = await pdfjsLib.getDocument(pdfPath).promise;
+          const totalPages = pdf.numPages;
+          loading.style.display = 'none';
+
+          const pageViewports = [];
+
+          for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const originalViewport = page.getViewport({ scale: 2.0 });
+            pageViewports[pageNum] = { page, viewport: originalViewport };
+
+            for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
+              const canvas = document.createElement('canvas');
+              const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
+              canvas.width = thumbViewport.width;
+              canvas.height = thumbViewport.height;
+
+              const context = canvas.getContext('2d');
+              await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
+
+              const floater = document.createElement('div');
+              floater.className = 'floating-page';
+              floater.appendChild(canvas);
+
+              // Random position within the viewport (no overflow)
+              const winW = window.innerWidth - thumbViewport.width - 20;
+              const winH = window.innerHeight - thumbViewport.height - 20;
+              const left = Math.max(10, Math.random() * winW);
+              const top = Math.max(10, Math.random() * winH);
+
+              floater.style.left = left + 'px';
+              floater.style.top = top + 'px';
+              floater.style.width = thumbViewport.width + 'px';
+              floater.style.height = thumbViewport.height + 'px';
+
+              // Static 3D tilt – the continuous spin is handled by CSS on the canvas
+              const rotX = (Math.random() - 0.5) * 8;
+              const rotY = (Math.random() - 0.5) * 8;
+              const rotZ = (Math.random() - 0.5) * 6;
+              floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
+
+              floater.dataset.page = pageNum;
+
+              floater.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const pageNum = parseInt(floater.dataset.page);
+                const { page, viewport } = pageViewports[pageNum];
+                expandedCanvas.width = viewport.width;
+                expandedCanvas.height = viewport.height;
+                const ctx = expandedCanvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                overlay.style.display = 'flex';
+              });
+
+              cloud.appendChild(floater);
+            }
+          }
+
+          overlay.addEventListener('click', () => overlay.style.display = 'none');
+          expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+          expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') overlay.style.display = 'none';
+          });
+
+          // Handle window resize – reposition floaters
+          window.addEventListener('resize', () => {
+            const floaters = document.querySelectorAll('.floating-page');
+            floaters.forEach(floater => {
+              const w = floater.offsetWidth;
+              const h = floater.offsetHeight;
+              const winW = window.innerWidth - w - 20;
+              const winH = window.innerHeight - h - 20;
+              const left = Math.max(10, Math.random() * winW);
+              const top = Math.max(10, Math.random() * winH);
+              floater.style.left = left + 'px';
+              floater.style.top = top + 'px';
+            });
+          });
+
+        } catch (err) {
+          console.error(err);
+          loading.innerHTML = `🌀 ${err.message}<br><small>Check console</small>`;
+          loading.style.color = '#c66';
+        }
+      });
+    })();
+  </script>
+
+  <!-- Hypnotic 1‑Pixel TV Static -->
+  <script>
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
       }
-    });
-  })();
-</script>
 
-<!-- Hypnotic 1‑Pixel TV Static (Smallest Grain) -->
-<script>
-  (function() {
-    const canvas = document.getElementById('bg-canvas');
-    const ctx = canvas.getContext('2d');
-
-    const PIXEL_SIZE = 1; // smallest possible = full‑resolution noise
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-
-    function drawNoise() {
-      const w = canvas.width;
-      const h = canvas.height;
-      
-      const imageData = ctx.createImageData(w, h);
-      const data = imageData.data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = Math.floor(Math.random() * 256);     // R
-        data[i + 1] = Math.floor(Math.random() * 256); // G
-        data[i + 2] = Math.floor(Math.random() * 256); // B
-        data[i + 3] = 255;                             // A
+      function drawNoise() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const imageData = ctx.createImageData(w, h);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = Math.floor(Math.random() * 256);
+          data[i+1] = Math.floor(Math.random() * 256);
+          data[i+2] = Math.floor(Math.random() * 256);
+          data[i+3] = 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
       }
-      
-      ctx.putImageData(imageData, 0, 0);
-    }
 
-    function tick() {
-      drawNoise();
-      requestAnimationFrame(tick);
-    }
+      function tick() {
+        drawNoise();
+        requestAnimationFrame(tick);
+      }
 
-    window.addEventListener('resize', () => {
+      window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
-      drawNoise();
-    });
-
-    resizeCanvas();
-    tick();
-  })();
-</script>
-
+      tick();
+    })();
+  </script>
 </body>
 </html>
