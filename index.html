@@ -120,7 +120,7 @@
 </div>
 
 <div class="dl">
-  <a href="/pdf/resume.pdf" download>⬇ Download PDF</a>
+  <a href="/pdf/resume.pdf" target="_blank">📄 open pdf with hyperlinks available</a>
 </div>
 
 <!-- Try local PDF.js first; if missing, fallback to CDN -->
@@ -138,14 +138,12 @@
 
 <script>
   (async function() {
-    // Wait for PDF.js to load
     function waitForPDFJS(cb) {
       if (typeof pdfjsLib !== 'undefined') cb();
       else setTimeout(() => waitForPDFJS(cb), 50);
     }
 
     waitForPDFJS(async () => {
-      // Set worker source
       if (window.PDFJS_LOCAL) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
       } else {
@@ -158,14 +156,12 @@
       const overlay = document.getElementById('overlay');
       const expandedCanvas = document.getElementById('expanded-canvas');
 
-      const COPIES_PER_PAGE = 25;
+      const COPIES_PER_PAGE = 100;   // ← increased density
       const THUMB_SCALE = 0.35;
 
       try {
-        console.log('Loading PDF from:', pdfPath);
         const pdf = await pdfjsLib.getDocument(pdfPath).promise;
         const totalPages = pdf.numPages;
-        console.log(`PDF loaded, ${totalPages} pages.`);
         loading.style.display = 'none';
 
         const pageViewports = [];
@@ -227,10 +223,9 @@
         });
 
       } catch (err) {
-        console.error('Fatal error:', err);
+        console.error(err);
         loading.innerHTML = `🌀 ${err.message}<br><small>Check console</small>`;
         loading.style.color = '#c66';
-        loading.style.textAlign = 'center';
       }
     });
   })();
