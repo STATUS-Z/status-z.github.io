@@ -37,9 +37,17 @@
       position: relative;
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
-      animation: ringRotate 44s linear infinite;
+      overflow: visible; /* was hidden — changed to prevent clipping */
+    }
+
+    #ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
       transform-origin: center center;
+      animation: ringRotate 48s linear infinite;
     }
 
     @keyframes ringRotate {
@@ -176,7 +184,9 @@
 
   <canvas id="bg-canvas"></canvas>
 
-  <div id="cloud"></div>
+<div id="cloud">
+  <div id="ring"></div>
+</div>
   <div id="loading">Manifesting...</div>
 
   <div id="overlay">
@@ -214,7 +224,7 @@
         }
 
         const pdfPath = '/pdf/resume.pdf';
-        const cloud = document.getElementById('cloud');
+        const ring = document.getElementById('ring');
         const loading = document.getElementById('loading');
         const overlay = document.getElementById('overlay');
         const expandedCanvas = document.getElementById('expanded-canvas');
@@ -227,13 +237,10 @@
         const allFloaters = [];
 
         function positionOnCircle(floater, index, total, baseW, baseH) {
-          // Offset the circle so the final thumbnail (index = total-1) lands at 12 o'clock
           const angle = (index / total) * Math.PI * 2 - Math.PI / 2 - (total - 1) / total * Math.PI * 2;
           const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
-          const centerX = window.innerWidth / 2;
-          const centerY = window.innerHeight / 2;
-          const left = centerX + Math.cos(angle) * radius - baseW / 2;
-          const top = centerY + Math.sin(angle) * radius - baseH / 2;
+          const left = Math.cos(angle) * radius - baseW / 2;
+          const top = Math.sin(angle) * radius - baseH / 2;
           floater.style.left = left + 'px';
           floater.style.top = top + 'px';
         }
