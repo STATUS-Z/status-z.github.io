@@ -184,7 +184,7 @@
     }
   </script>
 
-  <script>
+    <script>
     (async function() {
       function waitForPDFJS(cb) {
         if (typeof pdfjsLib !== 'undefined') cb();
@@ -205,17 +205,15 @@
         const expandedCanvas = document.getElementById('expanded-canvas');
 
         const COPIES_PER_PAGE = 33;
-        const THUMB_SCALE = 0.5;
-        const STAGGER_DELAY = 25; // ms between each appearance (≈1.5× faster than typical frame pacing)
+        const THUMB_SCALE = 0.35;     // smaller thumbnails → more static visible
+        const STAGGER_DELAY = 150;    // ms between each appearance (ritual slow emergence)
 
-        // Store page data and all floaters for resize repositioning
         const pageViewports = [];
         const allFloaters = [];
 
-        // Helper: position a floater on a circle
         function positionOnCircle(floater, index, total, baseW, baseH) {
           const angle = (index / total) * Math.PI * 2;
-          const radius = Math.min(window.innerWidth, window.innerHeight) * 0.35;
+          const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
           const centerX = window.innerWidth / 2;
           const centerY = window.innerHeight / 2;
           const left = centerX + Math.cos(angle) * radius - baseW / 2;
@@ -229,30 +227,26 @@
           const totalPages = pdf.numPages;
           loading.style.display = 'none';
 
-          // Prepare page render promises and data
-          const pageRenderPromises = [];
           for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const originalViewport = page.getViewport({ scale: 2.0 });
-            pageViewports[pageNum] = { page, viewport: originalViewport };
-
-            // Pre‑render the thumbnail canvas for this page once (used for all copies)
-            const thumbCanvas = document.createElement('canvas');
             const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
+            
+            const thumbCanvas = document.createElement('canvas');
             thumbCanvas.width = thumbViewport.width;
             thumbCanvas.height = thumbViewport.height;
             const context = thumbCanvas.getContext('2d');
-            const renderTask = page.render({ canvasContext: context, viewport: thumbViewport });
-            pageRenderPromises.push(renderTask.promise);
-            await renderTask.promise; // wait for each page's thumbnail to be ready
+            await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
 
-            // Store the rendered canvas for reuse
-            pageViewports[pageNum].thumbCanvas = thumbCanvas;
-            pageViewports[pageNum].thumbWidth = thumbViewport.width;
-            pageViewports[pageNum].thumbHeight = thumbViewport.height;
+            pageViewports[pageNum] = {
+              page,
+              viewport: originalViewport,
+              thumbCanvas,
+              thumbWidth: thumbViewport.width,
+              thumbHeight: thumbViewport.height
+            };
           }
 
-          // Create all floaters with staggered appearance
           let globalIndex = 0;
           const totalCopies = totalPages * COPIES_PER_PAGE;
 
@@ -263,7 +257,6 @@
               const floater = document.createElement('div');
               floater.className = 'floating-page';
               
-              // Clone the pre‑rendered canvas
               const canvasCopy = document.createElement('canvas');
               canvasCopy.width = thumbWidth;
               canvasCopy.height = thumbHeight;
@@ -273,12 +266,9 @@
               floater.appendChild(canvasCopy);
               floater.style.width = thumbWidth + 'px';
               floater.style.height = thumbHeight + 'px';
-
-              // Initial position off‑screen (will be set when shown)
               floater.style.left = '-9999px';
               floater.style.top = '-9999px';
 
-              // Static 3D tilt (individual variation)
               const rotX = (Math.random() - 0.5) * 8;
               const rotY = (Math.random() - 0.5) * 8;
               const rotZ = (Math.random() - 0.5) * 6;
@@ -286,7 +276,6 @@
 
               floater.dataset.page = pageNum;
 
-              // Click handler – instant expansion
               floater.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const pageNum = parseInt(floater.dataset.page);
@@ -302,7 +291,6 @@
               cloud.appendChild(floater);
               allFloaters.push({ element: floater, index: globalIndex, width: thumbWidth, height: thumbHeight });
               
-              // Staggered appearance: position after a short delay
               setTimeout((floaterEl, idx, w, h) => {
                 positionOnCircle(floaterEl, idx, totalCopies, w, h);
               }, globalIndex * STAGGER_DELAY, floater, globalIndex, thumbWidth, thumbHeight);
@@ -311,14 +299,12 @@
             }
           }
 
-          // After all floaters are created, set up resize handler to maintain circle
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
               positionOnCircle(element, index, totalCopies, width, height);
             });
           });
 
-          // Overlay close logic
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
             expandedCanvas.classList.remove('dream-glow');
