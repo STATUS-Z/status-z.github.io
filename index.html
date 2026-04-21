@@ -55,7 +55,7 @@
       height: 100%;
       border-radius: 4px;
       background: #000;
-      animation: slowSpin 33s linear infinite, thumbnailPulse 4s ease-in-out infinite;
+      animation: slowSpin 33s linear infinite, thumbnailPulse 11s ease-in-out infinite;
       transform-origin: center center;
       image-rendering: crisp-edges;
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
@@ -220,7 +220,7 @@
         const allFloaters = [];
 
         function positionOnCircle(floater, index, total, baseW, baseH) {
-          const angle = (index / total) * Math.PI * 2;
+          const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
           const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
           const centerX = window.innerWidth / 2;
           const centerY = window.innerHeight / 2;
