@@ -38,6 +38,13 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
+      animation: ringRotate 44s linear infinite;
+      transform-origin: center center;
+    }
+
+    @keyframes ringRotate {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
     }
 
     .floating-page {
