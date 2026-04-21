@@ -10,19 +10,18 @@
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden;  /* kills scrollbars */
+      overflow: hidden;
       background: #000;
     }
 
     body {
       perspective: 1200px;
       font-family: system-ui, sans-serif;
-      position: fixed;   /* locks viewport */
+      position: fixed;
       top: 0;
       left: 0;
     }
 
-    /* Hypnotic static canvas – behind everything */
     #bg-canvas {
       position: fixed;
       top: 0;
@@ -34,7 +33,6 @@
       pointer-events: none;
     }
 
-    /* Fixed container – exactly viewport size, no overflow */
     #cloud {
       position: relative;
       width: 100vw;
@@ -42,16 +40,14 @@
       overflow: hidden;
     }
 
-    /* Each floating page – absolute position */
-             .floating-page {
+    .floating-page {
       position: absolute;
       cursor: pointer;
       will-change: transform;
-      background: transparent;          /* fully see‑through */
+      background: transparent;
       transform-style: preserve-3d;
       backface-visibility: hidden;
       border-radius: 4px;
-      /* no shadow on the div */
     }
 
     .floating-page canvas {
@@ -68,7 +64,7 @@
     }
 
     .floating-page canvas:hover {
-      box-shadow: 0 30px 60px rgba(0,0,0,1), 0 0 30px rgba(255,255,255,0.5); /* white glow */
+      box-shadow: 0 30px 60px rgba(0,0,0,1), 0 0 30px rgba(255,255,255,0.5);
       z-index: 100;
     }
 
@@ -92,7 +88,7 @@
       cursor: zoom-out;
     }
 
-        #overlay canvas {
+    #overlay canvas {
       max-width: 90vw;
       max-height: 90vh;
       box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.4);
@@ -114,13 +110,14 @@
         box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #790b3e, 0 0 120px rgba(121,11,62,0.4);
       }
       100% {
-        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.4);
+        box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(0,0,0,0.4);
       }
     }
 
     #overlay canvas.dream-glow {
       animation: dreamGlow 8s ease-in-out infinite;
     }
+
     .dl {
       position: fixed;
       bottom: 20px;
@@ -162,7 +159,6 @@
 </head>
 <body>
 
-  <!-- Hypnotic TV static canvas -->
   <canvas id="bg-canvas"></canvas>
 
   <div id="cloud"></div>
@@ -176,7 +172,6 @@
     <a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a>
   </div>
 
-  <!-- PDF.js libraries -->
   <script>
     window.PDFJS_LOCAL = true;
   </script>
@@ -209,47 +204,81 @@
         const overlay = document.getElementById('overlay');
         const expandedCanvas = document.getElementById('expanded-canvas');
 
-        // TRANCE SETTINGS
-        const COPIES_PER_PAGE = 33;   // auspicious double‑digit, lighter on resources
-        const THUMB_SCALE = 0.5;      // larger thumbnails
+        const COPIES_PER_PAGE = 33;
+        const THUMB_SCALE = 0.5;
+        const STAGGER_DELAY = 25; // ms between each appearance (≈1.5× faster than typical frame pacing)
+
+        // Store page data and all floaters for resize repositioning
+        const pageViewports = [];
+        const allFloaters = [];
+
+        // Helper: position a floater on a circle
+        function positionOnCircle(floater, index, total, baseW, baseH) {
+          const angle = (index / total) * Math.PI * 2;
+          const radius = Math.min(window.innerWidth, window.innerHeight) * 0.35;
+          const centerX = window.innerWidth / 2;
+          const centerY = window.innerHeight / 2;
+          const left = centerX + Math.cos(angle) * radius - baseW / 2;
+          const top = centerY + Math.sin(angle) * radius - baseH / 2;
+          floater.style.left = left + 'px';
+          floater.style.top = top + 'px';
+        }
 
         try {
           const pdf = await pdfjsLib.getDocument(pdfPath).promise;
           const totalPages = pdf.numPages;
           loading.style.display = 'none';
 
-          const pageViewports = [];
-
+          // Prepare page render promises and data
+          const pageRenderPromises = [];
           for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const originalViewport = page.getViewport({ scale: 2.0 });
             pageViewports[pageNum] = { page, viewport: originalViewport };
 
+            // Pre‑render the thumbnail canvas for this page once (used for all copies)
+            const thumbCanvas = document.createElement('canvas');
+            const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
+            thumbCanvas.width = thumbViewport.width;
+            thumbCanvas.height = thumbViewport.height;
+            const context = thumbCanvas.getContext('2d');
+            const renderTask = page.render({ canvasContext: context, viewport: thumbViewport });
+            pageRenderPromises.push(renderTask.promise);
+            await renderTask.promise; // wait for each page's thumbnail to be ready
+
+            // Store the rendered canvas for reuse
+            pageViewports[pageNum].thumbCanvas = thumbCanvas;
+            pageViewports[pageNum].thumbWidth = thumbViewport.width;
+            pageViewports[pageNum].thumbHeight = thumbViewport.height;
+          }
+
+          // Create all floaters with staggered appearance
+          let globalIndex = 0;
+          const totalCopies = totalPages * COPIES_PER_PAGE;
+
+          for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            const { thumbCanvas, thumbWidth, thumbHeight } = pageViewports[pageNum];
+            
             for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
-              const canvas = document.createElement('canvas');
-              const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
-              canvas.width = thumbViewport.width;
-              canvas.height = thumbViewport.height;
-
-              const context = canvas.getContext('2d');
-              await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
-
               const floater = document.createElement('div');
               floater.className = 'floating-page';
-              floater.appendChild(canvas);
+              
+              // Clone the pre‑rendered canvas
+              const canvasCopy = document.createElement('canvas');
+              canvasCopy.width = thumbWidth;
+              canvasCopy.height = thumbHeight;
+              const ctxCopy = canvasCopy.getContext('2d');
+              ctxCopy.drawImage(thumbCanvas, 0, 0);
+              
+              floater.appendChild(canvasCopy);
+              floater.style.width = thumbWidth + 'px';
+              floater.style.height = thumbHeight + 'px';
 
-              // Random position within the viewport (no overflow)
-              const winW = window.innerWidth - thumbViewport.width - 20;
-              const winH = window.innerHeight - thumbViewport.height - 20;
-              const left = Math.max(10, Math.random() * winW);
-              const top = Math.max(10, Math.random() * winH);
+              // Initial position off‑screen (will be set when shown)
+              floater.style.left = '-9999px';
+              floater.style.top = '-9999px';
 
-              floater.style.left = left + 'px';
-              floater.style.top = top + 'px';
-              floater.style.width = thumbViewport.width + 'px';
-              floater.style.height = thumbViewport.height + 'px';
-
-              // Static 3D tilt – the continuous spin is handled by CSS on the canvas
+              // Static 3D tilt (individual variation)
               const rotX = (Math.random() - 0.5) * 8;
               const rotY = (Math.random() - 0.5) * 8;
               const rotZ = (Math.random() - 0.5) * 6;
@@ -257,6 +286,7 @@
 
               floater.dataset.page = pageNum;
 
+              // Click handler – instant expansion
               floater.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const pageNum = parseInt(floater.dataset.page);
@@ -270,35 +300,36 @@
               });
 
               cloud.appendChild(floater);
+              allFloaters.push({ element: floater, index: globalIndex, width: thumbWidth, height: thumbHeight });
+              
+              // Staggered appearance: position after a short delay
+              setTimeout((floaterEl, idx, w, h) => {
+                positionOnCircle(floaterEl, idx, totalCopies, w, h);
+              }, globalIndex * STAGGER_DELAY, floater, globalIndex, thumbWidth, thumbHeight);
+              
+              globalIndex++;
             }
           }
 
-                  overlay.addEventListener('click', () => {
-          overlay.style.display = 'none';
-          expandedCanvas.classList.remove('dream-glow'); // ← ADD
-        });
-        expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
-        expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape') {
-            overlay.style.display = 'none';
-            expandedCanvas.classList.remove('dream-glow'); // ← ADD
-          }
-        });
-
-          // Handle window resize – reposition floaters
+          // After all floaters are created, set up resize handler to maintain circle
           window.addEventListener('resize', () => {
-            const floaters = document.querySelectorAll('.floating-page');
-            floaters.forEach(floater => {
-              const w = floater.offsetWidth;
-              const h = floater.offsetHeight;
-              const winW = window.innerWidth - w - 20;
-              const winH = window.innerHeight - h - 20;
-              const left = Math.max(10, Math.random() * winW);
-              const top = Math.max(10, Math.random() * winH);
-              floater.style.left = left + 'px';
-              floater.style.top = top + 'px';
+            allFloaters.forEach(({ element, index, width, height }) => {
+              positionOnCircle(element, index, totalCopies, width, height);
             });
+          });
+
+          // Overlay close logic
+          overlay.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            expandedCanvas.classList.remove('dream-glow');
+          });
+          expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+          expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              overlay.style.display = 'none';
+              expandedCanvas.classList.remove('dream-glow');
+            }
           });
 
         } catch (err) {
