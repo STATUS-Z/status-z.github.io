@@ -43,21 +43,15 @@
     }
 
     /* Each floating page – absolute position */
-         .floating-page {
+             .floating-page {
       position: absolute;
       cursor: pointer;
-      transition: box-shadow 0.3s;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(80,80,80,0.2);
-      border-radius: 4px;
       will-change: transform;
-      background: transparent;          /* totally see‑through */
+      background: transparent;          /* fully see‑through */
       transform-style: preserve-3d;
       backface-visibility: hidden;
-    }
-
-    .floating-page:hover {
-      box-shadow: 0 30px 60px rgba(0,0,0,1), 0 0 20px rgba(100,150,255,0.3);
-      z-index: 100;
+      border-radius: 4px;
+      /* no shadow on the div */
     }
 
     .floating-page canvas {
@@ -65,10 +59,17 @@
       width: 100%;
       height: 100%;
       border-radius: 4px;
-      background: #000;                 /* canvas itself is black (matches PDF) */
+      background: #000;
       animation: slowSpin 20s linear infinite;
       transform-origin: center center;
       image-rendering: crisp-edges;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(80,80,80,0.2);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .floating-page canvas:hover {
+      box-shadow: 0 30px 60px rgba(0,0,0,1), 0 0 30px rgba(255,255,255,0.5); /* white glow */
+      z-index: 100;
     }
 
     @keyframes slowSpin {
