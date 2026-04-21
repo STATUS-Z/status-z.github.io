@@ -220,7 +220,8 @@
         const allFloaters = [];
 
         function positionOnCircle(floater, index, total, baseW, baseH) {
-          const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
+          // Offset the circle so the final thumbnail (index = total-1) lands at 12 o'clock
+          const angle = (index / total) * Math.PI * 2 - Math.PI / 2 - (total - 1) / total * Math.PI * 2;
           const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
           const centerX = window.innerWidth / 2;
           const centerY = window.innerHeight / 2;
