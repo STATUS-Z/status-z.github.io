@@ -55,10 +55,10 @@
       height: 100%;
       border-radius: 4px;
       background: #000;
-      animation: slowSpin 33s linear infinite;
+      animation: slowSpin 33s linear infinite, thumbnailPulse 4s ease-in-out infinite;
       transform-origin: center center;
       image-rendering: crisp-edges;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.95), 0 0 30px #cc5500, 0 0 60px rgba(204,85,0,0.4);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
     /* .floating-page canvas:hover {
@@ -68,6 +68,17 @@
     @keyframes slowSpin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
+    }
+        @keyframes thumbnailPulse {
+      0% {
+        box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #ffffff, 0 0 150px rgba(255,255,255,0.8);
+      }
+      50% {
+        box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000000, 0 0 150px rgba(0,0,0,0.95);
+      }
+      100% {
+        box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #ffffff, 0 0 150px rgba(255,255,255,0.8);
+      }
     }
 
     #overlay {
