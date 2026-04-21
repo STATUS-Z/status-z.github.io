@@ -16,7 +16,6 @@
       font-family: system-ui, sans-serif;
     }
 
-    /* Floating canvas container */
     #cloud {
       position: relative;
       width: 100%;
@@ -24,7 +23,6 @@
       padding: 2rem;
     }
 
-    /* Each floating page */
     .floating-page {
       position: absolute;
       cursor: pointer;
@@ -49,7 +47,6 @@
       background: #0b0b0b;
     }
 
-    /* Expanded overlay */
     #overlay {
       position: fixed;
       top: 0;
@@ -74,7 +71,6 @@
       background: #000;
     }
 
-    /* Download button */
     .dl {
       position: fixed;
       bottom: 20px;
@@ -103,7 +99,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* Loading text */
     #loading {
       position: fixed;
       top: 50%;
@@ -128,107 +123,116 @@
   <a href="/pdf/resume.pdf" download>⬇ Download PDF</a>
 </div>
 
-<!-- PDF.js -->
+<!-- Try local PDF.js first; if missing, fallback to CDN -->
+<script>
+  window.PDFJS_LOCAL = true;
+</script>
 <script src="/pdfjs/build/pdf.min.js"></script>
+<script>
+  if (typeof pdfjsLib === 'undefined') {
+    console.warn('Local pdf.min.js not found, using CDN fallback.');
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
+    window.PDFJS_LOCAL = false;
+  }
+</script>
 
 <script>
   (async function() {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+    // Wait for PDF.js to load
+    function waitForPDFJS(cb) {
+      if (typeof pdfjsLib !== 'undefined') cb();
+      else setTimeout(() => waitForPDFJS(cb), 50);
+    }
 
-    const pdfPath = '/pdf/resume.pdf';
-    const cloud = document.getElementById('cloud');
-    const loading = document.getElementById('loading');
-    const overlay = document.getElementById('overlay');
-    const expandedCanvas = document.getElementById('expanded-canvas');
-
-    // Number of floating duplicates per page
-    const COPIES_PER_PAGE = 25; // adjust for more/less density
-    const THUMB_SCALE = 0.35;    // size of floating thumbnails
-
-    try {
-      const pdf = await pdfjsLib.getDocument(pdfPath).promise;
-      const totalPages = pdf.numPages;
-      loading.style.display = 'none';
-
-      // Store original page viewports for later expansion
-      const pageViewports = [];
-
-      // Render each page once at high res for expansion, and also create thumbnails
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const originalViewport = page.getViewport({ scale: 2.0 }); // high-res for expanded view
-        pageViewports[pageNum] = { page, viewport: originalViewport };
-
-        // Create multiple floating copies
-        for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
-          // Create canvas for thumbnail
-          const canvas = document.createElement('canvas');
-          const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
-          canvas.width = thumbViewport.width;
-          canvas.height = thumbViewport.height;
-
-          const context = canvas.getContext('2d');
-          await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
-
-          // Create wrapper div
-          const floater = document.createElement('div');
-          floater.className = 'floating-page';
-          floater.appendChild(canvas);
-
-          // Random position within viewport bounds (with some margin)
-          const winW = window.innerWidth - thumbViewport.width - 40;
-          const winH = window.innerHeight - thumbViewport.height - 100;
-          const left = Math.max(20, Math.random() * winW);
-          const top = Math.max(20, Math.random() * (winH + 200)); // allow some offscreen vertical scroll
-
-          floater.style.left = left + 'px';
-          floater.style.top = top + 'px';
-          floater.style.width = thumbViewport.width + 'px';
-          floater.style.height = thumbViewport.height + 'px';
-
-          // Random slight rotation and Z offset for 3D feel
-          const rotX = (Math.random() - 0.5) * 8;
-          const rotY = (Math.random() - 0.5) * 8;
-          const rotZ = (Math.random() - 0.5) * 6;
-          floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
-
-          // Store page number for expansion
-          floater.dataset.page = pageNum;
-
-          // Click handler: expand to full view
-          floater.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const pageNum = parseInt(floater.dataset.page);
-            const { page, viewport } = pageViewports[pageNum];
-            expandedCanvas.width = viewport.width;
-            expandedCanvas.height = viewport.height;
-            const ctx = expandedCanvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            overlay.style.display = 'flex';
-          });
-
-          cloud.appendChild(floater);
-        }
+    waitForPDFJS(async () => {
+      // Set worker source
+      if (window.PDFJS_LOCAL) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+      } else {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       }
 
-      // Close overlay on click
-      overlay.addEventListener('click', () => {
-        overlay.style.display = 'none';
-      });
+      const pdfPath = '/pdf/resume.pdf';
+      const cloud = document.getElementById('cloud');
+      const loading = document.getElementById('loading');
+      const overlay = document.getElementById('overlay');
+      const expandedCanvas = document.getElementById('expanded-canvas');
 
-      // Prevent closing when clicking on canvas itself
-      expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+      const COPIES_PER_PAGE = 25;
+      const THUMB_SCALE = 0.35;
 
-      // ESC key closes overlay
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') overlay.style.display = 'none';
-      });
+      try {
+        console.log('Loading PDF from:', pdfPath);
+        const pdf = await pdfjsLib.getDocument(pdfPath).promise;
+        const totalPages = pdf.numPages;
+        console.log(`PDF loaded, ${totalPages} pages.`);
+        loading.style.display = 'none';
 
-    } catch (err) {
-      console.error('PDF loading error:', err);
-      loading.textContent = '🌀 Unable to load resume. Check console.';
-      loading.style.color = '#c66';
-    }
+        const pageViewports = [];
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const originalViewport = page.getViewport({ scale: 2.0 });
+          pageViewports[pageNum] = { page, viewport: originalViewport };
+
+          for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
+            const canvas = document.createElement('canvas');
+            const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
+            canvas.width = thumbViewport.width;
+            canvas.height = thumbViewport.height;
+
+            const context = canvas.getContext('2d');
+            await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
+
+            const floater = document.createElement('div');
+            floater.className = 'floating-page';
+            floater.appendChild(canvas);
+
+            const winW = window.innerWidth - thumbViewport.width - 40;
+            const winH = window.innerHeight - thumbViewport.height - 100;
+            const left = Math.max(20, Math.random() * winW);
+            const top = Math.max(20, Math.random() * (winH + 200));
+
+            floater.style.left = left + 'px';
+            floater.style.top = top + 'px';
+            floater.style.width = thumbViewport.width + 'px';
+            floater.style.height = thumbViewport.height + 'px';
+
+            const rotX = (Math.random() - 0.5) * 8;
+            const rotY = (Math.random() - 0.5) * 8;
+            const rotZ = (Math.random() - 0.5) * 6;
+            floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
+
+            floater.dataset.page = pageNum;
+
+            floater.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const pageNum = parseInt(floater.dataset.page);
+              const { page, viewport } = pageViewports[pageNum];
+              expandedCanvas.width = viewport.width;
+              expandedCanvas.height = viewport.height;
+              const ctx = expandedCanvas.getContext('2d');
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              overlay.style.display = 'flex';
+            });
+
+            cloud.appendChild(floater);
+          }
+        }
+
+        overlay.addEventListener('click', () => overlay.style.display = 'none');
+        expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') overlay.style.display = 'none';
+        });
+
+      } catch (err) {
+        console.error('Fatal error:', err);
+        loading.innerHTML = `🌀 ${err.message}<br><small>Check console</small>`;
+        loading.style.color = '#c66';
+        loading.style.textAlign = 'center';
+      }
+    });
   })();
 </script>
 </body>
