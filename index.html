@@ -7,31 +7,26 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-      background: #050505;
+    body {
+      background: #000; /* fallback */
       min-height: 100vh;
       overflow-x: hidden;
       perspective: 1200px;
       font-family: system-ui, sans-serif;
-      animation: pulseBackground 8s ease-in-out infinite alternate;
+      margin: 0;
+      padding: 0;
     }
 
-    @keyframes pulseBackground {
-      0% {
-        background: radial-gradient(circle at 30% 40%, #1a0a0a 0%, #050505 100%);
-      }
-      25% {
-        background: radial-gradient(circle at 35% 45%, #2a0f1a 0%, #080505 100%);
-      }
-      50% {
-        background: radial-gradient(circle at 40% 35%, #1a0f2a 0%, #050508 100%);
-      }
-      75% {
-        background: radial-gradient(circle at 25% 50%, #1a1a1a 0%, #030303 100%);
-      }
-      100% {
-        background: radial-gradient(circle at 30% 40%, #1a0a0a 0%, #050505 100%);
-      }
+    /* Full‑screen canvas for the hypnotic TV static */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;        /* keeps it behind the floating PDFs */
+      display: block;
+      pointer-events: none; /* lets you click through to the PDFs */
     }
 
     #cloud {
@@ -129,6 +124,9 @@
   </style>
 </head>
 <body>
+
+  <!-- Hypnotic TV static canvas -->
+  <canvas id="bg-canvas"></canvas>
 
 <div id="cloud"></div>
 <div id="loading">Manifesting...</div>
@@ -236,7 +234,7 @@
 
         overlay.addEventListener('click', () => overlay.style.display = 'none');
         expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
-        expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());  // 🔒 NEW: Disables right-click
+        expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());  // 🔒 Disables right-click
         document.addEventListener('keydown', (e) => {
           if (e.key === 'Escape') overlay.style.display = 'none';
         });
@@ -249,5 +247,51 @@
     });
   })();
 </script>
+
+<!-- Hypnotic 1‑Pixel TV Static (Smallest Grain) -->
+<script>
+  (function() {
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const PIXEL_SIZE = 1; // smallest possible = full‑resolution noise
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function drawNoise() {
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      const imageData = ctx.createImageData(w, h);
+      const data = imageData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = Math.floor(Math.random() * 256);     // R
+        data[i + 1] = Math.floor(Math.random() * 256); // G
+        data[i + 2] = Math.floor(Math.random() * 256); // B
+        data[i + 3] = 255;                             // A
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function tick() {
+      drawNoise();
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      drawNoise();
+    });
+
+    resizeCanvas();
+    tick();
+  })();
+</script>
+
 </body>
 </html>
