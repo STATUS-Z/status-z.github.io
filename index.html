@@ -1,48 +1,235 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #0a0a0a;
-    background-image: radial-gradient(circle at 30% 40%, #1a1f2a 0%, #050505 90%);
-  }
-  iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    display: block;
-    mix-blend-mode: normal;
-  }
-  .dl {
-    position: fixed;
-    bottom: 16px;
-    right: 20px;
-    z-index: 9999;
-    background: #0d1117;
-    padding: 8px 16px;
-    border-radius: 6px;
-    opacity: 0.5;
-    border: 1px solid #30363d;
-    backdrop-filter: blur(4px);
-    transition: opacity 0.2s;
-  }
-  .dl:hover { opacity: 1; }
-  .dl a {
-    color: #c9d1d9;
-    text-decoration: none;
-    font-family: system-ui, sans-serif;
-    font-size: 13px;
-  }
-</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Trippy Dark Resume</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #050505;
+      background-image: radial-gradient(circle at 30% 40%, #1a1f2a 0%, #020202 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      perspective: 1200px;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* Floating canvas container */
+    #cloud {
+      position: relative;
+      width: 100%;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    /* Each floating page */
+    .floating-page {
+      position: absolute;
+      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1), box-shadow 0.3s;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
+      border-radius: 4px;
+      will-change: transform;
+      background: #000;
+    }
+
+    .floating-page:hover {
+      transform: scale(1.05) translateZ(20px);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.9), 0 0 20px rgba(100,150,255,0.2);
+      z-index: 100;
+    }
+
+    .floating-page canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+      background: #0b0b0b;
+    }
+
+    /* Expanded overlay */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+
+    #overlay canvas {
+      max-width: 90vw;
+      max-height: 90vh;
+      box-shadow: 0 0 80px rgba(0,0,0,1);
+      border-radius: 6px;
+      cursor: default;
+      background: #000;
+    }
+
+    /* Download button */
+    .dl {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: #0d1117;
+      padding: 10px 18px;
+      border-radius: 40px;
+      opacity: 0.4;
+      border: 1px solid #3a4a6a;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .dl:hover {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .dl a {
+      color: #d0e0ff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* Loading text */
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #aaa;
+      font-size: 18px;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
-  <iframe src="/pdfjs/web/viewer.html"></iframe>
-  <div class="dl"><a href="/pdf/resume.pdf" download>⬇ Download PDF</a></div>
+
+<div id="cloud"></div>
+<div id="loading">Manifesting...</div>
+
+<div id="overlay">
+  <canvas id="expanded-canvas"></canvas>
+</div>
+
+<div class="dl">
+  <a href="/pdf/resume.pdf" download>⬇ Download PDF</a>
+</div>
+
+<!-- PDF.js -->
+<script src="/pdfjs/build/pdf.min.js"></script>
+
+<script>
+  (async function() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+
+    const pdfPath = '/pdf/resume.pdf';
+    const cloud = document.getElementById('cloud');
+    const loading = document.getElementById('loading');
+    const overlay = document.getElementById('overlay');
+    const expandedCanvas = document.getElementById('expanded-canvas');
+
+    // Number of floating duplicates per page
+    const COPIES_PER_PAGE = 25; // adjust for more/less density
+    const THUMB_SCALE = 0.35;    // size of floating thumbnails
+
+    try {
+      const pdf = await pdfjsLib.getDocument(pdfPath).promise;
+      const totalPages = pdf.numPages;
+      loading.style.display = 'none';
+
+      // Store original page viewports for later expansion
+      const pageViewports = [];
+
+      // Render each page once at high res for expansion, and also create thumbnails
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const originalViewport = page.getViewport({ scale: 2.0 }); // high-res for expanded view
+        pageViewports[pageNum] = { page, viewport: originalViewport };
+
+        // Create multiple floating copies
+        for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
+          // Create canvas for thumbnail
+          const canvas = document.createElement('canvas');
+          const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
+          canvas.width = thumbViewport.width;
+          canvas.height = thumbViewport.height;
+
+          const context = canvas.getContext('2d');
+          await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
+
+          // Create wrapper div
+          const floater = document.createElement('div');
+          floater.className = 'floating-page';
+          floater.appendChild(canvas);
+
+          // Random position within viewport bounds (with some margin)
+          const winW = window.innerWidth - thumbViewport.width - 40;
+          const winH = window.innerHeight - thumbViewport.height - 100;
+          const left = Math.max(20, Math.random() * winW);
+          const top = Math.max(20, Math.random() * (winH + 200)); // allow some offscreen vertical scroll
+
+          floater.style.left = left + 'px';
+          floater.style.top = top + 'px';
+          floater.style.width = thumbViewport.width + 'px';
+          floater.style.height = thumbViewport.height + 'px';
+
+          // Random slight rotation and Z offset for 3D feel
+          const rotX = (Math.random() - 0.5) * 8;
+          const rotY = (Math.random() - 0.5) * 8;
+          const rotZ = (Math.random() - 0.5) * 6;
+          floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
+
+          // Store page number for expansion
+          floater.dataset.page = pageNum;
+
+          // Click handler: expand to full view
+          floater.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const pageNum = parseInt(floater.dataset.page);
+            const { page, viewport } = pageViewports[pageNum];
+            expandedCanvas.width = viewport.width;
+            expandedCanvas.height = viewport.height;
+            const ctx = expandedCanvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            overlay.style.display = 'flex';
+          });
+
+          cloud.appendChild(floater);
+        }
+      }
+
+      // Close overlay on click
+      overlay.addEventListener('click', () => {
+        overlay.style.display = 'none';
+      });
+
+      // Prevent closing when clicking on canvas itself
+      expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
+
+      // ESC key closes overlay
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') overlay.style.display = 'none';
+      });
+
+    } catch (err) {
+      console.error('PDF loading error:', err);
+      loading.textContent = '🌀 Unable to load resume. Check console.';
+      loading.style.color = '#c66';
+    }
+  })();
+</script>
 </body>
 </html>
