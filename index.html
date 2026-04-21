@@ -49,7 +49,6 @@
       backface-visibility: hidden;
       border-radius: 4px;
     }
-
     .floating-page canvas {
       display: block;
       width: 100%;
@@ -59,14 +58,12 @@
       animation: slowSpin 33s linear infinite;
       transform-origin: center center;
       image-rendering: crisp-edges;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(80,80,80,0.2);
-      transition: box-shadow 0.3s ease;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95), 0 0 30px #cc5500, 0 0 60px rgba(204,85,0,0.4);
     }
 
-    .floating-page canvas:hover {
-      box-shadow: 0 30px 60px rgba(0,0,0,1), 0 0 40px #D4AF37, 0 0 80px rgba(212,175,55,0.5);
-      z-index: 100;
-    }
+    /* .floating-page canvas:hover {
+       ← REMOVED THIS ENTIRE BLOCK (TEMP)
+    } */
 
     @keyframes slowSpin {
       from { transform: rotate(0deg); }
@@ -99,18 +96,18 @@
       transition: box-shadow 0.3s ease;
     }
 
-    @keyframes dreamGlow {
+        @keyframes dreamGlow {
       0% {
         box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 60px #000000, 0 0 150px rgba(0,0,0,0.95);
       }
-      33% {
+      33.33% {
         box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 60px #ccff00, 0 0 150px rgba(204,255,0,0.5);
       }
-      66% {
-        box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 60px #000000, 0 0 150px rgba(0,0,0,0.95);
+      66.66% {
+        box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 60px #790b3e, 0 0 150px rgba(121,11,62,0.5);
       }
       100% {
-        box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 60px #790b3e, 0 0 150px rgba(121,11,62,0.5);
+        box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 60px #000000, 0 0 150px rgba(0,0,0,0.95);
       }
     }
 
