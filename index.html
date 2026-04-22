@@ -37,7 +37,7 @@
       position: relative;
       width: 100vw;
       height: 100vh;
-      overflow: visible; /* was hidden — changed to prevent clipping */
+      overflow: visible;
     }
 
     #ring {
@@ -50,13 +50,12 @@
       animation: ringRotate 20.3s linear infinite;
     }
 
-      @keyframes ringRotate {
+    @keyframes ringRotate {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
 
-    
-    /* Red aura pulse – behind thumbnails, transparent, expansive */
+    /* Pure red pulse – originates from ring center, expands outward */
     #ring::after {
       content: '';
       position: fixed;
@@ -65,11 +64,11 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 40%, transparent 70%);
-      box-shadow: 0 0 150px rgba(255,255,255,0.5);
+      background: #ff0000;
+      box-shadow: 0 0 150px #ff0000, 0 0 300px #ff0000;
       opacity: 0;
       pointer-events: none;
-      z-index: 1;                  /* behind thumbnails (which are positioned relative to #ring) */
+      z-index: 1;
       transform: translate(-50%, -50%);
       animation: ringPulse 20.3s ease-in-out infinite;
     }
@@ -81,7 +80,7 @@
       }
       98% { 
         opacity: 1; 
-        transform: translate(-50%, -50%) scale(150);   /* 150× expansion ensures screen coverage */
+        transform: translate(-50%, -50%) scale(150);
       }
       100% { 
         opacity: 0; 
@@ -92,12 +91,14 @@
     .floating-page {
       position: absolute;
       cursor: pointer;
-      will-change: transform;
+      will-change: transform, left, top;
       background: transparent;
       transform-style: preserve-3d;
       backface-visibility: hidden;
       border-radius: 4px;
+      transition: none; /* will be added via class */
     }
+
     .floating-page canvas {
       display: block;
       width: 100%;
@@ -110,34 +111,28 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
-    .floating-page.moving {
-      transition: left 0.133s step-start, top 0.133s step-start, transform 0.133s step-start;
-      z-index: 150 !important;
-      animation: redFlicker 0.133s step-start infinite;
+    /* Swap animation class – smooth 2s movement */
+    .floating-page.swapping canvas {
+      animation: slowSpin 33s linear infinite, redFlicker 0.125s step-start infinite !important;
     }
 
     @keyframes redFlicker {
       0%, 49.9% {
-        box-shadow: 0 0 60px #ff0000, 0 0 120px rgba(255,0,0,0.8);
+        box-shadow: 0 0 80px #ff0000, 0 0 160px #ff0000, 0 0 240px rgba(255,0,0,0.9) !important;
       }
       50%, 99.9% {
-        box-shadow: 0 0 60px #000000, 0 0 120px rgba(0,0,0,0);
+        box-shadow: 0 0 80px #000000, 0 0 160px #000000, 0 0 240px rgba(0,0,0,0) !important;
       }
       100% {
-        box-shadow: 0 0 60px #ff0000, 0 0 120px rgba(255,0,0,0.8);
+        box-shadow: 0 0 80px #ff0000, 0 0 160px #ff0000, 0 0 240px rgba(255,0,0,0.9) !important;
       }
     }
-
-
-
-    /* .floating-page canvas:hover {
-       ← REMOVED THIS ENTIRE BLOCK (TEMP)
-    } */
 
     @keyframes slowSpin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
+
     @keyframes squarePulse {
       0%, 49.9% {
         box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #ffffff, 0 0 150px rgba(255,255,255,0.8);
@@ -195,8 +190,6 @@
       animation: dreamGlow 24s ease-in-out infinite;
     }
 
-
-
     .dl {
       position: fixed;
       bottom: 20px;
@@ -237,12 +230,12 @@
   </style>
 </head>
 <body>
-  <div id="infraslow-flash"></div>
+  <!-- Removed infraslow-flash div – pulse is now handled by #ring::after -->
   <canvas id="bg-canvas"></canvas>
 
-<div id="cloud">
-  <div id="ring"></div>
-</div>
+  <div id="cloud">
+    <div id="ring"></div>
+  </div>
   <div id="loading">Manifesting...</div>
 
   <div id="overlay">
@@ -265,7 +258,7 @@
     }
   </script>
 
-    <script>
+  <script>
     (async function() {
       function waitForPDFJS(cb) {
         if (typeof pdfjsLib !== 'undefined') cb();
@@ -286,8 +279,8 @@
         const expandedCanvas = document.getElementById('expanded-canvas');
 
         const COPIES_PER_PAGE = 33;
-        const THUMB_SCALE = 0.35;     // smaller thumbs → static void visible
-        const STAGGER_DELAY = 400;    // ~13 seconds total emergence (moderate trance)
+        const THUMB_SCALE = 0.35;
+        const STAGGER_DELAY = 400;
 
         const pageViewports = [];
         const allFloaters = [];
@@ -304,10 +297,10 @@
         try {
           const pdf = await pdfjsLib.getDocument(pdfPath).promise;
           const totalPages = pdf.numPages;
-                    // Keep loading message visible during initial render burst
+          
           setTimeout(() => {
             loading.style.display = 'none';
-          }, 1500); // 1.5s delay
+          }, 1500);
 
           for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
@@ -381,63 +374,76 @@
             }
           }
 
-                    // --- VOID CROSSING: Sequential opposite‑pair swaps (all participate) ---
+          // --- SEQUENTIAL SWAP RITUAL (all 33 participate, one leg at a time) ---
           setTimeout(() => {
             const total = allFloaters.length;
-            const half = Math.floor(total / 2);  // 16 for 33
-            const pairs = [];
+            const moveDuration = 2000;        // 2s per move
+            const gapBetweenLegs = 500;       // 0.5s pause between the two moves
+            const restBetweenSwaps = 1500;    // 1.5s rest after full swap
             
-            // Create pairs: (0,16), (1,17), ... (15,31)
-            for (let i = 0; i < half; i++) {
-              pairs.push([i, i + half]);
+            function getRandomInt(max) {
+              return Math.floor(Math.random() * max);
             }
             
-            let pairIndex = 0;
-            
-            setInterval(() => {
-              const [idxA, idxB] = pairs[pairIndex];
+            function performSequentialSwap() {
+              let idxA = getRandomInt(total);
+              let idxB = getRandomInt(total);
+              while (idxB === idxA) idxB = getRandomInt(total);
+              
               const floaterA = allFloaters[idxA].element;
               const floaterB = allFloaters[idxB].element;
               
-              // Get current screen positions
               const rectA = floaterA.getBoundingClientRect();
               const rectB = floaterB.getBoundingClientRect();
               const ringRect = ring.getBoundingClientRect();
               
-              // Convert to local #ring coordinates
-              const leftA = rectA.left - ringRect.left;
-              const topA = rectA.top - ringRect.top;
-              const leftB = rectB.left - ringRect.left;
-              const topB = rectB.top - ringRect.top;
+              const posA = {
+                left: rectA.left - ringRect.left,
+                top: rectA.top - ringRect.top
+              };
+              const posB = {
+                left: rectB.left - ringRect.left,
+                top: rectB.top - ringRect.top
+              };
               
-              // Add moving class for 8s smooth transition
-              floaterA.classList.add('moving');
-              floaterB.classList.add('moving');
+              // Phase 1: A moves to B's position
+              floaterA.classList.add('swapping');
+              floaterA.style.left = posB.left + 'px';
+              floaterA.style.top = posB.top + 'px';
               
-              // Swap positions
-              floaterA.style.left = leftB + 'px';
-              floaterA.style.top = topB + 'px';
-              floaterB.style.left = leftA + 'px';
-              floaterB.style.top = topA + 'px';
-              
-              // Remove moving class after animation
               setTimeout(() => {
-                floaterA.classList.remove('moving');
-                floaterB.classList.remove('moving');
-              }, 133);
-              
-              // Advance to next pair (loop back to start)
-              pairIndex = (pairIndex + 1) % pairs.length;
-            }, 8000);
+                floaterA.classList.remove('swapping');
+                
+                // Phase 2: B moves to A's original position
+                floaterB.classList.add('swapping');
+                floaterB.style.left = posA.left + 'px';
+                floaterB.style.top = posA.top + 'px';
+                
+                setTimeout(() => {
+                  floaterB.classList.remove('swapping');
+                  
+                  // Swap references so future swaps reflect new arrangement
+                  [allFloaters[idxA], allFloaters[idxB]] = [allFloaters[idxB], allFloaters[idxA]];
+                }, moveDuration);
+              }, moveDuration + gapBetweenLegs);
+            }
+            
+            function scheduleNextSwap() {
+              performSequentialSwap();
+              setTimeout(scheduleNextSwap, moveDuration + gapBetweenLegs + moveDuration + restBetweenSwaps);
+            }
+            
+            scheduleNextSwap();
           }, totalCopies * STAGGER_DELAY + 2000);
 
-          
+          // Resize handler
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
               positionOnCircle(element, index, totalCopies, width, height);
             });
           });
 
+          // Overlay close logic
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
             expandedCanvas.classList.remove('dream-glow');
@@ -460,7 +466,7 @@
     })();
   </script>
 
-  <!-- Hypnotic 1‑Pixel TV Static -->
+  <!-- 1‑Pixel TV Static -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
