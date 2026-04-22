@@ -111,14 +111,24 @@
     }
 
     .floating-page.moving {
-      transition: left 1.5s ease-in-out, top 1.5s ease-in-out, transform 1.5s ease-in-out;
+      transition: left 0.133s step-start, top 0.133s step-start, transform 0.133s step-start;
       z-index: 150 !important;
-      box-shadow: 0 0 40px #ff0000, 0 0 80px rgba(255,0,0,0.7) !important;
+      animation: redFlicker 0.133s step-start infinite;
     }
 
-    .floating-page.moving canvas {
-      box-shadow: 0 0 40px #ff0000, 0 0 80px rgba(255,0,0,0.7) !important;
+    @keyframes redFlicker {
+      0%, 49.9% {
+        box-shadow: 0 0 60px #ff0000, 0 0 120px rgba(255,0,0,0.8);
+      }
+      50%, 99.9% {
+        box-shadow: 0 0 60px #000000, 0 0 120px rgba(0,0,0,0);
+      }
+      100% {
+        box-shadow: 0 0 60px #ff0000, 0 0 120px rgba(255,0,0,0.8);
+      }
     }
+
+
 
     /* .floating-page canvas:hover {
        ← REMOVED THIS ENTIRE BLOCK (TEMP)
@@ -414,7 +424,7 @@
               setTimeout(() => {
                 floaterA.classList.remove('moving');
                 floaterB.classList.remove('moving');
-              }, 8000);
+              }, 133);
               
               // Advance to next pair (loop back to start)
               pairIndex = (pairIndex + 1) % pairs.length;
