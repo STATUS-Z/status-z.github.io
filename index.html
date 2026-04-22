@@ -113,6 +113,7 @@
     .floating-page.moving {
       transition: left 8s ease-in-out, top 8s ease-in-out, transform 8s ease-in-out;
       z-index: 150; /* ensure moving thumbnails appear above others */
+      border: 2px solid #ff0000 !important;  /* temporary debug */
     }
 
     /* .floating-page canvas:hover {
@@ -366,22 +367,16 @@
             }
           }
 
-                    // --- VOID CROSSING: Opposite thumbnails swap every 8 seconds ---
-          
-          // Wait for all thumbnails to be positioned before starting swaps
+                    // --- VOID CROSSING: Sequential opposite‑pair swaps (all participate) ---
           setTimeout(() => {
             const total = allFloaters.length;
-            
-            // Store original positions and precompute opposite pairs
+            const half = Math.floor(total / 2);  // 16 for 33
             const pairs = [];
-            const half = total / 2;
             
+            // Create pairs: (0,16), (1,17), ... (15,31)
             for (let i = 0; i < half; i++) {
               pairs.push([i, i + half]);
             }
-            
-            // Toggle state for each thumbnail (currently swapped or not)
-            const swapped = new Array(total).fill(false);
             
             let pairIndex = 0;
             
@@ -390,19 +385,18 @@
               const floaterA = allFloaters[idxA].element;
               const floaterB = allFloaters[idxB].element;
               
-              // Get current positions (which may be swapped from previous cycles)
+              // Get current screen positions
               const rectA = floaterA.getBoundingClientRect();
               const rectB = floaterB.getBoundingClientRect();
-              
-              // Compute target positions relative to the ring container
               const ringRect = ring.getBoundingClientRect();
               
+              // Convert to local #ring coordinates
               const leftA = rectA.left - ringRect.left;
               const topA = rectA.top - ringRect.top;
               const leftB = rectB.left - ringRect.left;
               const topB = rectB.top - ringRect.top;
               
-              // Add moving class for smooth transition
+              // Add moving class for 8s smooth transition
               floaterA.classList.add('moving');
               floaterB.classList.add('moving');
               
@@ -412,21 +406,16 @@
               floaterB.style.left = leftA + 'px';
               floaterB.style.top = topA + 'px';
               
-              // Toggle swapped state
-              swapped[idxA] = !swapped[idxA];
-              swapped[idxB] = !swapped[idxB];
-              
-              // Remove moving class after animation completes (8s)
+              // Remove moving class after animation
               setTimeout(() => {
                 floaterA.classList.remove('moving');
                 floaterB.classList.remove('moving');
               }, 8000);
               
-              // Move to next pair
+              // Advance to next pair (loop back to start)
               pairIndex = (pairIndex + 1) % pairs.length;
             }, 8000);
-            
-          }, totalCopies * STAGGER_DELAY + 2000); // start after full emergence
+          }, totalCopies * STAGGER_DELAY + 2000);
 
           
           window.addEventListener('resize', () => {
