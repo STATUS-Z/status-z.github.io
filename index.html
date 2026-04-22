@@ -104,6 +104,11 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
+    .floating-page.moving {
+      transition: left 8s ease-in-out, top 8s ease-in-out, transform 8s ease-in-out;
+      z-index: 150; /* ensure moving thumbnails appear above others */
+    }
+
     /* .floating-page canvas:hover {
        ← REMOVED THIS ENTIRE BLOCK (TEMP)
     } */
@@ -355,6 +360,69 @@
             }
           }
 
+                    // --- VOID CROSSING: Opposite thumbnails swap every 8 seconds ---
+          
+          // Wait for all thumbnails to be positioned before starting swaps
+          setTimeout(() => {
+            const total = allFloaters.length;
+            
+            // Store original positions and precompute opposite pairs
+            const pairs = [];
+            const half = total / 2;
+            
+            for (let i = 0; i < half; i++) {
+              pairs.push([i, i + half]);
+            }
+            
+            // Toggle state for each thumbnail (currently swapped or not)
+            const swapped = new Array(total).fill(false);
+            
+            let pairIndex = 0;
+            
+            setInterval(() => {
+              const [idxA, idxB] = pairs[pairIndex];
+              const floaterA = allFloaters[idxA].element;
+              const floaterB = allFloaters[idxB].element;
+              
+              // Get current positions (which may be swapped from previous cycles)
+              const rectA = floaterA.getBoundingClientRect();
+              const rectB = floaterB.getBoundingClientRect();
+              
+              // Compute target positions relative to the ring container
+              const ringRect = ring.getBoundingClientRect();
+              
+              const leftA = rectA.left - ringRect.left;
+              const topA = rectA.top - ringRect.top;
+              const leftB = rectB.left - ringRect.left;
+              const topB = rectB.top - ringRect.top;
+              
+              // Add moving class for smooth transition
+              floaterA.classList.add('moving');
+              floaterB.classList.add('moving');
+              
+              // Swap positions
+              floaterA.style.left = leftB + 'px';
+              floaterA.style.top = topB + 'px';
+              floaterB.style.left = leftA + 'px';
+              floaterB.style.top = topA + 'px';
+              
+              // Toggle swapped state
+              swapped[idxA] = !swapped[idxA];
+              swapped[idxB] = !swapped[idxB];
+              
+              // Remove moving class after animation completes (8s)
+              setTimeout(() => {
+                floaterA.classList.remove('moving');
+                floaterB.classList.remove('moving');
+              }, 8000);
+              
+              // Move to next pair
+              pairIndex = (pairIndex + 1) % pairs.length;
+            }, 8000);
+            
+          }, totalCopies * STAGGER_DELAY + 2000); // start after full emergence
+
+          
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
               positionOnCircle(element, index, totalCopies, width, height);
