@@ -91,7 +91,7 @@
     .floating-page {
       position: absolute;
       cursor: pointer;
-      will-change: transform, left, top;
+      will-change: transform;
       background: transparent;
       transform-style: preserve-3d;
       backface-visibility: hidden;
@@ -110,14 +110,12 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
-    /* Swap movement – smooth 2s glide */
-    .floating-page.swapping {
-      transition: left 2s ease-in-out, top 2s ease-in-out, transform 2s ease-in-out;
+    /* Spotlight effect – rises to front and pulses red at 8 Hz */
+    .floating-page.spotlight {
       z-index: 200 !important;
     }
 
-    /* 8 Hz red flicker on the canvas during swap */
-    .floating-page.swapping canvas {
+    .floating-page.spotlight canvas {
       animation: slowSpin 33s linear infinite, redFlicker 0.125s step-start infinite !important;
     }
 
@@ -235,7 +233,6 @@
   </style>
 </head>
 <body>
-  <!-- Removed the extra #infraslow-flash div; pulse is now handled by #ring::after -->
   <canvas id="bg-canvas"></canvas>
 
   <div id="cloud">
@@ -379,66 +376,34 @@
             }
           }
 
-          // --- SEQUENTIAL SWAP RITUAL (all 33 participate, copacetic) ---
+                   // --- ASCENDING SPOTLIGHT LOOP: 33 → 1 → 2 → … → 32 → 33 (exactly 2.7272727273s) ---
           setTimeout(() => {
             const total = allFloaters.length;
-            const moveDuration = 2000;        // 2 seconds per move
-            const gapBetweenLegs = 500;       // 0.5s pause between the two moves
-            const restBetweenSwaps = 1500;    // 1.5s rest after full swap
+            const interval = 2727.2727273; // exact ms for 2.7272727273s
             
-            function getRandomInt(max) {
-              return Math.floor(Math.random() * max);
-            }
+            // Indices: 32 (33rd), then 0,1,2,...,31, then back to 32
+            let currentIndex = total - 1; // start at 33rd thumbnail (index 32)
             
-            function performSequentialSwap() {
-              let idxA = getRandomInt(total);
-              let idxB = getRandomInt(total);
-              while (idxB === idxA) idxB = getRandomInt(total);
-              
-              const floaterA = allFloaters[idxA].element;
-              const floaterB = allFloaters[idxB].element;
-              
-              const rectA = floaterA.getBoundingClientRect();
-              const rectB = floaterB.getBoundingClientRect();
-              const ringRect = ring.getBoundingClientRect();
-              
-              const posA = {
-                left: rectA.left - ringRect.left,
-                top: rectA.top - ringRect.top
-              };
-              const posB = {
-                left: rectB.left - ringRect.left,
-                top: rectB.top - ringRect.top
-              };
-              
-              // Phase 1: A moves to B's position
-              floaterA.classList.add('swapping');
-              floaterA.style.left = posB.left + 'px';
-              floaterA.style.top = posB.top + 'px';
-              
-              setTimeout(() => {
-                floaterA.classList.remove('swapping');
-                
-                // Phase 2: B moves to A's original position
-                floaterB.classList.add('swapping');
-                floaterB.style.left = posA.left + 'px';
-                floaterB.style.top = posA.top + 'px';
-                
-                setTimeout(() => {
-                  floaterB.classList.remove('swapping');
-                  
-                  // Update the array so future swaps reflect the new arrangement
-                  [allFloaters[idxA], allFloaters[idxB]] = [allFloaters[idxB], allFloaters[idxA]];
-                }, moveDuration);
-              }, moveDuration + gapBetweenLegs);
-            }
+            // Remove any existing spotlight
+            allFloaters.forEach(item => item.element.classList.remove('spotlight'));
             
-            function scheduleNextSwap() {
-              performSequentialSwap();
-              setTimeout(scheduleNextSwap, moveDuration + gapBetweenLegs + moveDuration + restBetweenSwaps);
-            }
+            // Apply spotlight to the starting thumbnail
+            allFloaters[currentIndex].element.classList.add('spotlight');
             
-            scheduleNextSwap();
+            setInterval(() => {
+              // Remove spotlight from current
+              allFloaters[currentIndex].element.classList.remove('spotlight');
+              
+              // Determine next index: if currently 32 (33rd), go to 0 (1st); otherwise increment
+              if (currentIndex === total - 1) {
+                currentIndex = 0;
+              } else {
+                currentIndex = currentIndex + 1;
+              }
+              
+              // Add spotlight to the new index
+              allFloaters[currentIndex].element.classList.add('spotlight');
+            }, interval);
           }, totalCopies * STAGGER_DELAY + 2000);
 
           // Resize handler – keep the circle centered
