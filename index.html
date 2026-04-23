@@ -31,6 +31,7 @@
       z-index: -1;
       display: block;
       pointer-events: none;
+      will-change: transform; /* performance */
     }
 
     #cloud {
@@ -49,6 +50,7 @@
       transform-origin: center center;
       animation: ringRotate 20.3s linear infinite;
       isolation: isolate;
+      will-change: transform;
     }
 
     @keyframes ringRotate {
@@ -75,15 +77,15 @@
         ringBurstEnvelope 20.3s ease-in-out infinite,
         ringStrobe36 0.0278s step-start infinite,
         ringColorBurst 20.3s step-start infinite;
+      will-change: transform, opacity, box-shadow, background;
     }
 
-    /* Envelope: expand and fade in/out only during the 1s burst */
     @keyframes ringBurstEnvelope {
       0%, 94.5% { 
         opacity: 0; 
         transform: translate(-50%, -50%) scale(0.1);
       }
-      95.07% {  /* 19.3s / 20.3s ≈ 95.07% */
+      95.07% {
         opacity: 1; 
         transform: translate(-50%, -50%) scale(150);
       }
@@ -93,28 +95,26 @@
       }
     }
 
-    /* 36 Hz square‑wave strobe (active continuously, but only visible during burst) */
     @keyframes ringStrobe36 {
       0%, 49.9% { visibility: visible; }
       50%, 99.9% { visibility: hidden; }
       100% { visibility: visible; }
     }
 
-    /* Color sequence: black → red → white within the 1‑second burst */
     @keyframes ringColorBurst {
-      0%, 94.5% { /* before burst, default to black (invisible anyway) */
+      0%, 94.5% {
         background: #000000;
         box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
       }
-      95.07%, 96.71% { /* first third of the burst (~0.33s): black */
+      95.07%, 96.71% {
         background: #000000;
         box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
       }
-      96.72%, 98.36% { /* second third: red */
+      96.72%, 98.36% {
         background: #ff0000;
         box-shadow: 0 0 150px #ff0000, 0 0 300px rgba(255,0,0,0.9);
       }
-      98.37%, 100% { /* final third: white */
+      98.37%, 100% {
         background: #ffffff;
         box-shadow: 0 0 150px #ffffff, 0 0 300px rgba(255,255,255,0.9);
       }
@@ -140,9 +140,10 @@
       transform-origin: center center;
       image-rendering: crisp-edges;
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
+      will-change: transform, box-shadow; /* performance */
     }
 
-     .floating-page.spotlight canvas {
+    .floating-page.spotlight canvas {
       animation: fastSpin 1s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
@@ -168,7 +169,6 @@
       }
     }
 
-    /* Single, strong red flicker keyframes */
     @keyframes redFlicker {
       0%, 49.9% {
         box-shadow: 
@@ -203,6 +203,7 @@
       justify-content: center;
       align-items: center;
       cursor: zoom-out;
+      overflow: visible;
     }
 
     #overlay canvas {
@@ -214,6 +215,8 @@
       background: #000;
       animation: none;
       transition: box-shadow 0.3s ease;
+      will-change: box-shadow;
+      margin: 100px;
     }
 
     @keyframes dreamGlow {
@@ -245,7 +248,6 @@
 
     #overlay canvas.dream-glow {
       animation: dreamGlow 24s ease-in-out infinite;
-         margin: 100px;  /* give extra breathing room */
     }
 
     .dl {
@@ -316,6 +318,9 @@
   </script>
 
   <script>
+    // 🔒 Disable right‑click on the entire page
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
     (async function() {
       function waitForPDFJS(cb) {
         if (typeof pdfjsLib !== 'undefined') cb();
@@ -424,10 +429,9 @@
               if (idx === 22) floater.style.zIndex = 35;   // #23 under #22
               
               // Highlight #11, #22, #33
-                if (idx === 10 || idx === 21 || idx === 32) {
+              if (idx === 10 || idx === 21 || idx === 32) {
                 floater.classList.add('spotlight');
                 floater.style.zIndex = 200;
-                // No inline animation – CSS handles everything
               }
 
               floater.addEventListener('click', async (e) => {
@@ -466,7 +470,6 @@
             expandedCanvas.classList.remove('dream-glow');
           });
           expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
-          expandedCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
           document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
               overlay.style.display = 'none';
