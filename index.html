@@ -101,23 +101,34 @@
       100% { visibility: visible; }
     }
 
-    /* Fixed color sequence: black → red → white within the burst */
     @keyframes ringColorBurst {
       0%, 94.5% {
         background: #000000;
         box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
       }
-      95.07%, 96.0% {
-        background: #000000;
-        box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
+      95.07%, 95.9% {
+        background: #1A0000;
+        box-shadow: 0 0 150px #1A0000, 0 0 300px rgba(26,0,0,0.9);
       }
-      96.0%, 98.0% {
-        background: #ff0000;
-        box-shadow: 0 0 150px #ff0000, 0 0 300px rgba(255,0,0,0.9);
+      95.91%, 96.74% {
+        background: #42000A;
+        box-shadow: 0 0 150px #42000A, 0 0 300px rgba(66,0,10,0.9);
       }
-      98.0%, 100% {
-        background: #ffffff;
-        box-shadow: 0 0 150px #ffffff, 0 0 300px rgba(255,255,255,0.9);
+      96.75%, 97.58% {
+        background: #600B12;
+        box-shadow: 0 0 150px #600B12, 0 0 300px rgba(96,11,18,0.9);
+      }
+      97.59%, 98.42% {
+        background: #8B1A1A;
+        box-shadow: 0 0 150px #8B1A1A, 0 0 300px rgba(139,26,26,0.9);
+      }
+      98.43%, 99.26% {
+        background: #9D0B0B;
+        box-shadow: 0 0 150px #9D0B0B, 0 0 300px rgba(157,11,11,0.9);
+      }
+      99.27%, 100% {
+        background: #B30000;
+        box-shadow: 0 0 150px #B30000, 0 0 300px rgba(179,0,0,0.9);
       }
     }
     
@@ -220,59 +231,57 @@
       transition: box-shadow 0.3s ease;
     }
 
-        @keyframes dreamGlow {
-      /* Black phase (0–8s) */
-      0%, 33.33% {
-        box-shadow: 
-          0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #000000,
-          0 0 6000px rgba(0,0,0,0.95);
-      }
-      /* Soul green phase (8–16s) */
-      33.34%, 66.66% {
+    #overlay canvas.dream-glow {
+      animation: 
+        dreamGlow 24s ease-in-out infinite,
+        dreamStrobe 0.0278s step-start infinite;
+      margin: 100px;
+    }
+
+    @keyframes dreamGlow {
+      0%, 50% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #ccff00,
           0 0 6000px rgba(204,255,0,0.5);
       }
-      /* Purple sequence (16–24s) – 7 steps */
-      66.67%, 71.43% {
+      50.01%, 57.14% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #790B3E,
           0 0 6000px rgba(121,11,62,0.5);
       }
-      71.44%, 76.19% {
+      57.15%, 64.28% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #2A001A,
           0 0 6000px rgba(42,0,26,0.5);
       }
-      76.20%, 80.95% {
+      64.29%, 71.42% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #5A0038,
           0 0 6000px rgba(90,0,56,0.5);
       }
-      80.96%, 85.71% {
+      71.43%, 78.56% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #9E1A5E,
           0 0 6000px rgba(158,26,94,0.5);
       }
-      85.72%, 90.47% {
+      78.57%, 85.70% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #B20B5E,
           0 0 6000px rgba(178,11,94,0.5);
       }
-      90.48%, 95.23% {
+      85.71%, 92.84% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #CB0066,
           0 0 6000px rgba(203,0,102,0.5);
       }
-      95.24%, 100% {
+      92.85%, 100% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #790B3E,
@@ -280,9 +289,10 @@
       }
     }
 
-    #overlay canvas.dream-glow {
-      animation: dreamGlow 24s ease-in-out infinite;
-      margin: 100px;  /* give extra breathing room */
+    @keyframes dreamStrobe {
+      0%, 49.9% { visibility: visible; }
+      50%, 99.9% { visibility: hidden; }
+      100% { visibility: visible; }
     }
 
     .dl {
