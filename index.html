@@ -101,20 +101,21 @@
       100% { visibility: visible; }
     }
 
+    /* Fixed color sequence: black → red → white within the burst */
     @keyframes ringColorBurst {
       0%, 94.5% {
         background: #000000;
         box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
       }
-      95.07%, 96.71% {
+      95.07%, 96.0% {
         background: #000000;
         box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
       }
-      96.72%, 98.36% {
+      96.0%, 98.0% {
         background: #ff0000;
         box-shadow: 0 0 150px #ff0000, 0 0 300px rgba(255,0,0,0.9);
       }
-      98.37%, 100% {
+      98.0%, 100% {
         background: #ffffff;
         box-shadow: 0 0 150px #ffffff, 0 0 300px rgba(255,255,255,0.9);
       }
@@ -190,7 +191,7 @@
       }
     }
 
-        #overlay {
+    #overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -203,7 +204,7 @@
       justify-content: center;
       align-items: center;
       cursor: zoom-out;
-      overflow: visible;    /* allow glow to extend beyond canvas bounds */
+      overflow: visible;
       pointer-events: auto;
     }
 
@@ -215,31 +216,29 @@
       background: #000;
       box-shadow: none;
       will-change: box-shadow;
-      transform: translateZ(0); /* promote to GPU layer */
+      transform: translateZ(0);
     }
 
+    /* Sun-like dream glow – applied directly to canvas */
     #overlay canvas.dream-glow {
       animation: dreamGlow 24s ease-in-out infinite;
     }
 
-       @keyframes dreamGlow {
+    @keyframes dreamGlow {
       0% {
         box-shadow: 
-          /* Solid black core */
           0 0 2000px 1000px rgba(0,0,0,1),
           0 0 4000px 2000px #000000,
           0 0 8000px 4000px rgba(0,0,0,1);
       }
       33.33% {
         box-shadow: 
-          /* Intense soul green – fully opaque core */
           0 0 2000px 1000px rgba(204,255,0,1),
           0 0 4000px 2000px #ccff00,
           0 0 8000px 4000px rgba(204,255,0,1);
       }
       66.66% {
         box-shadow: 
-          /* Intense red‑purple – fully opaque core */
           0 0 2000px 1000px rgba(121,11,62,1),
           0 0 4000px 2000px #790b3e,
           0 0 8000px 4000px rgba(121,11,62,1);
@@ -251,8 +250,6 @@
           0 0 8000px 4000px rgba(0,0,0,1);
       }
     }
-
-
 
     .dl {
       position: fixed;
@@ -429,10 +426,9 @@
               }
               floater.style.zIndex = z;
               
-              if (idx === 11) floater.style.zIndex = 25;   // #12 under #11
-              if (idx === 22) floater.style.zIndex = 35;   // #23 under #22
+              if (idx === 11) floater.style.zIndex = 25;
+              if (idx === 22) floater.style.zIndex = 35;
               
-              // Highlight #11, #22, #33
               if (idx === 10 || idx === 21 || idx === 32) {
                 floater.classList.add('spotlight');
                 floater.style.zIndex = 200;
@@ -447,7 +443,7 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
-                overlay.classList.add('dream-active');
+                expandedCanvas.classList.add('dream-glow'); // ← FIXED: glow on canvas
               });
 
               ring.appendChild(floater);
@@ -461,23 +457,21 @@
             }
           }
 
-          // Resize handler
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
               positionOnCircle(element, index, totalCopies, width, height);
             });
           });
 
-          // Overlay close logic
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
-            overlay.classList.remove('dream-active');
+            expandedCanvas.classList.remove('dream-glow');
           });
           expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
           document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
               overlay.style.display = 'none';
-              overlay.classList.remove('dream-active');
+              expandedCanvas.classList.remove('dream-glow');
             }
           });
 
@@ -490,8 +484,7 @@
     })();
   </script>
 
-  <!-- Hypnotic TV Static @ 36fps (infraslow‑friendly) -->
-   <!-- Hypnotic TV Static @ 36fps (gamma‑aligned) -->
+  <!-- Hypnotic TV Static @ 36fps -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
