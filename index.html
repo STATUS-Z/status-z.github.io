@@ -55,7 +55,7 @@
       to   { transform: rotate(360deg); }
     }
 
-    /* White aura pulse – originates from the ring, expands outward */
+    /* Pure red ring pulse – originates from the center, expands outward */
     #ring::after {
       content: '';
       position: fixed;
@@ -64,8 +64,8 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 40%, transparent 70%);
-      box-shadow: 0 0 150px rgba(255,255,255,0.5);
+      background: #ff0000;
+      box-shadow: 0 0 150px #ff0000, 0 0 300px rgba(255,0,0,0.8);
       opacity: 0;
       pointer-events: none;
       z-index: 1;
@@ -110,24 +110,24 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
-    /* Spotlight effect – rises to front and pulses red at 8 Hz */
+    /* Spotlight effect – rises to front and pulses red at 36 Hz (gamma) */
     .floating-page.spotlight {
       z-index: 200 !important;
     }
 
     .floating-page.spotlight canvas {
-      animation: slowSpin 33s linear infinite, redFlicker 0.125s step-start infinite !important;
+      animation: slowSpin 33s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
     @keyframes redFlicker {
       0%, 49.9% {
-        box-shadow: 0 0 80px #ff0000, 0 0 160px #ff0000, 0 0 240px rgba(255,0,0,0.9) !important;
+        box-shadow: 0 0 120px #ff0000, 0 0 240px #ff0000, 0 0 360px rgba(255,0,0,0.9) !important;
       }
       50%, 99.9% {
-        box-shadow: 0 0 80px #000000, 0 0 160px #000000, 0 0 240px rgba(0,0,0,0) !important;
+        box-shadow: 0 0 120px #8b0000, 0 0 240px #8b0000, 0 0 360px rgba(139,0,0,0.7) !important;
       }
       100% {
-        box-shadow: 0 0 80px #ff0000, 0 0 160px #ff0000, 0 0 240px rgba(255,0,0,0.9) !important;
+        box-shadow: 0 0 120px #ff0000, 0 0 240px #ff0000, 0 0 360px rgba(255,0,0,0.9) !important;
       }
     }
 
@@ -376,7 +376,7 @@
             }
           }
 
-                   // --- ASCENDING SPOTLIGHT LOOP: 33 → 1 → 2 → … → 32 → 33 (exactly 2.7272727273s) ---
+          // --- ASCENDING SPOTLIGHT LOOP: 33 → 1 → 2 → … → 32 → 33 (2.7272727273s) ---
           setTimeout(() => {
             const total = allFloaters.length;
             const interval = 2727.2727273; // exact ms for 2.7272727273s
