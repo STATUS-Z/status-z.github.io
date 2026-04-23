@@ -354,7 +354,7 @@
           let globalIndex = 0;
           const totalCopies = totalPages * COPIES_PER_PAGE;
 
-                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
             const { thumbCanvas, thumbWidth, thumbHeight } = pageViewports[pageNum];
             
             for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
@@ -394,7 +394,6 @@
               
               if (idx === 11) floater.style.zIndex = 25;   // #12 under #11
               if (idx === 22) floater.style.zIndex = 35;   // #23 under #22
-              // DO NOT override idx 0 — it stays 20, under #2 (21), etc.
               
               // Highlight #11, #22, #33
               if (idx === 10 || idx === 21 || idx === 32) {
@@ -427,49 +426,8 @@
               
               globalIndex++;
             }
+          }
 
-          // --- SPIRAL LAYERING: three overlapping staircases ---
-          setTimeout(() => {
-            const total = allFloaters.length;
-            
-            // Remove any existing spotlight classes
-            allFloaters.forEach(item => item.element.classList.remove('spotlight'));
-            
-            // Assign base z‑index to create spiral stacking
-            allFloaters.forEach((item, idx) => {
-              let z = 10; // base
-              
-              // Within each group of 11, increasing z‑index
-              if (idx < 11) {
-                // First group: #1 (idx 0) to #11 (idx 10)
-                z = 20 + idx;
-              } else if (idx < 22) {
-                // Second group: #12 (idx 11) to #22 (idx 21)
-                z = 30 + (idx - 11);
-              } else {
-                // Third group: #23 (idx 22) to #33 (idx 32)
-                z = 40 + (idx - 22);
-              }
-              
-              item.element.style.zIndex = z;
-            });
-            
-            // Highlight the key thumbnails: #11 (idx 10), #22 (idx 21), #33 (idx 32)
-            const highlightIndices = [10, 21, 32];
-            highlightIndices.forEach(idx => {
-              allFloaters[idx].element.style.zIndex = '200';
-              allFloaters[idx].element.classList.add('spotlight');
-            });
-            
-            // Ensure #12 (idx 11) sits under #11 (idx 10)
-            allFloaters[11].element.style.zIndex = '25';
-            // Ensure #23 (idx 22) sits under #22 (idx 21)
-            allFloaters[22].element.style.zIndex = '35';
-            // Ensure #1 (idx 0) sits under #33 (idx 32)
-            allFloaters[0].element.style.zIndex = '45';
-            
-          }, totalCopies * STAGGER_DELAY + 2000);
-          
           // Resize handler – keep the circle centered
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
