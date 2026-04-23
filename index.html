@@ -31,7 +31,7 @@
       z-index: -1;
       display: block;
       pointer-events: none;
-      will-change: transform; /* performance */
+      will-change: transform;
     }
 
     #cloud {
@@ -140,11 +140,11 @@
       transform-origin: center center;
       image-rendering: crisp-edges;
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
-      will-change: transform, box-shadow; /* performance */
+      will-change: transform, box-shadow;
     }
 
     .floating-page.spotlight canvas {
-      animation: fastSpin 33s linear infinite, redFlicker 0.0278s step-start infinite !important;
+      animation: fastSpin 1s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
     @keyframes slowSpin {
@@ -203,7 +203,8 @@
       justify-content: center;
       align-items: center;
       cursor: zoom-out;
-      overflow: visible;
+      overflow: visible; /* allow glow to extend */
+      pointer-events: auto; /* capture clicks to close */
     }
 
     #overlay canvas {
@@ -216,7 +217,8 @@
       animation: none;
       transition: box-shadow 0.3s ease;
       will-change: box-shadow;
-      margin: 100px;
+      margin: 100px; /* give extra breathing room for glow */
+      transform: translateZ(0); /* promote to own layer for better shadow rendering */
     }
 
     @keyframes dreamGlow {
