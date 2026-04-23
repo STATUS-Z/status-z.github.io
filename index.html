@@ -380,28 +380,30 @@
 
               floater.dataset.page = pageNum;
 
-              // --- SPIRAL LAYERING & SPOTLIGHT (immediate) ---
-              const idx = globalIndex; // 0 to 32
-              // Calculate z-index for staircase effect
+              // --- SPIRAL LAYERING & SPOTLIGHT ---
+              const idx = globalIndex;
               let z = 10;
               if (idx < 11) {
-                z = 20 + idx;                    // #1 (idx0) → 20, #11 (idx10) → 30
+                z = 20 + idx;
               } else if (idx < 22) {
-                z = 30 + (idx - 11);             // #12 (idx11) → 30, #22 (idx21) → 40
+                z = 30 + (idx - 11);
               } else {
-                z = 40 + (idx - 22);             // #23 (idx22) → 40, #33 (idx32) → 50
+                z = 40 + (idx - 22);
               }
               floater.style.zIndex = z;
               
-              // Fine‑tune overlaps for spiral continuity
               if (idx === 11) floater.style.zIndex = 25;   // #12 under #11
               if (idx === 22) floater.style.zIndex = 35;   // #23 under #22
-              if (idx === 0)  floater.style.zIndex = 45;   // #1 under #33
+              // DO NOT override idx 0 — it stays 20, under #2 (21), etc.
               
-              // Highlight #11, #22, #33 with red flicker
+              // Highlight #11, #22, #33
               if (idx === 10 || idx === 21 || idx === 32) {
                 floater.classList.add('spotlight');
-                floater.style.zIndex = 200; // ensure they sit on top
+                floater.style.zIndex = 200;
+                // Force red flicker on canvas
+                const canv = floater.querySelector('canvas');
+                canv.style.animation = 'slowSpin 33s linear infinite, redFlicker 0.0278s step-start infinite';
+                canv.style.boxShadow = 'none';
               }
 
               floater.addEventListener('click', async (e) => {
@@ -425,7 +427,6 @@
               
               globalIndex++;
             }
-          }
 
           // --- SPIRAL LAYERING: three overlapping staircases ---
           setTimeout(() => {
