@@ -191,7 +191,7 @@
       }
     }
 
-       #overlay {
+    #overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -208,64 +208,48 @@
       pointer-events: auto;
     }
 
-    /* Glow layer – sits behind the canvas, expands freely */
-    #overlay::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      pointer-events: none;
-      z-index: -1;
-      transform: translate(-50%, -50%);
-      will-change: box-shadow;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    #overlay.dream-active::before {
-      opacity: 1;
-      animation: dreamGlow 24s ease-in-out infinite;
+    /* --- Original dream glow restored from first file --- */
+    #overlay canvas {
+      max-width: 95vw;
+      max-height: 95vh;
+      box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.6);
+      border-radius: 6px;
+      cursor: default;
+      background: #000;
+      animation: none;
+      transition: box-shadow 0.3s ease;
     }
 
     @keyframes dreamGlow {
       0% {
         box-shadow: 
-          0 0 150px 75px rgba(0,0,0,1),
-          0 0 300px 150px #000000,
-          0 0 600px 300px rgba(0,0,0,1);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #000000,
+          0 0 6000px rgba(0,0,0,0.95);
       }
       33.33% {
         box-shadow: 
-          0 0 150px 75px rgba(204,255,0,0.75),
-          0 0 300px 150px #ccff00,
-          0 0 600px 300px rgba(204,255,0,0.75);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #ccff00,
+          0 0 6000px rgba(204,255,0,0.5);
       }
       66.66% {
         box-shadow: 
-          0 0 150px 75px rgba(121,11,62,0.75),
-          0 0 300px 150px #790b3e,
-          0 0 600px 300px rgba(121,11,62,0.75);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #790b3e,
+          0 0 6000px rgba(121,11,62,0.5);
       }
       100% {
         box-shadow: 
-          0 0 150px 75px rgba(0,0,0,1),
-          0 0 300px 150px #000000,
-          0 0 600px 300px rgba(0,0,0,1);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #000000,
+          0 0 6000px rgba(0,0,0,0.95);
       }
     }
 
-    #overlay canvas {
-      max-width: 95vw;
-      max-height: 95vh;
-      border-radius: 6px;
-      cursor: default;
-      background: #000;
-      box-shadow: none;
-      position: relative;
-      z-index: 2;
+    #overlay canvas.dream-glow {
+      animation: dreamGlow 24s ease-in-out infinite;
+      margin: 100px;  /* give extra breathing room */
     }
 
     .dl {
@@ -460,7 +444,7 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
-                overlay.classList.add('dream-active');   // ← add to overlay, not canvas
+                expandedCanvas.classList.add('dream-glow');   // ← CORRECTED: add to canvas
               });
 
               ring.appendChild(floater);
@@ -482,7 +466,7 @@
 
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
-            overlay.classList.remove('dream-active');
+            expandedCanvas.classList.remove('dream-glow');
           });
           expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
           document.addEventListener('keydown', (e) => {
@@ -501,7 +485,7 @@
     })();
   </script>
 
-    <!-- Hypnotic TV Static @ 36fps (gamma‑aligned) with custom color palette -->
+  <!-- Hypnotic TV Static @ 36fps (gamma‑aligned) with custom color palette -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
@@ -510,13 +494,12 @@
       const fps = 36;
       const interval = 1000 / fps;
 
-
-       // Reds & deep reds only (12 colors)
       const palette = [
         '#1A0000', '#42000A', '#600B12', '#8B1A1A', '#9D0B0B', '#B30000',
         '#2A001A', '#5A0038', '#790B3E', '#9E1A5E', '#B20B5E', '#CB0066',
-        '#1A002A', '#000000'
+        '#000000'
       ];
+      
       function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -529,10 +512,7 @@
         const data = imageData.data;
         
         for (let i = 0; i < data.length; i += 4) {
-          // Pick a random color from the palette
           const hex = palette[Math.floor(Math.random() * palette.length)];
-          
-          // Convert hex to RGB
           const r = parseInt(hex.slice(1, 3), 16);
           const g = parseInt(hex.slice(3, 5), 16);
           const b = parseInt(hex.slice(5, 7), 16);
@@ -540,7 +520,7 @@
           data[i] = r;
           data[i+1] = g;
           data[i+2] = b;
-          data[i+3] = 255; // fully opaque
+          data[i+3] = 255;
         }
         ctx.putImageData(imageData, 0, 0);
       }
