@@ -143,7 +143,7 @@
     }
 
      .floating-page.spotlight canvas {
-      animation: fastSpin 0.5s linear infinite, redFlicker 0.0278s step-start infinite !important;
+      animation: fastSpin 1s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
     @keyframes slowSpin {
@@ -219,32 +219,33 @@
     @keyframes dreamGlow {
       0% {
         box-shadow: 
-          0 0 1000px rgba(0,0,0,1),
-          0 0 600px #000000,
-          0 0 1500px rgba(0,0,0,0.95);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #000000,
+          0 0 6000px rgba(0,0,0,0.95);
       }
       33.33% {
         box-shadow: 
-          0 0 1000px rgba(0,0,0,1),
-          0 0 600px #ccff00,
-          0 0 1500px rgba(204,255,0,0.5);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #ccff00,
+          0 0 6000px rgba(204,255,0,0.5);
       }
       66.66% {
         box-shadow: 
-          0 0 1000px rgba(0,0,0,1),
-          0 0 600px #790b3e,
-          0 0 1500px rgba(121,11,62,0.5);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #790b3e,
+          0 0 6000px rgba(121,11,62,0.5);
       }
       100% {
         box-shadow: 
-          0 0 1000px rgba(0,0,0,1),
-          0 0 600px #000000,
-          0 0 1500px rgba(0,0,0,0.95);
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #000000,
+          0 0 6000px rgba(0,0,0,0.95);
       }
     }
 
     #overlay canvas.dream-glow {
       animation: dreamGlow 24s ease-in-out infinite;
+         margin: 100px;  /* give extra breathing room */
     }
 
     .dl {
