@@ -119,8 +119,9 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
-    .floating-page.spotlight {
-      z-index: 200 !important;
+    /* Spotlight – override white pulse with red flicker */
+    .floating-page.spotlight canvas {
+      animation: slowSpin 33s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
     @keyframes slowSpin {
@@ -383,13 +384,10 @@
               if (idx === 22) floater.style.zIndex = 35;   // #23 under #22
               
               // Highlight #11, #22, #33
-              if (idx === 10 || idx === 21 || idx === 32) {
+                if (idx === 10 || idx === 21 || idx === 32) {
                 floater.classList.add('spotlight');
                 floater.style.zIndex = 200;
-                // Force red flicker with inline !important
-                const canv = floater.querySelector('canvas');
-                canv.style.setProperty('animation', 'slowSpin 33s linear infinite, redFlicker 0.0278s step-start infinite', 'important');
-                canv.style.setProperty('box-shadow', 'none', 'important');
+                // No inline animation – CSS handles everything
               }
 
               floater.addEventListener('click', async (e) => {
