@@ -191,7 +191,7 @@
       }
     }
 
-    #overlay {
+       #overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -208,6 +208,55 @@
       pointer-events: auto;
     }
 
+    /* Glow layer – sits behind the canvas, expands freely */
+    #overlay::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      pointer-events: none;
+      z-index: -1;
+      transform: translate(-50%, -50%);
+      will-change: box-shadow;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    #overlay.dream-active::before {
+      opacity: 1;
+      animation: dreamGlow 24s ease-in-out infinite;
+    }
+
+    @keyframes dreamGlow {
+      0% {
+        box-shadow: 
+          0 0 150px 75px rgba(0,0,0,1),
+          0 0 300px 150px #000000,
+          0 0 600px 300px rgba(0,0,0,1);
+      }
+      33.33% {
+        box-shadow: 
+          0 0 150px 75px rgba(204,255,0,0.75),
+          0 0 300px 150px #ccff00,
+          0 0 600px 300px rgba(204,255,0,0.75);
+      }
+      66.66% {
+        box-shadow: 
+          0 0 150px 75px rgba(121,11,62,0.75),
+          0 0 300px 150px #790b3e,
+          0 0 600px 300px rgba(121,11,62,0.75);
+      }
+      100% {
+        box-shadow: 
+          0 0 150px 75px rgba(0,0,0,1),
+          0 0 300px 150px #000000,
+          0 0 600px 300px rgba(0,0,0,1);
+      }
+    }
+
     #overlay canvas {
       max-width: 95vw;
       max-height: 95vh;
@@ -215,40 +264,8 @@
       cursor: default;
       background: #000;
       box-shadow: none;
-      will-change: box-shadow;
-      transform: translateZ(0);
-    }
-
-    /* Sun-like dream glow – applied directly to canvas */
-    #overlay canvas.dream-glow {
-      animation: dreamGlow 24s ease-in-out infinite;
-    }
-
-    @keyframes dreamGlow {
-      0% {
-        box-shadow: 
-          0 0 2000px 1000px rgba(0,0,0,0.75),
-          0 0 4000px 2000px #000000,
-          0 0 8000px 4000px rgba(0,0,0,0.75);
-      }
-      33.33% {
-        box-shadow: 
-          0 0 2000px 1000px rgba(204,255,0,0.75),   /* 25% more transparent */
-          0 0 4000px 2000px #ccff00,
-          0 0 8000px 4000px rgba(204,255,0,0.75);
-      }
-      66.66% {
-        box-shadow: 
-          0 0 2000px 1000px rgba(121,11,62,0.75),   /* 25% more transparent */
-          0 0 4000px 2000px #790b3e,
-          0 0 8000px 4000px rgba(121,11,62,0.75);
-      }
-      100% {
-        box-shadow: 
-          0 0 2000px 1000px rgba(0,0,0,0.75),
-          0 0 4000px 2000px #000000,
-          0 0 8000px 4000px rgba(0,0,0,0.75);
-      }
+      position: relative;
+      z-index: 2;
     }
 
     .dl {
@@ -443,7 +460,7 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
-                expandedCanvas.classList.add('dream-glow'); // ← FIXED: glow on canvas
+                overlay.classList.add('dream-active');   // ← add to overlay, not canvas
               });
 
               ring.appendChild(floater);
@@ -465,7 +482,7 @@
 
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
-            expandedCanvas.classList.remove('dream-glow');
+            overlay.classList.remove('dream-active');
           });
           expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
           document.addEventListener('keydown', (e) => {
@@ -497,7 +514,8 @@
        // Reds & deep reds only (12 colors)
       const palette = [
         '#1A0000', '#42000A', '#600B12', '#8B1A1A', '#9D0B0B', '#B30000',
-        '#1A002A', '#360F5A', '#522081', '#6A329F', '#8A4CB9', '#D8B4FE'
+        '#2A001A', '#5A0038', '#790B3E', '#9E1A5E', '#B20B5E', '#CB0066',
+        '#1A002A', '#000000'
       ];
       function resizeCanvas() {
         canvas.width = window.innerWidth;
