@@ -220,30 +220,63 @@
       transition: box-shadow 0.3s ease;
     }
 
-    @keyframes dreamGlow {
-      0% {
+        @keyframes dreamGlow {
+      /* Black phase (0–8s) */
+      0%, 33.33% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #000000,
           0 0 6000px rgba(0,0,0,0.95);
       }
-      33.33% {
+      /* Soul green phase (8–16s) */
+      33.34%, 66.66% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #ccff00,
           0 0 6000px rgba(204,255,0,0.5);
       }
-      66.66% {
+      /* Purple sequence (16–24s) – 7 steps */
+      66.67%, 71.43% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #790b3e,
+          0 0 2400px #790B3E,
           0 0 6000px rgba(121,11,62,0.5);
       }
-      100% {
+      71.44%, 76.19% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #000000,
-          0 0 6000px rgba(0,0,0,0.95);
+          0 0 2400px #2A001A,
+          0 0 6000px rgba(42,0,26,0.5);
+      }
+      76.20%, 80.95% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #5A0038,
+          0 0 6000px rgba(90,0,56,0.5);
+      }
+      80.96%, 85.71% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #9E1A5E,
+          0 0 6000px rgba(158,26,94,0.5);
+      }
+      85.72%, 90.47% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #B20B5E,
+          0 0 6000px rgba(178,11,94,0.5);
+      }
+      90.48%, 95.23% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #CB0066,
+          0 0 6000px rgba(203,0,102,0.5);
+      }
+      95.24%, 100% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #790B3E,
+          0 0 6000px rgba(121,11,62,0.5);
       }
     }
 
@@ -485,7 +518,7 @@
     })();
   </script>
 
-  <!-- Hypnotic TV Static @ 36fps (gamma‑aligned) with custom color palette -->
+   <!-- Hypnotic 1‑Pixel TV Static @ 36fps (Original Random RGB) -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
@@ -494,12 +527,6 @@
       const fps = 36;
       const interval = 1000 / fps;
 
-      const palette = [
-        '#1A0000', '#42000A', '#600B12', '#8B1A1A', '#9D0B0B', '#B30000',
-        '#2A001A', '#5A0038', '#790B3E', '#9E1A5E', '#B20B5E', '#CB0066',
-        '#000000'
-      ];
-      
       function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -510,17 +537,11 @@
         const h = canvas.height;
         const imageData = ctx.createImageData(w, h);
         const data = imageData.data;
-        
         for (let i = 0; i < data.length; i += 4) {
-          const hex = palette[Math.floor(Math.random() * palette.length)];
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          
-          data[i] = r;
-          data[i+1] = g;
-          data[i+2] = b;
-          data[i+3] = 255;
+          data[i] = Math.floor(Math.random() * 256);     // R
+          data[i+1] = Math.floor(Math.random() * 256);   // G
+          data[i+2] = Math.floor(Math.random() * 256);   // B
+          data[i+3] = 255;                               // A
         }
         ctx.putImageData(imageData, 0, 0);
       }
