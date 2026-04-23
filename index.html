@@ -142,12 +142,16 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
     }
 
-    /* Spotlight – override white pulse with red flicker */
-    .floating-page.spotlight canvas {
-      animation: slowSpin 33s linear infinite, redFlicker 0.0278s step-start infinite !important;
+     .floating-page.spotlight canvas {
+      animation: fastSpin 3s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
     @keyframes slowSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    @keyframes fastSpin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
@@ -212,7 +216,7 @@
       transition: box-shadow 0.3s ease;
     }
 
-        @keyframes dreamGlow {
+         @keyframes dreamGlow {
       0% {
         box-shadow: 
           0 0 300px rgba(0,0,0,1),
