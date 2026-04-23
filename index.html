@@ -144,7 +144,7 @@
     }
 
     .floating-page.spotlight canvas {
-      animation: fastSpin 1s linear infinite, redFlicker 0.0278s step-start infinite !important;
+      animation: fastSpin 33s linear infinite, redFlicker 0.0278s step-start infinite !important;
     }
 
     @keyframes slowSpin {
@@ -203,22 +203,29 @@
       justify-content: center;
       align-items: center;
       cursor: zoom-out;
-      overflow: visible; /* allow glow to extend */
-      pointer-events: auto; /* capture clicks to close */
+      overflow: visible;
+      pointer-events: auto;
     }
 
-    #overlay canvas {
-      max-width: 95vw;
-      max-height: 95vh;
-      box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.6);
-      border-radius: 6px;
-      cursor: default;
-      background: #000;
-      animation: none;
-      transition: box-shadow 0.3s ease;
+    /* Glow layer behind the expanded canvas – completely unclipped */
+    #overlay::before {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+      background: transparent;
+      opacity: 1;
+      pointer-events: none;
+      z-index: -1;
+      transform: translate(-50%, -50%);
       will-change: box-shadow;
-      margin: 100px; /* give extra breathing room for glow */
-      transform: translateZ(0); /* promote to own layer for better shadow rendering */
+    }
+
+    #overlay.dream-active::before {
+      animation: dreamGlow 24s ease-in-out infinite;
     }
 
     @keyframes dreamGlow {
@@ -248,8 +255,17 @@
       }
     }
 
-    #overlay canvas.dream-glow {
-      animation: dreamGlow 24s ease-in-out infinite;
+    #overlay canvas {
+      max-width: 95vw;
+      max-height: 95vh;
+      box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px #ffffff, 0 0 120px rgba(255,255,255,0.6);
+      border-radius: 6px;
+      cursor: default;
+      background: #000;
+      animation: none;
+      transition: box-shadow 0.3s ease;
+      will-change: box-shadow;
+      transform: translateZ(0);
     }
 
     .dl {
@@ -445,7 +461,7 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
-                expandedCanvas.classList.add('dream-glow');
+                overlay.classList.add('dream-active');
               });
 
               ring.appendChild(floater);
@@ -469,13 +485,13 @@
           // Overlay close logic
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
-            expandedCanvas.classList.remove('dream-glow');
+            overlay.classList.remove('dream-active');
           });
           expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
           document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
               overlay.style.display = 'none';
-              expandedCanvas.classList.remove('dream-glow');
+              overlay.classList.remove('dream-active');
             }
           });
 
@@ -488,11 +504,15 @@
     })();
   </script>
 
-  <!-- Hypnotic 1‑Pixel TV Static -->
+  <!-- Hypnotic TV Static @ 36fps (infraslow‑friendly) -->
+   <!-- Hypnotic TV Static @ 36fps (gamma‑aligned) -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
       const ctx = canvas.getContext('2d');
+      let lastTime = 0;
+      const fps = 36;
+      const interval = 1000 / fps;
 
       function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -513,14 +533,17 @@
         ctx.putImageData(imageData, 0, 0);
       }
 
-      function tick() {
-        drawNoise();
+      function tick(now) {
         requestAnimationFrame(tick);
+        if (now - lastTime >= interval) {
+          drawNoise();
+          lastTime = now;
+        }
       }
 
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
-      tick();
+      requestAnimationFrame(tick);
     })();
   </script>
 </body>
