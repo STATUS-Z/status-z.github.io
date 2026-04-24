@@ -288,36 +288,60 @@
     }
 
     @keyframes dreamGlow {
-      /* Soul green (0–8s) */
-      0%, 33.33% {
+      /* Soul green – rapid flicker matching shimmer pace */
+      0%, 1.38% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #ccff00,
           0 0 6000px rgba(204,255,0,0.5);
       }
+      1.39%, 2.77% {
+        box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      }
+      2.78%, 4.16% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #ccff00,
+          0 0 6000px rgba(204,255,0,0.5);
+      }
+      4.17%, 5.55% {
+        box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      }
+      5.56%, 6.94% {
+        box-shadow: 
+          0 0 4000px rgba(0,0,0,1),
+          0 0 2400px #ccff00,
+          0 0 6000px rgba(204,255,0,0.5);
+      }
+      6.95%, 8.33% {
+        box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      }
+      8.34%, 33.33% {
+        box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      }
       /* Iridescent shimmer (8–16s) – soul green, true green, blue-magenta, brightest red-purple */
       33.34%, 38.88% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #ccff00,   /* soul green */
+          0 0 2400px #ccff00,
           0 0 6000px rgba(204,255,0,0.6);
       }
       38.89%, 44.44% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #00ff00,   /* true green */
+          0 0 2400px #00ff00,
           0 0 6000px rgba(0,255,0,0.6);
       }
       44.45%, 50.00% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #8800ff,   /* blue-magenta */
+          0 0 2400px #8800ff,
           0 0 6000px rgba(136,0,255,0.6);
       }
       50.01%, 55.55% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #CB0066,   /* brightest red-purple */
+          0 0 2400px #CB0066,
           0 0 6000px rgba(203,0,102,0.6);
       }
       55.56%, 61.11% {
@@ -559,7 +583,7 @@
               floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
 
               floater.dataset.page = pageNum;
-              floater.dataset.index = globalIndex;   // store index for red pass
+              floater.dataset.index = globalIndex;
 
               // --- SPIRAL LAYERING & SPOTLIGHT ---
               const idx = globalIndex;
@@ -604,25 +628,45 @@
             }
           }
 
-          // --- RED PASS SWEEP – clock‑like, infraslow, one at a time ---
-          const totalThumbs = allFloaters.length;
-          let redPassIndex = -1;
-          const redPassInterval = 8000; // 8 seconds per thumbnail (infraslow)
-          
-          function moveRedPass() {
-            // Remove from current
-            if (redPassIndex >= 0) {
-              allFloaters[redPassIndex].element.classList.remove('red-pass');
+          // --- RED PASS SWEEP – group sequence (2, 4, 5), skips #11, #22, #33 ---
+          const skipIndices = new Set([10, 21, 32]);
+          const eligibleIndices = allFloaters
+            .map((_, i) => i)
+            .filter(i => !skipIndices.has(i));
+
+          // Build groups: first 2, then 4, then 5, repeating
+          const groupSizes = [2, 4, 5];
+          let groupIndex = 0;
+          let posInGroup = 0;
+          const redPassInterval = 8000; // 8 seconds per group
+
+          function applyRedPassGroup() {
+            // Remove from all currently lit
+            eligibleIndices.forEach(i => {
+              allFloaters[i].element.classList.remove('red-pass');
+            });
+
+            const size = groupSizes[groupIndex];
+            const currentGroup = [];
+            for (let i = 0; i < size; i++) {
+              const idx = eligibleIndices[(posInGroup + i) % eligibleIndices.length];
+              currentGroup.push(idx);
             }
-            // Move to next
-            redPassIndex = (redPassIndex + 1) % totalThumbs;
-            allFloaters[redPassIndex].element.classList.add('red-pass');
+
+            // Add red-pass to the selected group
+            currentGroup.forEach(idx => {
+              allFloaters[idx].element.classList.add('red-pass');
+            });
+
+            // Advance position and group cycle
+            posInGroup = (posInGroup + size) % eligibleIndices.length;
+            groupIndex = (groupIndex + 1) % groupSizes.length;
           }
-          
-          // Start the sweep after all thumbnails have appeared
+
+          // Start after all thumbnails have appeared
           setTimeout(() => {
-            moveRedPass();
-            setInterval(moveRedPass, redPassInterval);
+            applyRedPassGroup();
+            setInterval(applyRedPassGroup, redPassInterval);
           }, totalCopies * STAGGER_DELAY + 2000);
 
           // Resize handler
