@@ -268,42 +268,42 @@
           0 0 2400px #ccff00,
           0 0 6000px rgba(204,255,0,0.5);
       }
-      /* Iridescent shimmer (8–16s) – 6 rapid steps */
+      /* Iridescent shimmer (8–16s) – soul green, true green, blue-magenta, brightest red-purple */
       33.34%, 38.88% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #ff0000,
-          0 0 6000px rgba(255,0,0,0.6);
+          0 0 2400px #ccff00,   /* soul green */
+          0 0 6000px rgba(204,255,0,0.6);
       }
       38.89%, 44.44% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #ff8800,
-          0 0 6000px rgba(255,136,0,0.6);
+          0 0 2400px #00ff00,   /* true green */
+          0 0 6000px rgba(0,255,0,0.6);
       }
       44.45%, 50.00% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #ffff00,
-          0 0 6000px rgba(255,255,0,0.6);
+          0 0 2400px #8800ff,   /* blue-magenta */
+          0 0 6000px rgba(136,0,255,0.6);
       }
       50.01%, 55.55% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #00ff88,
-          0 0 6000px rgba(0,255,136,0.6);
+          0 0 2400px #CB0066,   /* brightest red-purple */
+          0 0 6000px rgba(203,0,102,0.6);
       }
       55.56%, 61.11% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #0088ff,
-          0 0 6000px rgba(0,136,255,0.6);
+          0 0 2400px #ccff00,
+          0 0 6000px rgba(204,255,0,0.6);
       }
       61.12%, 66.66% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
-          0 0 2400px #8800ff,
-          0 0 6000px rgba(136,0,255,0.6);
+          0 0 2400px #00ff00,
+          0 0 6000px rgba(0,255,0,0.6);
       }
       /* Purple spectrum (16–24s) */
       66.67%, 71.43% {
@@ -349,7 +349,6 @@
           0 0 6000px rgba(121,11,62,0.5);
       }
     }
-
     /* Inversion strobe – toggles filter on the glow layer only */
     @keyframes dreamStrobe {
       0%, 49.9% { filter: invert(0); }
