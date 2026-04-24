@@ -58,7 +58,7 @@
       to   { transform: rotate(360deg); }
     }
 
-    /* Ring pulse – 1s burst every 20.3s, 36 Hz strobe, color sequence black→red→white */
+    /* Ring pulse – 5s burst every 20.3s, 36 Hz strobe, six red sequence */
     #ring::after {
       content: '';
       position: fixed;
@@ -101,7 +101,7 @@
       100% { visibility: visible; }
     }
 
-       @keyframes ringColorBurst {
+    @keyframes ringColorBurst {
       0%, 75.37% {
         background: #000000;
         box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
@@ -161,7 +161,7 @@
       will-change: transform, box-shadow;
     }
 
-       .floating-page.spotlight canvas {
+    .floating-page.spotlight canvas {
       animation: 
         fastSpin 33s linear infinite, 
         redFlicker 0.0278s step-start infinite,
@@ -211,9 +211,9 @@
       }
     }
 
-        @keyframes thumbStrobe {
-      0%, 49.9% { opacity: 1; }      /* fully opaque */
-      50%, 99.9% { opacity: 0.75; }  /* 25% transparent */
+    @keyframes thumbStrobe {
+      0%, 49.9% { opacity: 1; }
+      50%, 99.9% { opacity: 0.75; }
       100% { opacity: 1; }
     }
 
@@ -234,7 +234,6 @@
       pointer-events: auto;
     }
 
-    /* --- Original dream glow restored from first file --- */
     #overlay canvas {
       max-width: 95vw;
       max-height: 95vh;
@@ -248,26 +247,24 @@
 
     #overlay canvas.dream-glow {
       animation: 
-        dreamGlow 24s ease-in-out infinite,
+        dreamGlow 11s ease-in-out infinite,
         dreamStrobe 0.0278s step-start infinite;
       margin: 100px;
     }
+
     @keyframes dreamGlow {
-      /* Soul green phase (0–8s) */
       0%, 33.33% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #ccff00,
           0 0 6000px rgba(204,255,0,0.5);
       }
-      /* White phase (8–16s) */
       33.34%, 66.66% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
           0 0 2400px #ffffff,
           0 0 6000px rgba(255,255,255,0.7);
       }
-      /* Purple sequence (16–24s) – 7 steps evenly distributed */
       66.67%, 71.43% {
         box-shadow: 
           0 0 4000px rgba(0,0,0,1),
@@ -312,6 +309,11 @@
       }
     }
 
+    @keyframes dreamStrobe {
+      0%, 49.9% { opacity: 1; }
+      50%, 99.9% { opacity: 1; }
+      100% { opacity: 1; }
+    }
 
     .dl {
       position: fixed;
@@ -410,13 +412,53 @@
         const pageViewports = [];
         const allFloaters = [];
 
-        function positionOnCircle(floater, index, total, baseW, baseH) {
-          const angle = (index / total) * Math.PI * 2 - Math.PI / 2 - (total - 1) / total * Math.PI * 2;
-          const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
-          const left = Math.cos(angle) * radius - baseW / 2;
-          const top = Math.sin(angle) * radius - baseH / 2;
-          floater.style.left = left + 'px';
-          floater.style.top = top + 'px';
+        // ---- Rub el Hizb star positioning ----
+        function positionOnStar(floater, index, total, baseW, baseH) {
+          // Build the 16 vertices of the star (8 outer, 8 inner)
+          const outerR = Math.min(window.innerWidth, window.innerHeight) * 0.4;
+          const innerR = outerR * 0.707; // R/√2 for the inner points
+          const steps = 16;
+          const vertices = [];
+          for (let i = 0; i < steps; i++) {
+            const angle = (i / steps) * Math.PI * 2 - Math.PI / 2; // start at top
+            const r = (i % 2 === 0) ? outerR : innerR;
+            vertices.push({
+              x: Math.cos(angle) * r,
+              y: Math.sin(angle) * r
+            });
+          }
+
+          // Calculate total perimeter length
+          const segmentLengths = [];
+          let totalLength = 0;
+          for (let i = 0; i < vertices.length; i++) {
+            const j = (i + 1) % vertices.length;
+            const dx = vertices[j].x - vertices[i].x;
+            const dy = vertices[j].y - vertices[i].y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            segmentLengths.push(d);
+            totalLength += d;
+          }
+
+          // Find position along the perimeter for this index
+          const targetDist = (index / total) * totalLength;
+          let travelled = 0;
+          for (let i = 0; i < vertices.length; i++) {
+            const j = (i + 1) % vertices.length;
+            const segLen = segmentLengths[i];
+            if (travelled + segLen >= targetDist) {
+              const t = (targetDist - travelled) / segLen;
+              const x = vertices[i].x + (vertices[j].x - vertices[i].x) * t;
+              const y = vertices[i].y + (vertices[j].y - vertices[i].y) * t;
+              floater.style.left = (x - baseW / 2) + 'px';
+              floater.style.top = (y - baseH / 2) + 'px';
+              return;
+            }
+            travelled += segLen;
+          }
+          // Fallback (should never reach here)
+          floater.style.left = (vertices[0].x - baseW / 2) + 'px';
+          floater.style.top = (vertices[0].y - baseH / 2) + 'px';
         }
 
         try {
@@ -505,14 +547,14 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
-                expandedCanvas.classList.add('dream-glow');   // ← CORRECTED: add to canvas
+                expandedCanvas.classList.add('dream-glow');
               });
 
               ring.appendChild(floater);
               allFloaters.push({ element: floater, index: globalIndex, width: thumbWidth, height: thumbHeight });
               
               setTimeout((floaterEl, idxPos, w, h) => {
-                positionOnCircle(floaterEl, idxPos, totalCopies, w, h);
+                positionOnStar(floaterEl, idxPos, totalCopies, w, h);
               }, globalIndex * STAGGER_DELAY, floater, globalIndex, thumbWidth, thumbHeight);
               
               globalIndex++;
@@ -521,7 +563,7 @@
 
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
-              positionOnCircle(element, index, totalCopies, width, height);
+              positionOnStar(element, index, totalCopies, width, height);
             });
           });
 
@@ -546,7 +588,7 @@
     })();
   </script>
 
-   <!-- Hypnotic 1‑Pixel TV Static @ 36fps (Original Random RGB) -->
+  <!-- Hypnotic 1‑Pixel TV Static @ 36fps (Original Random RGB) -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
@@ -566,10 +608,10 @@
         const imageData = ctx.createImageData(w, h);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.floor(Math.random() * 256);     // R
-          data[i+1] = Math.floor(Math.random() * 256);   // G
-          data[i+2] = Math.floor(Math.random() * 256);   // B
-          data[i+3] = 255;                               // A
+          data[i] = Math.floor(Math.random() * 256);
+          data[i+1] = Math.floor(Math.random() * 256);
+          data[i+2] = Math.floor(Math.random() * 256);
+          data[i+3] = 255;
         }
         ctx.putImageData(imageData, 0, 0);
       }
