@@ -248,7 +248,7 @@
 
     #overlay canvas.dream-glow {
       animation: 
-        dreamGlow 11s ease-in-out infinite,
+        dreamGlow 24s ease-in-out infinite,
         dreamStrobe 0.0278s step-start infinite;
       margin: 100px;
     }
@@ -312,11 +312,6 @@
       }
     }
 
-    @keyframes dreamStrobe {
-      0%, 49.9% { opacity: 1; }      /* full glow intensity */
-      50%, 99.9% { opacity: 1; }  /* slightly dimmed, never hidden */
-      100% { opacity: 1; }
-    }
 
     .dl {
       position: fixed;
