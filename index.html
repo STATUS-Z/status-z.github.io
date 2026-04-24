@@ -419,11 +419,11 @@
       }
     }
 
-    @keyframes dreamStrobe {
-      0%, 49.9% { filter: invert(0); }
-      50%, 99.9% { filter: invert(1); }
-      100% { filter: invert(0); }
-    }
+@keyframes dreamStrobe {
+  0%, 33.33% { filter: invert(0); }   /* soul green – no inversion */
+  33.34%, 66.66% { filter: invert(1); } /* invert only during shimmer */
+  66.67%, 100% { filter: invert(0); }  /* purple spectrum – no inversion */
+}
 
     #overlay canvas {
       max-width: 95vw;
