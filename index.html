@@ -159,7 +159,15 @@
       animation: 
         fastSpin 33s linear infinite, 
         redFlicker 0.0278s step-start infinite,
-        thumbStrobe 0.0278s step-start infinite !important;
+        thumbStrobeTwo 0.0278s step-start infinite !important;
+    }
+
+    /* Red pass sweep – slow sequential red glow */
+    .floating-page.red-pass canvas {
+      animation: 
+        slowSpin 33s linear infinite, 
+        redPassGlow 2s ease-in-out infinite,
+        thumbStrobe 0.0278s step-start infinite;
     }
 
     @keyframes slowSpin {
@@ -211,6 +219,27 @@
       100% { opacity: 1; }
     }
 
+    @keyframes thumbStrobeTwo {
+      0%, 49.9% { opacity: 0.75; }
+      50%, 99.9% { opacity: 0.5; }  /* slightly deeper transparency for the three spotlighted */
+      100% { opacity: 0.75; }
+    }
+
+    @keyframes redPassGlow {
+      0%, 100% {
+        box-shadow: 
+          0 20px 40px rgba(0,0,0,1),
+          0 0 100px #ff0000,
+          0 0 200px rgba(255,0,0,0.8);
+      }
+      50% {
+        box-shadow: 
+          0 20px 40px rgba(0,0,0,1),
+          0 0 150px #ff0000,
+          0 0 300px rgba(255,0,0,0.9);
+      }
+    }
+
     #overlay {
       position: fixed;
       top: 0;
@@ -228,7 +257,6 @@
       pointer-events: auto;
     }
 
-    /* Wrapper to keep glow attached to PDF */
     #glow-wrapper {
       position: relative;
       display: inline-block;
@@ -236,7 +264,6 @@
       max-height: 95vh;
     }
 
-    /* Glow layer – behind canvas, carries colour cycle and inversion strobe */
     #glow-wrapper::before {
       content: '';
       position: absolute;
@@ -256,8 +283,8 @@
     #glow-wrapper.dream-active::before {
       opacity: 1;
       animation: 
-        dreamGlow 24s ease-in-out infinite,        /* slow colour cycle */
-        dreamStrobe 0.0278s step-start infinite;   /* gamma inversion strobe */
+        dreamGlow 24s ease-in-out infinite,
+        dreamStrobe 0.0278s step-start infinite;
     }
 
     @keyframes dreamGlow {
@@ -349,14 +376,13 @@
           0 0 6000px rgba(121,11,62,0.5);
       }
     }
-    /* Inversion strobe – toggles filter on the glow layer only */
+
     @keyframes dreamStrobe {
       0%, 49.9% { filter: invert(0); }
       50%, 99.9% { filter: invert(1); }
       100% { filter: invert(0); }
     }
 
-    /* Canvas – no glow, no strobe */
     #overlay canvas {
       max-width: 95vw;
       max-height: 95vh;
@@ -533,6 +559,7 @@
               floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
 
               floater.dataset.page = pageNum;
+              floater.dataset.index = globalIndex;   // store index for red pass
 
               // --- SPIRAL LAYERING & SPOTLIGHT ---
               const idx = globalIndex;
@@ -563,7 +590,7 @@
                 const ctx = expandedCanvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 overlay.style.display = 'flex';
-                glowWrapper.classList.add('dream-active');   // ← activate glow wrapper
+                glowWrapper.classList.add('dream-active');
               });
 
               ring.appendChild(floater);
@@ -577,6 +604,28 @@
             }
           }
 
+          // --- RED PASS SWEEP – clock‑like, infraslow, one at a time ---
+          const totalThumbs = allFloaters.length;
+          let redPassIndex = -1;
+          const redPassInterval = 8000; // 8 seconds per thumbnail (infraslow)
+          
+          function moveRedPass() {
+            // Remove from current
+            if (redPassIndex >= 0) {
+              allFloaters[redPassIndex].element.classList.remove('red-pass');
+            }
+            // Move to next
+            redPassIndex = (redPassIndex + 1) % totalThumbs;
+            allFloaters[redPassIndex].element.classList.add('red-pass');
+          }
+          
+          // Start the sweep after all thumbnails have appeared
+          setTimeout(() => {
+            moveRedPass();
+            setInterval(moveRedPass, redPassInterval);
+          }, totalCopies * STAGGER_DELAY + 2000);
+
+          // Resize handler
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
               positionOnCircle(element, index, totalCopies, width, height);
@@ -585,7 +634,7 @@
 
           overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
-            glowWrapper.classList.remove('dream-active');   // ← deactivate glow
+            glowWrapper.classList.remove('dream-active');
           });
           expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
           document.addEventListener('keydown', (e) => {
@@ -624,10 +673,10 @@
         const imageData = ctx.createImageData(w, h);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.floor(Math.random() * 256);     // R
-          data[i+1] = Math.floor(Math.random() * 256);   // G
-          data[i+2] = Math.floor(Math.random() * 256);   // B
-          data[i+3] = 255;                               // A
+          data[i] = Math.floor(Math.random() * 256);
+          data[i+1] = Math.floor(Math.random() * 256);
+          data[i+2] = Math.floor(Math.random() * 256);
+          data[i+3] = 255;
         }
         ctx.putImageData(imageData, 0, 0);
       }
