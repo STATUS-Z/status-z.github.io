@@ -9,7 +9,7 @@
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
 
-    /* ── Cursor auto‑hide (idle after 2s, visible on move / over thumbnails) ── */
+    /* ── Cursor auto‑hide (idle after 2s) ── */
     body.idle { cursor: none; }
 
     #bg-canvas {
@@ -115,7 +115,6 @@
       animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
-    /* Spotlight – electric sacred colour flicker */
     body.receptive .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
@@ -126,7 +125,6 @@
       animation: fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
-    /* Colour‑pass sweep */
     body.receptive .floating-page.color-pass canvas {
       animation: slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
@@ -224,7 +222,6 @@
       animation: dreamGlowAction 0.5s ease-in-out infinite;
     }
 
-    /* ── Electric divine dream glows ── */
     @keyframes dreamGlowReceptive {
       0%, 33.33% { box-shadow: 0 0 4000px rgba(255,255,255,0.9), 0 0 2400px #FFFFFF, 0 0 6000px rgba(255,255,255,0.8); }
       33.34%, 66.66% { box-shadow: 0 0 4000px rgba(255,215,0,0.5), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.7); }
@@ -264,6 +261,13 @@
     .dl:hover { opacity: 1; transform: scale(1.05); }
     .dl a { color: #d0e0ff; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; }
     #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
+
+    /* Eye of Horus symbol */
+    #eye-symbol {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 90px; height: 90px; z-index: 0; pointer-events: none;
+      transition: color 0.3s ease;
+    }
   </style>
 </head>
 <body class="receptive" id="body">
@@ -273,6 +277,17 @@
   <div id="loading">Manifesting...</div>
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
   <div class="dl"><a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a></div>
+
+  <!-- Eye of Horus symbol -->
+  <svg id="eye-symbol" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <!-- Stylized Eye of Horus: brow, eye, pupil, line -->
+      <path d="M 15 25 Q 50 5 85 25 Q 50 20 15 25 Z" />
+      <path d="M 25 45 Q 50 55 75 45 Q 50 35 25 45 Z" />
+      <circle cx="50" cy="45" r="9" />
+      <path d="M 50 54 L 50 75 L 44 68 Z" />
+    </g>
+  </svg>
 
   <script>
     window.PDFJS_LOCAL = true;
@@ -287,7 +302,7 @@
   </script>
 
   <script>
-    // ── Cursor auto‑hide (idle after 2s, reappear on movement) ──
+    // ── Cursor auto‑hide (idle after 2s) ──
     (function() {
       const body = document.getElementById('body');
       let timeout;
@@ -298,7 +313,6 @@
       }
       document.addEventListener('mousemove', showCursor);
       document.addEventListener('mouseenter', showCursor);
-      // initial hide after 2s if no movement
       timeout = setTimeout(() => body.classList.add('idle'), 2000);
     })();
 
@@ -316,10 +330,12 @@
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
 
-    // ── Phase‑coherent luminance entrainment engine ──
+    // ── Phase‑coherent luminance entrainment engine (with Eye of Horus) ──
     (function() {
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
+      const eyeSVG = document.getElementById('eye-symbol');
+
       const RECEPTIVE = 15000, ALIGN = 10000, ACTION = 12000, TOTAL = RECEPTIVE + ALIGN + ACTION;
       let start = performance.now(), pdfOpen = false, phase = 0, global = 'receptive', sub = 'alpha', freq = 10;
 
@@ -360,6 +376,27 @@
         const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
         loop.prev = now;
         phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
+
+        // Eye symbol color by phase
+        let eyeColor = '#FFFFFF';
+        if (global === 'alignment') eyeColor = '#FFD700';
+        else if (global === 'action') eyeColor = '#790B3E';
+        eyeSVG.style.color = eyeColor;
+
+        // Eye symbol flicker – pure carrier frequency
+        let eyeOpacity = 1;
+        if (global === 'receptive') {
+          if (sub === 'delta') eyeOpacity = 0.5 + 0.5 * Math.sin(phase);
+          else eyeOpacity = Math.sin(phase) >= 0 ? 1 : 0;
+        } else if (global === 'alignment') {
+          // infraslow modulation only
+          eyeOpacity = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
+        } else {
+          eyeOpacity = Math.sin(phase) >= 0 ? 1 : 0;
+        }
+        eyeSVG.style.opacity = reducedMotion ? 0 : eyeOpacity;
+
+        // Luminance overlay (same as before)
         if (reducedMotion) { overlay.style.opacity = 0; return; }
         const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
         let flicker = 0;
