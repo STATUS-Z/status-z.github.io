@@ -275,29 +275,7 @@
   max-height: 95vh;
 }
 
-/* Slow colour layer – 24‑stop shimmer, soul green flicker, purple spectrum */
-#glow-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  pointer-events: none;
-  z-index: -1;
-  transform: translate(-50%, -50%);
-  will-change: box-shadow;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-#glow-wrapper.dream-active::before {
-  opacity: 1;
-  animation: dreamGlow 24s ease-in-out infinite;
-}
-
-/* White sparkle layer – 36 Hz gamma strobe, independent */
+/* White sparkle layer – sits behind the colour glow */
 #glow-wrapper::after {
   content: '';
   position: absolute;
@@ -307,7 +285,7 @@
   height: 100%;
   background: transparent;
   pointer-events: none;
-  z-index: -1;
+  z-index: -2;               /* behind colour layer */
   transform: translate(-50%, -50%);
   will-change: box-shadow, opacity;
   opacity: 0;
@@ -317,6 +295,28 @@
 #glow-wrapper.dream-active::after {
   opacity: 1;
   animation: whiteSparkle 0.0278s step-start infinite;   /* 36 Hz hard on/off */
+}
+
+/* Colour glow layer – sits above the sparkle */
+#glow-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+  z-index: -1;               /* above sparkle, below canvas */
+  transform: translate(-50%, -50%);
+  will-change: box-shadow;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#glow-wrapper.dream-active::before {
+  opacity: 1;
+  animation: dreamGlow 24s ease-in-out infinite;
 }
 
 @keyframes dreamGlow {
@@ -340,31 +340,31 @@
     box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5);
   }
 
-  /* ── Iridescent shimmer (8–16s) – 24 colours, white every 4th ── */
+  /* ── Iridescent shimmer (8–16s) – 24 colours, NO white (sparkle handles it) ── */
   33.34%, 34.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
   34.73%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
   36.12%, 37.49% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
-  37.50%, 38.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffffff, 0 0 6000px rgba(255,255,255,0.9); } /* white */
-  38.89%, 40.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #80c000, 0 0 6000px rgba(128,192,0,0.6); }
-  40.28%, 41.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
-  41.67%, 43.05% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
-  43.06%, 44.44% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffffff, 0 0 6000px rgba(255,255,255,0.9); } /* white */
-  44.45%, 45.83% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #206000, 0 0 6000px rgba(32,96,0,0.6); }
-  45.84%, 47.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #004000, 0 0 6000px rgba(0,64,0,0.6); }
-  47.23%, 48.61% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2a0040, 0 0 6000px rgba(42,0,64,0.6); }
-  48.62%, 50.00% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffffff, 0 0 6000px rgba(255,255,255,0.9); } /* white */
-  50.01%, 51.39% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #4a0060, 0 0 6000px rgba(74,0,96,0.6); }
-  51.40%, 52.78% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #600080, 0 0 6000px rgba(96,0,128,0.6); }
-  52.79%, 54.17% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790b3e, 0 0 6000px rgba(121,11,62,0.6); }
-  54.18%, 55.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffffff, 0 0 6000px rgba(255,255,255,0.9); } /* white */
-  55.56%, 56.94% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #9E1A5E, 0 0 6000px rgba(158,26,94,0.6); }
-  56.95%, 58.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #B20B5E, 0 0 6000px rgba(178,11,94,0.6); }
-  58.34%, 59.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #CB0066, 0 0 6000px rgba(203,0,102,0.6); }
-  59.73%, 61.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffffff, 0 0 6000px rgba(255,255,255,0.9); } /* white */
-  61.12%, 62.50% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2A001A, 0 0 6000px rgba(42,0,26,0.6); }
-  62.51%, 63.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #5A0038, 0 0 6000px rgba(90,0,56,0.6); }
-  63.89%, 65.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790b3e, 0 0 6000px rgba(121,11,62,0.6); }
-  65.28%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffffff, 0 0 6000px rgba(255,255,255,0.9); } /* white */
+  37.50%, 38.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #80c000, 0 0 6000px rgba(128,192,0,0.6); }
+  38.89%, 40.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
+  40.28%, 41.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
+  41.67%, 43.05% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #206000, 0 0 6000px rgba(32,96,0,0.6); }
+  43.06%, 44.44% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #004000, 0 0 6000px rgba(0,64,0,0.6); }
+  44.45%, 45.83% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2a0040, 0 0 6000px rgba(42,0,64,0.6); }
+  45.84%, 47.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #4a0060, 0 0 6000px rgba(74,0,96,0.6); }
+  47.23%, 48.61% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #600080, 0 0 6000px rgba(96,0,128,0.6); }
+  48.62%, 50.00% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790b3e, 0 0 6000px rgba(121,11,62,0.6); }
+  50.01%, 51.39% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #9E1A5E, 0 0 6000px rgba(158,26,94,0.6); }
+  51.40%, 52.78% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #B20B5E, 0 0 6000px rgba(178,11,94,0.6); }
+  52.79%, 54.17% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #CB0066, 0 0 6000px rgba(203,0,102,0.6); }
+  54.18%, 55.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2A001A, 0 0 6000px rgba(42,0,26,0.6); }
+  55.56%, 56.94% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #5A0038, 0 0 6000px rgba(90,0,56,0.6); }
+  56.95%, 58.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790b3e, 0 0 6000px rgba(121,11,62,0.6); }
+  58.34%, 59.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
+  59.73%, 61.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
+  61.12%, 62.50% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
+  62.51%, 63.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #80c000, 0 0 6000px rgba(128,192,0,0.6); }
+  63.89%, 65.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
+  65.28%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
 
   /* ── Purple spectrum (16–24s) ── */
   66.67%, 71.43% {
@@ -390,7 +390,7 @@
   }
 }
 
-/* 36 Hz white sparkle – square wave, hard on/off */
+/* 36 Hz white sparkle – square wave, hard on/off, sits behind colour layer */
 @keyframes whiteSparkle {
   0%, 49.9% {
     box-shadow: 
