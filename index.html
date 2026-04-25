@@ -30,13 +30,14 @@
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
-      animation: ringRotate 2s linear infinite;
+      animation: ringRotate 2s linear infinite;   /* Receptive */
     }
     body.alignment #ring { animation: ringRotate 20s linear infinite; }
     body.action #ring { animation: ringRotate 0.5s linear infinite; }
 
     @keyframes ringRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+    /* Ring pulse – envelope and strobe are constant; colour burst is swapped via CSS variable */
     #ring::after {
       content: '';
       position: fixed; top: 50%; left: 50%;
@@ -46,7 +47,7 @@
       transform: translate(-50%, -50%) scale(0.1);
       animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
                  ringStrobe var(--strobe-dur, 0.5s) step-start infinite,
-                 ringColorBurst var(--color-dur, 2s) step-start infinite;
+                 var(--color-anim, ringColorReceptive) var(--color-dur, 2s) step-start infinite;
       will-change: transform, opacity, box-shadow, background;
     }
 
@@ -62,7 +63,20 @@
       100% { visibility: visible; }
     }
 
-    @keyframes ringColorBurst {
+    /* ── Phase‑specific ring colour bursts ── */
+    /* White for Receptivity */
+    @keyframes ringColorReceptive {
+      0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
+      75.37%, 79.475% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.8); }
+      79.475%, 83.58% { background: #F0F0F0; box-shadow: 0 0 150px #F0F0F0, 0 0 300px rgba(240,240,240,0.8); }
+      83.58%, 87.685% { background: #E0E0E0; box-shadow: 0 0 150px #E0E0E0, 0 0 300px rgba(224,224,224,0.8); }
+      87.685%, 91.79% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9); }
+      91.79%, 95.895% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1); }
+      95.895%, 100% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
+    }
+
+    /* Gold for Alignment */
+    @keyframes ringColorAlignment {
       0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
       75.37%, 79.475% { background: #4A3500; box-shadow: 0 0 150px #4A3500, 0 0 300px rgba(74,53,0,0.9); }
       79.475%, 83.58% { background: #8B6500; box-shadow: 0 0 150px #8B6500, 0 0 300px rgba(139,101,0,0.9); }
@@ -70,6 +84,17 @@
       87.685%, 91.79% { background: #FFD700; box-shadow: 0 0 150px #FFD700, 0 0 300px rgba(255,215,0,0.9); }
       91.79%, 95.895% { background: #FFF8DC; box-shadow: 0 0 150px #FFF8DC, 0 0 300px rgba(255,248,220,0.9); }
       95.895%, 100% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9); }
+    }
+
+    /* Green for Action */
+    @keyframes ringColorAction {
+      0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
+      75.37%, 79.475% { background: #0A2A0A; box-shadow: 0 0 150px #0A2A0A, 0 0 300px rgba(10,42,10,0.9); }
+      79.475%, 83.58% { background: #1A4A1A; box-shadow: 0 0 150px #1A4A1A, 0 0 300px rgba(26,74,26,0.9); }
+      83.58%, 87.685% { background: #2A6A2A; box-shadow: 0 0 150px #2A6A2A, 0 0 300px rgba(42,106,42,0.9); }
+      87.685%, 91.79% { background: #3C8A3C; box-shadow: 0 0 150px #3C8A3C, 0 0 300px rgba(60,138,60,0.9); }
+      91.79%, 95.895% { background: #50B050; box-shadow: 0 0 150px #50B050, 0 0 300px rgba(80,176,80,0.9); }
+      95.895%, 100% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
     }
 
     .floating-page {
@@ -84,6 +109,7 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform, box-shadow;
     }
 
+    /* Base animations (Theta‑dominant) */
     body.receptive .floating-page canvas {
       animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
     }
@@ -94,15 +120,26 @@
       animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
-    .floating-page.spotlight canvas {
+    /* Spotlight – phase‑specific sacred colour flicker */
+    body.receptive .floating-page.spotlight canvas {
+      animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
+    }
+    body.alignment .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, goldFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
     body.action .floating-page.spotlight canvas {
-      animation: fastSpin 33s linear infinite, goldFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
+      animation: fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
-    .floating-page.gold-pass canvas {
+    /* Colour‑pass sweep – phase‑specific glow */
+    body.receptive .floating-page.color-pass canvas {
+      animation: slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
+    }
+    body.alignment .floating-page.color-pass canvas {
       animation: slowSpin 33s linear infinite, goldPassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
+    }
+    body.action .floating-page.color-pass canvas {
+      animation: slowSpin 33s linear infinite, greenPassGlow 0.5s ease-in-out infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
     .flipper {
@@ -120,18 +157,46 @@
       100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
     }
 
+    /* White flicker (Receptivity) */
+    @keyframes whiteFlicker {
+      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFFFFF, 0 0 225px rgba(255,255,255,0.9); }
+      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #B0B0B0, 0 0 225px rgba(176,176,176,0.8); }
+      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFFFFF, 0 0 225px rgba(255,255,255,0.9); }
+    }
+
+    /* Gold flicker (Alignment) */
     @keyframes goldFlicker {
       0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFD700, 0 0 225px rgba(255,215,0,0.9); }
       50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #B8860B, 0 0 225px rgba(184,134,11,0.8); }
       100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFD700, 0 0 225px rgba(255,215,0,0.9); }
     }
 
+    /* Green flicker (Action) */
+    @keyframes greenFlicker {
+      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #50B050, 0 0 225px rgba(80,176,80,0.9); }
+      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #1A4A1A, 0 0 225px rgba(26,74,26,0.8); }
+      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #50B050, 0 0 225px rgba(80,176,80,0.9); }
+    }
+
     @keyframes thumbStrobe { 0%, 49.9% { opacity: 1; } 50%, 99.9% { opacity: 0.75; } 100% { opacity: 1; } }
     @keyframes thumbStrobeTwo { 0%, 49.9% { opacity: 0.5; } 50%, 99.9% { opacity: 0.75; } 100% { opacity: 0.5; } }
 
+    /* White pass glow */
+    @keyframes whitePassGlow {
+      0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(255,255,255,0.4), 0 0 200px rgba(255,255,255,0.3); }
+      50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(255,255,255,0.5), 0 0 300px rgba(255,255,255,0.4); }
+    }
+
+    /* Gold pass glow */
     @keyframes goldPassGlow {
       0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(255,215,0,0.4), 0 0 200px rgba(255,215,0,0.3); }
       50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(255,215,0,0.5), 0 0 300px rgba(255,215,0,0.4); }
+    }
+
+    /* Green pass glow */
+    @keyframes greenPassGlow {
+      0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(80,176,80,0.4), 0 0 200px rgba(80,176,80,0.3); }
+      50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(80,176,80,0.5), 0 0 300px rgba(80,176,80,0.4); }
     }
 
     #overlay {
@@ -169,44 +234,30 @@
 
     #glow-wrapper.dream-active::before {
       opacity: 1;
-      animation: dreamGlow 2s ease-in-out infinite;
+      animation: dreamGlowReceptive 2s ease-in-out infinite;   /* default for Receptive */
     }
     body.action #glow-wrapper.dream-active::before {
-      animation: dreamGlow 0.5s ease-in-out infinite;
+      animation: dreamGlowAction 0.5s ease-in-out infinite;    /* Green for Action */
     }
 
-    /* ── Updated dream glow – divine colors only ── */
-    @keyframes dreamGlow {
-      /* Soul green (0–8s) */
-      0%, 5.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
-      5.56%, 11.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
-      11.12%, 16.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
-      16.67%, 22.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
-      22.23%, 27.77% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
-      27.78%, 33.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
+    /* Dream glow for Receptive (rarely seen, but kept as white/gold) */
+    @keyframes dreamGlowReceptive {
+      0%, 33.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFFFFF, 0 0 6000px rgba(255,255,255,0.5); }
+      33.34%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.5); }
+      66.67%, 100% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFFFFF, 0 0 6000px rgba(255,255,255,0.5); }
+    }
 
-      /* Divine shimmer (8–16s) – green → gold bridge */
-      33.34%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
-      36.12%, 38.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
-      38.89%, 41.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
-      41.67%, 44.44% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #80c000, 0 0 6000px rgba(128,192,0,0.6); }
-      44.45%, 47.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
-      47.23%, 50.00% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
-      50.01%, 52.78% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #206000, 0 0 6000px rgba(32,96,0,0.6); }
-      52.79%, 55.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #004000, 0 0 6000px rgba(0,64,0,0.6); }
-      55.56%, 58.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #4a3500, 0 0 6000px rgba(74,53,0,0.6); }
-      58.34%, 61.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #8b6500, 0 0 6000px rgba(139,101,0,0.6); }
-      61.12%, 63.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #daa520, 0 0 6000px rgba(218,165,32,0.6); }
-      63.89%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffd700, 0 0 6000px rgba(255,215,0,0.6); }
-
-      /* Golden spectrum (16–24s) */
-      66.67%, 71.43% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #DAA520, 0 0 6000px rgba(218,165,32,0.5); }
-      71.44%, 76.19% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.5); }
-      76.20%, 80.95% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFA500, 0 0 6000px rgba(255,165,0,0.5); }
-      80.96%, 85.71% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FF8C00, 0 0 6000px rgba(255,140,0,0.5); }
-      85.72%, 90.47% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.5); }
-      90.48%, 95.23% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFF8DC, 0 0 6000px rgba(255,248,220,0.5); }
-      95.24%, 100% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFFFFF, 0 0 6000px rgba(255,255,255,0.5); }
+    /* Dream glow for Action – green spectrum */
+    @keyframes dreamGlowAction {
+      0%, 11.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #0A2A0A, 0 0 6000px rgba(10,42,10,0.5); }
+      11.12%, 22.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #1A4A1A, 0 0 6000px rgba(26,74,26,0.5); }
+      22.23%, 33.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2A6A2A, 0 0 6000px rgba(42,106,42,0.5); }
+      33.34%, 44.44% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #3C8A3C, 0 0 6000px rgba(60,138,60,0.6); }
+      44.45%, 55.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #50B050, 0 0 6000px rgba(80,176,80,0.6); }
+      55.56%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #3C8A3C, 0 0 6000px rgba(60,138,60,0.6); }
+      66.67%, 77.77% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2A6A2A, 0 0 6000px rgba(42,106,42,0.6); }
+      77.78%, 88.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #1A4A1A, 0 0 6000px rgba(26,74,26,0.5); }
+      88.89%, 100% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #0A2A0A, 0 0 6000px rgba(10,42,10,0.5); }
     }
 
     @keyframes whiteSparkle {
@@ -263,7 +314,6 @@
         timeout = setTimeout(() => body.classList.add('idle'), 2000);
       }
       document.addEventListener('mousemove', showCursor);
-      // Initial hide after 2s if user doesn't move
       timeout = setTimeout(() => body.classList.add('idle'), 2000);
     })();
 
@@ -316,12 +366,22 @@
 
       function applyRing() {
         document.body.className = global;
+        // Set ring timing variables
         if (global === 'receptive') {
-          ring.style.setProperty('--env-dur','2s'); ring.style.setProperty('--strobe-dur','0.5s'); ring.style.setProperty('--color-dur','2s');
+          ring.style.setProperty('--env-dur','2s');
+          ring.style.setProperty('--strobe-dur','0.5s');
+          ring.style.setProperty('--color-dur','2s');
+          ring.style.setProperty('--color-anim','ringColorReceptive');
         } else if (global === 'alignment') {
-          ring.style.setProperty('--env-dur','5s'); ring.style.setProperty('--strobe-dur','2s'); ring.style.setProperty('--color-dur','5s');
+          ring.style.setProperty('--env-dur','5s');
+          ring.style.setProperty('--strobe-dur','2s');
+          ring.style.setProperty('--color-dur','5s');
+          ring.style.setProperty('--color-anim','ringColorAlignment');
         } else if (global === 'action') {
-          ring.style.setProperty('--env-dur','0.5s'); ring.style.setProperty('--strobe-dur','0.0278s'); ring.style.setProperty('--color-dur','0.5s');
+          ring.style.setProperty('--env-dur','0.5s');
+          ring.style.setProperty('--strobe-dur','0.0278s');
+          ring.style.setProperty('--color-dur','0.5s');
+          ring.style.setProperty('--color-anim','ringColorAction');
         }
       }
 
@@ -481,7 +541,7 @@
       requestAnimationFrame(tick);
     })();
 
-    // ── PDF.js ritual (gold‑pass instead of red‑pass) ──
+    // ── PDF.js ritual (colour‑pass instead of red‑pass) ──
     (async function() {
       function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
       wait(async () => {
@@ -556,14 +616,14 @@
         const skip = new Set([10, 21, 32]);
         const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
         const sizes = [2, 4, 5]; let gi = 0, pos = 0;
-        function applyGoldPass() {
-          eligible.forEach(i => all[i].element.classList.remove('gold-pass'));
+        function applyColorPass() {
+          eligible.forEach(i => all[i].element.classList.remove('color-pass'));
           const sz = sizes[gi], grp = [];
           for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
-          grp.forEach(i => all[i].element.classList.add('gold-pass'));
+          grp.forEach(i => all[i].element.classList.add('color-pass'));
           pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
         }
-        setTimeout(() => { applyGoldPass(); setInterval(applyGoldPass, 8000); }, totalCopies * STAGGER + 2000);
+        setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
         function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
         setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
