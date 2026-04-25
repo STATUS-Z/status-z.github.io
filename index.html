@@ -48,7 +48,7 @@
       width: 0;
       height: 0;
       transform-origin: center center;
-      animation: ringRotate 20.3s linear infinite;
+      animation: ringRotate 2s linear infinite;
       isolation: isolate;
       will-change: transform;
     }
@@ -58,7 +58,7 @@
       to   { transform: rotate(360deg); }
     }
 
-    /* Ring pulse – 5s burst every 20.3s, delta (2 Hz) strobe, six reds */
+    /* Ring pulse – Delta envelope (2 s), Delta strobe (2 Hz) */
     #ring::after {
       content: '';
       position: fixed;
@@ -74,9 +74,9 @@
       z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
       animation: 
-        ringBurstEnvelope 20.3s ease-in-out infinite,
+        ringBurstEnvelope 2s ease-in-out infinite,
         ringStrobe 0.5s step-start infinite,
-        ringColorBurst 20.3s step-start infinite;
+        ringColorBurst 2s step-start infinite;
       will-change: transform, opacity, box-shadow, background;
     }
 
@@ -148,7 +148,7 @@
       height: 100%;
       border-radius: 4px;
       background: #000;
-      animation: slowSpin 33s linear infinite, squarePulse 0.1s linear infinite, thumbStrobe 0.1s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
       transform-origin: center center;
       image-rendering: crisp-edges;
       box-shadow: 0 20px 40px rgba(0,0,0,0.95);
@@ -162,15 +162,13 @@
         thumbStrobeTwo 0.1667s step-start infinite !important;
     }
 
-    /* Red pass sweep – delta glow */
     .floating-page.red-pass canvas {
       animation: 
         slowSpin 33s linear infinite, 
         redPassGlow 2s ease-in-out infinite,
-        thumbStrobe 0.1s step-start infinite;
+        thumbStrobe 0.1667s step-start infinite;
     }
 
-    /* Paper flip ritual */
     .flipper {
       width: 100%;
       height: 100%;
@@ -275,7 +273,6 @@
       max-height: 95vh;
     }
 
-    /* White sparkle layer – sits behind the colour glow */
     #glow-wrapper::after {
       content: '';
       position: absolute;
@@ -294,10 +291,9 @@
 
     #glow-wrapper.dream-active::after {
       opacity: 1;
-      animation: whiteSparkle 0.1s step-start infinite;   /* 10 Hz alpha */
+      animation: whiteSparkle 0.1s step-start infinite;
     }
 
-    /* Colour glow layer – sits above the sparkle */
     #glow-wrapper::before {
       content: '';
       position: absolute;
@@ -316,11 +312,10 @@
 
     #glow-wrapper.dream-active::before {
       opacity: 1;
-      animation: dreamGlow 24s ease-in-out infinite;
+      animation: dreamGlow 2s ease-in-out infinite;
     }
 
     @keyframes dreamGlow {
-      /* ── Soul green – rapid flicker (0–8s) ── */
       0%, 5.55% {
         box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5);
       }
@@ -340,7 +335,6 @@
         box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5);
       }
 
-      /* ── Iridescent shimmer (8–16s) – 24 colours, NO white (sparkle handles it) ── */
       33.34%, 34.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
       34.73%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
       36.12%, 37.49% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
@@ -366,7 +360,6 @@
       63.89%, 65.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
       65.28%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
 
-      /* ── Purple spectrum (16–24s) ── */
       66.67%, 71.43% {
         box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790B3E, 0 0 6000px rgba(121,11,62,0.5);
       }
@@ -390,7 +383,6 @@
       }
     }
 
-    /* 10 Hz white sparkle – square wave, sits behind colour layer */
     @keyframes whiteSparkle {
       0%, 49.9% {
         box-shadow: 
@@ -490,8 +482,13 @@
   </script>
 
   <script>
-    // 🔒 Disable right‑click on the entire page
     document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Refresh pulse – brief Theta flicker before unload
+    window.addEventListener('beforeunload', () => {
+      document.body.style.background = '#ff0000';
+      setTimeout(() => { document.body.style.background = '#000'; }, 167);
+    });
 
     (async function() {
       function waitForPDFJS(cb) {
@@ -515,7 +512,7 @@
 
         const COPIES_PER_PAGE = 33;
         const THUMB_SCALE = 0.35;
-        const STAGGER_DELAY = 400;
+        const STAGGER_DELAY = 167; /* 6 Hz Theta emergence */
 
         const pageViewports = [];
         const allFloaters = [];
@@ -573,7 +570,6 @@
               const ctxCopy = canvasCopy.getContext('2d');
               ctxCopy.drawImage(thumbCanvas, 0, 0);
               
-              // Create flipper for paper-flip ritual
               const flipper = document.createElement('div');
               flipper.className = 'flipper';
               flipper.appendChild(canvasCopy);
@@ -592,7 +588,6 @@
               floater.dataset.page = pageNum;
               floater.dataset.index = globalIndex;
 
-              // --- SPIRAL LAYERING & SPOTLIGHT ---
               const idx = globalIndex;
               let z = 10;
               if (idx < 11) {
@@ -635,7 +630,6 @@
             }
           }
 
-          // --- RED PASS SWEEP – group sequence (2, 4, 5), skips #11, #22, #33 ---
           const skipIndices = new Set([10, 21, 32]);
           const eligibleIndices = allFloaters
             .map((_, i) => i)
@@ -671,7 +665,6 @@
             setInterval(applyRedPassGroup, redPassInterval);
           }, totalCopies * STAGGER_DELAY + 2000);
 
-          // --- PAPER‑FLIP RITUAL (single toggle every 10.15s) ---
           function triggerFlip() {
             allFloaters.forEach(item => {
               item.element.classList.toggle('flipped');
@@ -680,10 +673,9 @@
 
           setTimeout(() => {
             triggerFlip();
-            setInterval(triggerFlip, 10150);
+            setInterval(triggerFlip, 2000);
           }, totalCopies * STAGGER_DELAY + 3000);
 
-          // Resize handler
           window.addEventListener('resize', () => {
             allFloaters.forEach(({ element, index, width, height }) => {
               positionOnCircle(element, index, totalCopies, width, height);
@@ -711,13 +703,12 @@
     })();
   </script>
 
-  <!-- Hypnotic 1‑Pixel TV Static @ 36fps (Original Random RGB) -->
   <script>
     (function() {
       const canvas = document.getElementById('bg-canvas');
       const ctx = canvas.getContext('2d');
       let lastTime = 0;
-      const fps = 36;
+      const fps = 10;
       const interval = 1000 / fps;
 
       function resizeCanvas() {
