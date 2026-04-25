@@ -9,7 +9,6 @@
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
 
-    /* ── Cursor auto‑hide (idle after 2s) ── */
     body.idle { cursor: none; }
 
     #bg-canvas {
@@ -45,9 +44,9 @@
       opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
       animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
-                 ringStrobe var(--strobe-dur, 0.5s) step-start infinite,
-                 var(--color-anim, ringColorReceptive) var(--color-dur, 2s) step-start infinite;
+                 ringStrobe var(--strobe-dur, 0.5s) step-start infinite;
       will-change: transform, opacity, box-shadow, background;
+      /* colour is set via inline style in JS */
     }
 
     @keyframes ringBurstEnvelope {
@@ -60,37 +59,6 @@
       0%, 49.9% { visibility: visible; }
       50%, 99.9% { visibility: hidden; }
       100% { visibility: visible; }
-    }
-
-    /* ── Phase‑specific ring colour bursts ── */
-    @keyframes ringColorReceptive {
-      0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
-      75.37%, 79.475% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9); }
-      79.475%, 83.58% { background: #F8F8FF; box-shadow: 0 0 150px #F8F8FF, 0 0 300px rgba(248,248,255,0.9); }
-      83.58%, 87.685% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1); }
-      87.685%, 91.79% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1); }
-      91.79%, 95.895% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9); }
-      95.895%, 100% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
-    }
-
-    @keyframes ringColorAlignment {
-      0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
-      75.37%, 79.475% { background: #4A3500; box-shadow: 0 0 150px #4A3500, 0 0 300px rgba(74,53,0,0.9); }
-      79.475%, 83.58% { background: #8B6500; box-shadow: 0 0 150px #8B6500, 0 0 300px rgba(139,101,0,0.9); }
-      83.58%, 87.685% { background: #DAA520; box-shadow: 0 0 150px #DAA520, 0 0 300px rgba(218,165,32,0.9); }
-      87.685%, 91.79% { background: #FFD700; box-shadow: 0 0 150px #FFD700, 0 0 300px rgba(255,215,0,1); }
-      91.79%, 95.895% { background: #FFF8DC; box-shadow: 0 0 150px #FFF8DC, 0 0 300px rgba(255,248,220,0.9); }
-      95.895%, 100% { background: #FFFFFF; box-shadow: 0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9); }
-    }
-
-    @keyframes ringColorAction {
-      0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
-      75.37%, 79.475% { background: #0A2A0A; box-shadow: 0 0 150px #0A2A0A, 0 0 300px rgba(10,42,10,0.9); }
-      79.475%, 83.58% { background: #1A5A1A; box-shadow: 0 0 150px #1A5A1A, 0 0 300px rgba(26,90,26,0.9); }
-      83.58%, 87.685% { background: #2A8A2A; box-shadow: 0 0 150px #2A8A2A, 0 0 300px rgba(42,138,42,0.9); }
-      87.685%, 91.79% { background: #40C040; box-shadow: 0 0 150px #40C040, 0 0 300px rgba(64,192,64,0.9); }
-      91.79%, 95.895% { background: #60E060; box-shadow: 0 0 150px #60E060, 0 0 300px rgba(96,224,96,0.9); }
-      95.895%, 100% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
     }
 
     .floating-page {
@@ -190,7 +158,9 @@
       cursor: zoom-out; overflow: visible; pointer-events: auto;
     }
 
-    #glow-wrapper { position: relative; display: inline-block; max-width: 95vw; max-height: 95vh; }
+    #glow-wrapper {
+      position: relative; display: inline-block; max-width: 95vw; max-height: 95vh;
+    }
 
     #glow-wrapper::after {
       content: ''; position: absolute; top: 50%; left: 50%;
@@ -199,51 +169,45 @@
       will-change: box-shadow, opacity; opacity: 0; transition: opacity 0.2s;
     }
 
-    #glow-wrapper.dream-active::after {
+    /* white sparkle uses same frequency as entrainment overlay (carrier) */
+    body.receptive #glow-wrapper.dream-active::after {
       opacity: 1;
-      animation: whiteSparkle 0.1s step-start infinite;
+      animation: whiteSparkle 0.1s step-start infinite; /* 10 Hz */
+    }
+    body.alignment #glow-wrapper.dream-active::after {
+      opacity: 1;
+      animation: whiteSparkle 20s step-start infinite; /* infraslow (0.05 Hz) */
     }
     body.action #glow-wrapper.dream-active::after {
-      animation: whiteSparkle 0.0278s step-start infinite;
-    }
-
-    #glow-wrapper::before {
-      content: ''; position: absolute; top: 50%; left: 50%;
-      width: 100%; height: 100%; background: transparent; pointer-events: none;
-      z-index: -1; transform: translate(-50%, -50%);
-      will-change: box-shadow; opacity: 0; transition: opacity 0.2s;
-    }
-
-    #glow-wrapper.dream-active::before {
       opacity: 1;
-      animation: dreamGlowReceptive 2s ease-in-out infinite;
-    }
-    body.action #glow-wrapper.dream-active::before {
-      animation: dreamGlowAction 0.5s ease-in-out infinite;
-    }
-
-    @keyframes dreamGlowReceptive {
-      0%, 33.33% { box-shadow: 0 0 4000px rgba(255,255,255,0.9), 0 0 2400px #FFFFFF, 0 0 6000px rgba(255,255,255,0.8); }
-      33.34%, 66.66% { box-shadow: 0 0 4000px rgba(255,215,0,0.5), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.7); }
-      66.67%, 100% { box-shadow: 0 0 4000px rgba(255,255,255,0.9), 0 0 2400px #FFFFFF, 0 0 6000px rgba(255,255,255,1); }
-    }
-
-    @keyframes dreamGlowAction {
-      0%, 11.11% { box-shadow: 0 0 4000px rgba(0,255,0,0.5), 0 0 2400px #00FF00, 0 0 6000px rgba(0,255,0,0.7); }
-      11.12%, 22.22% { box-shadow: 0 0 4000px rgba(0,200,0,0.5), 0 0 2400px #00CC00, 0 0 6000px rgba(0,200,0,0.7); }
-      22.23%, 33.33% { box-shadow: 0 0 4000px rgba(0,150,0,0.5), 0 0 2400px #009900, 0 0 6000px rgba(0,150,0,0.7); }
-      33.34%, 44.44% { box-shadow: 0 0 4000px rgba(0,255,0,0.6), 0 0 2400px #33FF33, 0 0 6000px rgba(0,255,0,0.8); }
-      44.45%, 55.55% { box-shadow: 0 0 4000px rgba(0,255,0,0.8), 0 0 2400px #66FF66, 0 0 6000px rgba(0,255,0,0.9); }
-      55.56%, 66.66% { box-shadow: 0 0 4000px rgba(0,255,0,0.6), 0 0 2400px #33FF33, 0 0 6000px rgba(0,255,0,0.8); }
-      66.67%, 77.77% { box-shadow: 0 0 4000px rgba(0,200,0,0.5), 0 0 2400px #00CC00, 0 0 6000px rgba(0,200,0,0.7); }
-      77.78%, 88.88% { box-shadow: 0 0 4000px rgba(0,150,0,0.5), 0 0 2400px #009900, 0 0 6000px rgba(0,150,0,0.7); }
-      88.89%, 100% { box-shadow: 0 0 4000px rgba(0,255,0,0.5), 0 0 2400px #00FF00, 0 0 6000px rgba(0,255,0,0.7); }
+      animation: whiteSparkle 0.0278s step-start infinite; /* 36 Hz */
     }
 
     @keyframes whiteSparkle {
       0%, 49.9% { box-shadow: 0 0 4000px rgba(255,255,255,0.95), 0 0 2400px #fff, 0 0 6000px rgba(255,255,255,0.8); }
       50%, 99.9% { box-shadow: none; }
       100% { box-shadow: 0 0 4000px rgba(255,255,255,0.95), 0 0 2400px #fff, 0 0 6000px rgba(255,255,255,0.8); }
+    }
+
+    /* Glow colour layer – synchronised via JS custom properties */
+    #glow-wrapper::before {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 100%; height: 100%; background: transparent; pointer-events: none;
+      z-index: -1; transform: translate(-50%, -50%);
+      will-change: box-shadow, background, opacity;
+      opacity: 0; transition: opacity 0.2s;
+    }
+
+    #glow-wrapper.dream-active::before {
+      opacity: 1;
+      animation: glowBurstEnvelope var(--env-dur, 2s) ease-in-out infinite;
+      /* box-shadow / background set via JS */
+    }
+
+    @keyframes glowBurstEnvelope {
+      0%, 75.37% { opacity: 0; }
+      75.37% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     #overlay canvas {
@@ -281,7 +245,6 @@
   <!-- Eye of Horus symbol -->
   <svg id="eye-symbol" viewBox="0 0 100 100">
     <g fill="currentColor">
-      <!-- Stylized Eye of Horus: brow, eye, pupil, line -->
       <path d="M 15 25 Q 50 5 85 25 Q 50 20 15 25 Z" />
       <path d="M 25 45 Q 50 55 75 45 Q 50 35 25 45 Z" />
       <circle cx="50" cy="45" r="9" />
@@ -302,7 +265,7 @@
   </script>
 
   <script>
-    // ── Cursor auto‑hide (idle after 2s) ──
+    // ── Cursor auto‑hide ──
     (function() {
       const body = document.getElementById('body');
       let timeout;
@@ -316,7 +279,7 @@
       timeout = setTimeout(() => body.classList.add('idle'), 2000);
     })();
 
-    // ── User preference & capability checks ──
+    // ── User preferences ──
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const prefersLowData = window.matchMedia('(prefers-reduced-data: reduce)').matches;
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -330,14 +293,57 @@
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
 
-    // ── Phase‑coherent luminance entrainment engine (with Eye of Horus) ──
+    // ── Phase‑coherent engine + ring/glow synchronization ──
     (function() {
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
       const eyeSVG = document.getElementById('eye-symbol');
+      const glowWrapper = document.getElementById('glow-wrapper');
+      const glowBefore = glowWrapper && glowWrapper.style;
 
       const RECEPTIVE = 15000, ALIGN = 10000, ACTION = 12000, TOTAL = RECEPTIVE + ALIGN + ACTION;
       let start = performance.now(), pdfOpen = false, phase = 0, global = 'receptive', sub = 'alpha', freq = 10;
+
+      // Colour burst tables (mirrors CSS keyframes)
+      const colorSteps = {
+        receptive: [
+          { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
+          { upTo: 0.79475, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' },
+          { upTo: 0.8358, bg: '#F8F8FF', shadow: '0 0 150px #F8F8FF, 0 0 300px rgba(248,248,255,0.9)' },
+          { upTo: 0.87685, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1)' },
+          { upTo: 0.9179, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1)' },
+          { upTo: 0.95895, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' },
+          { upTo: 1.0, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' }
+        ],
+        alignment: [
+          { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
+          { upTo: 0.79475, bg: '#4A3500', shadow: '0 0 150px #4A3500, 0 0 300px rgba(74,53,0,0.9)' },
+          { upTo: 0.8358, bg: '#8B6500', shadow: '0 0 150px #8B6500, 0 0 300px rgba(139,101,0,0.9)' },
+          { upTo: 0.87685, bg: '#DAA520', shadow: '0 0 150px #DAA520, 0 0 300px rgba(218,165,32,0.9)' },
+          { upTo: 0.9179, bg: '#FFD700', shadow: '0 0 150px #FFD700, 0 0 300px rgba(255,215,0,1)' },
+          { upTo: 0.95895, bg: '#FFF8DC', shadow: '0 0 150px #FFF8DC, 0 0 300px rgba(255,248,220,0.9)' },
+          { upTo: 1.0, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' }
+        ],
+        action: [
+          { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
+          { upTo: 0.79475, bg: '#0A2A0A', shadow: '0 0 150px #0A2A0A, 0 0 300px rgba(10,42,10,0.9)' },
+          { upTo: 0.8358, bg: '#1A5A1A', shadow: '0 0 150px #1A5A1A, 0 0 300px rgba(26,90,26,0.9)' },
+          { upTo: 0.87685, bg: '#2A8A2A', shadow: '0 0 150px #2A8A2A, 0 0 300px rgba(42,138,42,0.9)' },
+          { upTo: 0.9179, bg: '#40C040', shadow: '0 0 150px #40C040, 0 0 300px rgba(64,192,64,0.9)' },
+          { upTo: 0.95895, bg: '#60E060', shadow: '0 0 150px #60E060, 0 0 300px rgba(96,224,96,0.9)' },
+          { upTo: 1.0, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' }
+        ]
+      };
+
+      function getBurstColor(phase, progress) {
+        const steps = colorSteps[phase] || colorSteps.receptive;
+        for (let i = 0; i < steps.length; i++) {
+          if (progress <= steps[i].upTo) {
+            return { bg: steps[i].bg, shadow: steps[i].shadow };
+          }
+        }
+        return steps[steps.length - 1];
+      }
 
       function update(now) {
         const el = (now - start) % TOTAL;
@@ -358,13 +364,19 @@
         document.body.className = global;
         if (global === 'receptive') {
           ring.style.setProperty('--env-dur','2s'); ring.style.setProperty('--strobe-dur','0.5s');
-          ring.style.setProperty('--color-dur','2s'); ring.style.setProperty('--color-anim','ringColorReceptive');
+          ring.style.setProperty('--color-dur','2s');
+          glowWrapper.style.setProperty('--env-dur','2s');
+          glowWrapper.style.setProperty('--color-dur','2s');
         } else if (global === 'alignment') {
           ring.style.setProperty('--env-dur','5s'); ring.style.setProperty('--strobe-dur','2s');
-          ring.style.setProperty('--color-dur','5s'); ring.style.setProperty('--color-anim','ringColorAlignment');
+          ring.style.setProperty('--color-dur','5s');
+          glowWrapper.style.setProperty('--env-dur','5s');
+          glowWrapper.style.setProperty('--color-dur','5s');
         } else {
           ring.style.setProperty('--env-dur','0.5s'); ring.style.setProperty('--strobe-dur','0.0278s');
-          ring.style.setProperty('--color-dur','0.5s'); ring.style.setProperty('--color-anim','ringColorAction');
+          ring.style.setProperty('--color-dur','0.5s');
+          glowWrapper.style.setProperty('--env-dur','0.5s');
+          glowWrapper.style.setProperty('--color-dur','0.5s');
         }
       }
 
@@ -377,26 +389,38 @@
         loop.prev = now;
         phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // Eye symbol color by phase
+        // Eye symbol colour & flicker
         let eyeColor = '#FFFFFF';
         if (global === 'alignment') eyeColor = '#FFD700';
         else if (global === 'action') eyeColor = '#790B3E';
         eyeSVG.style.color = eyeColor;
 
-        // Eye symbol flicker – pure carrier frequency
         let eyeOpacity = 1;
         if (global === 'receptive') {
           if (sub === 'delta') eyeOpacity = 0.5 + 0.5 * Math.sin(phase);
           else eyeOpacity = Math.sin(phase) >= 0 ? 1 : 0;
         } else if (global === 'alignment') {
-          // infraslow modulation only
           eyeOpacity = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
         } else {
           eyeOpacity = Math.sin(phase) >= 0 ? 1 : 0;
         }
         eyeSVG.style.opacity = reducedMotion ? 0 : eyeOpacity;
 
-        // Luminance overlay (same as before)
+        // Ring colour burst (computed position within burst window)
+        const burstDuration = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
+        const cycleElapsed = (now - start) % (burstDuration * 1000);
+        const burstProgress = cycleElapsed / (burstDuration * 1000);
+        const burst = getBurstColor(global, burstProgress);
+        ring.style.setProperty('background', burst.bg);
+        ring.style.setProperty('box-shadow', burst.shadow);
+
+        // Synchronize glow wrapper ::before colour and shadow
+        if (glowWrapper && glowWrapper.style) {
+          glowWrapper.style.setProperty('background', burst.bg);
+          glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
+        }
+
+        // Luminance overlay
         if (reducedMotion) { overlay.style.opacity = 0; return; }
         const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
         let flicker = 0;
@@ -417,7 +441,7 @@
       window.setPdfOpen = v => pdfOpen = v;
     })();
 
-    // ── Background static canvas (sacred palette, web worker) ──
+    // ── Background static canvas ──
     (function() {
       const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
       const palette = [
