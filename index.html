@@ -15,7 +15,6 @@
       will-change: transform; opacity: 0.2;
     }
 
-    /* ── Luminance entrainment overlay (pure white light) ── */
     #entrainment-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -1; pointer-events: none;
@@ -35,7 +34,6 @@
 
     @keyframes ringRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    /* Ring pulse – golden/white burst */
     #ring::after {
       content: '';
       position: fixed; top: 50%; left: 50%;
@@ -61,7 +59,6 @@
       100% { visibility: visible; }
     }
 
-    /* Golden and white burst sequence */
     @keyframes ringColorBurst {
       0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
       75.37%, 79.475% { background: #4A3500; box-shadow: 0 0 150px #4A3500, 0 0 300px rgba(74,53,0,0.9); }
@@ -94,7 +91,6 @@
       animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
-    /* Spotlight – sacred gold flicker */
     .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, goldFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
@@ -102,7 +98,6 @@
       animation: fastSpin 33s linear infinite, goldFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
-    /* Gold‑pass sweep (replaces red‑pass) */
     .floating-page.gold-pass canvas {
       animation: slowSpin 33s linear infinite, goldPassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
@@ -177,9 +172,7 @@
       animation: dreamGlow 0.5s ease-in-out infinite;
     }
 
-    /* Dream glow – soul green → iridescent bridge → golden spectrum */
     @keyframes dreamGlow {
-      /* Soul green (0–8s) */
       0%, 5.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
       5.56%, 11.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
       11.12%, 16.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
@@ -187,7 +180,6 @@
       22.23%, 27.77% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
       27.78%, 33.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
 
-      /* Iridescent shimmer (8–16s) – green‑to‑gold bridge */
       33.34%, 34.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
       34.73%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
       36.12%, 37.49% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
@@ -201,7 +193,6 @@
       47.23%, 48.61% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #600080, 0 0 6000px rgba(96,0,128,0.6); }
       48.62%, 50.00% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790b3e, 0 0 6000px rgba(121,11,62,0.6); }
 
-      /* Golden spectrum (16–24s) */
       66.67%, 71.43% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #DAA520, 0 0 6000px rgba(218,165,32,0.5); }
       71.44%, 76.19% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.5); }
       76.20%, 80.95% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFA500, 0 0 6000px rgba(255,165,0,0.5); }
@@ -255,6 +246,20 @@
   </script>
 
   <script>
+    // ── User preference & capability checks ──
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersLowData = window.matchMedia('(prefers-reduced-data: reduce)').matches;
+
+    // Listen for motion preference changes (dynamic adjustment)
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reducedMotion = prefersReducedMotion;
+    motionQuery.addEventListener('change', (e) => {
+      reducedMotion = e.matches;
+    });
+
+    // Performance / data saver: reduce static resolution
+    const staticScale = (prefersLowData || window.navigator.hardwareConcurrency < 4) ? 0.5 : 1.0;
+
     document.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('beforeunload', () => {
       document.body.style.background = '#ff0000';
@@ -311,18 +316,25 @@
         loop.prev = now;
         phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
+        // Stop luminance overlay if reduced motion is preferred
+        if (reducedMotion) {
+          overlay.style.opacity = 0;
+          return;
+        }
+
         const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
         let flicker = 0;
+        const intensityFactor = prefersLowData ? 0.5 : 1.0;
 
         if (global === 'receptive') {
           if (sub === 'delta') flicker = 0.5 + 0.5 * Math.sin(phase);
           else flicker = Math.sin(phase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * infra * 0.35;
+          overlay.style.opacity = flicker * infra * 0.35 * intensityFactor;
         } else if (global === 'alignment') {
-          overlay.style.opacity = infra * 0.25;
+          overlay.style.opacity = infra * 0.25 * intensityFactor;
         } else {
           flicker = Math.sin(phase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * infra * 0.35;
+          overlay.style.opacity = flicker * infra * 0.35 * intensityFactor;
         }
       }
       loop.prev = performance.now();
@@ -330,35 +342,134 @@
       window.setPdfOpen = v => pdfOpen = v;
     })();
 
-    // ── Background static canvas (sacred palette) ──
+    // ── Background static canvas (sacred palette, web worker or main thread) ──
     (function() {
-      const c = document.getElementById('bg-canvas'), ctx = c.getContext('2d');
-      let last = 0, fps = 10, iv = 1000 / fps;
-      // Divine palette: greens, golds, off‑whites
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+
       const palette = [
-        '#0a1f0a', '#143014', '#1e3b1e', '#284b28', '#326032', '#3c783c',    // sacred greens
-        '#4a3500', '#6b4e00', '#8b6500', '#b8860b', '#daa520', '#ffd700',    // deep to bright gold
-        '#ffffe0', '#fff8dc', '#fdf5e6'                                        // off‑whites
+        '#0a1f0a', '#143014', '#1e3b1e', '#284b28', '#326032', '#3c783c',
+        '#4a3500', '#6b4e00', '#8b6500', '#b8860b', '#daa520', '#ffd700',
+        '#ffffe0', '#fff8dc', '#fdf5e6'
       ];
-      function resize() { c.width = innerWidth; c.height = innerHeight; }
-      function noise() {
-        const w = c.width, h = c.height, img = ctx.createImageData(w, h), d = img.data;
-        for (let i = 0; i < d.length; i += 4) {
-          const hex = palette[Math.floor(Math.random() * palette.length)];
-          const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-          d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=255;
+      const numericPalette = palette.map(hex => ({
+        r: parseInt(hex.slice(1,3),16),
+        g: parseInt(hex.slice(3,5),16),
+        b: parseInt(hex.slice(5,7),16)
+      }));
+
+      let lastTime = 0;
+      let fps = 10;
+      let interval = 1000 / fps;
+      let worker;
+      let pendingFrame = false;
+
+      function resize() {
+        canvas.width = Math.floor(innerWidth * staticScale);
+        canvas.height = Math.floor(innerHeight * staticScale);
+        if (staticScale < 1.0) {
+          // If we reduced resolution, scale up the canvas via CSS to maintain viewport size
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
+        }
+      }
+
+      // Create a blob worker for noise generation
+      function createWorker() {
+        const workerCode = () => {
+          self.onmessage = function(e) {
+            const { width, height, numericPalette } = e.data;
+            const size = width * height * 4;
+            const buffer = new ArrayBuffer(size);
+            const data = new Uint8ClampedArray(buffer);
+            const len = numericPalette.length;
+            for (let i = 0; i < size; i += 4) {
+              const c = numericPalette[Math.floor(Math.random() * len)];
+              data[i] = c.r;
+              data[i+1] = c.g;
+              data[i+2] = c.b;
+              data[i+3] = 255;
+            }
+            self.postMessage({ buffer }, [buffer]);
+          };
+        };
+
+        const blob = new Blob([`(${workerCode.toString()})()`], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        const w = new Worker(url);
+        URL.revokeObjectURL(url);
+        return w;
+      }
+
+      function requestFrame() {
+        if (!worker || pendingFrame) return;
+        pendingFrame = true;
+        worker.postMessage({
+          width: canvas.width,
+          height: canvas.height,
+          numericPalette
+        });
+      }
+
+      // Fallback to main‑thread generation if worker fails or isn't supported
+      function generateMainThread() {
+        const w = canvas.width, h = canvas.height;
+        const img = ctx.createImageData(w, h);
+        const data = img.data;
+        const len = numericPalette.length;
+        for (let i = 0; i < data.length; i += 4) {
+          const c = numericPalette[Math.floor(Math.random() * len)];
+          data[i] = c.r;
+          data[i+1] = c.g;
+          data[i+2] = c.b;
+          data[i+3] = 255;
         }
         ctx.putImageData(img, 0, 0);
       }
+
+      function onWorkerMessage(e) {
+        const { buffer } = e.data;
+        const img = new ImageData(new Uint8ClampedArray(buffer), canvas.width, canvas.height);
+        ctx.putImageData(img, 0, 0);
+        pendingFrame = false;
+        // Once the frame is drawn, we can request the next one on next tick
+      }
+
+      try {
+        worker = createWorker();
+        worker.onmessage = onWorkerMessage;
+        worker.onerror = () => {
+          worker = null;
+          console.warn('Static worker failed, falling back to main thread.');
+        };
+      } catch (e) {
+        worker = null;
+      }
+
       function tick(now) {
         requestAnimationFrame(tick);
         if (document.body.classList.contains('action')) fps = 36;
         else if (document.body.classList.contains('alignment')) fps = 10;
         else fps = 10;
-        iv = 1000 / fps;
-        if (now - last >= iv) { noise(); last = now; }
+        interval = 1000 / fps;
+        if (now - lastTime >= interval) {
+          lastTime = now;
+          if (worker) {
+            requestFrame();
+          } else {
+            generateMainThread();
+          }
+        }
       }
-      addEventListener('resize', resize); resize(); requestAnimationFrame(tick);
+
+      addEventListener('resize', () => {
+        resize();
+        if (worker) {
+          worker.postMessage({ resize: true, width: canvas.width, height: canvas.height }); // force resize in worker? No, worker just gets dimensions with each request, so fine.
+        }
+      });
+      resize();
+      requestAnimationFrame(tick);
     })();
 
     // ── PDF.js ritual (with gold‑pass in place of red‑pass) ──
@@ -433,7 +544,6 @@
           }
         }
 
-        // Gold‑pass sweep (replaces red‑pass)
         const skip = new Set([10, 21, 32]);
         const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
         const sizes = [2, 4, 5]; let gi = 0, pos = 0;
