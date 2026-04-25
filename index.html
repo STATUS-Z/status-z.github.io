@@ -291,12 +291,12 @@
       transition: opacity 0.2s;
     }
 
-    #glow-wrapper.dream-active::before {
-      opacity: 1;
-      animation: 
-        dreamGlow 24s ease-in-out infinite,
-        dreamStrobe 0.0278s step-start infinite;
-    }
+#glow-wrapper.dream-active::before {
+  opacity: 1;
+  animation: 
+    dreamGlow 24s ease-in-out infinite,
+    dreamStrobe 24s linear infinite;   /* ← was 0.0278s step‑start */
+}
 
    @keyframes dreamGlow {
   /* Soul green – rapid flicker (0–8s) */
@@ -421,7 +421,7 @@
     
 @keyframes dreamStrobe {
   0%, 33.33% { filter: invert(0); }   /* soul green – no inversion */
-  33.34%, 66.66% { filter: invert(1); } /* invert only during shimmer */
+  33.34%, 66.66% { filter: invert(0); } /* invert only during shimmer */
   66.67%, 100% { filter: invert(0); }  /* purple spectrum – no inversion */
 }
 
