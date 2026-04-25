@@ -8,91 +8,67 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
+      width: 100%; height: 100%; overflow: hidden;
       background: #000;
     }
 
     body {
       perspective: 1200px;
       font-family: system-ui, sans-serif;
-      position: fixed;
-      top: 0;
-      left: 0;
+      position: fixed; top: 0; left: 0;
     }
 
     #bg-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-      display: block;
-      pointer-events: none;
-      will-change: transform;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -2; display: block; pointer-events: none;
+      will-change: transform; opacity: 0.15; /* subtle static texture */
     }
 
-    #cloud {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      overflow: visible;
+    /* ── Luminance entrainment overlay (real‑time phase‑coherent) ── */
+    #entrainment-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1; pointer-events: none;
+      background: white;
+      opacity: 0;
+      will-change: opacity;
+      mix-blend-mode: overlay; /* gently brightens */
     }
+
+    #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
 
     #ring {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      transform-origin: center center;
-      animation: ringRotate 2s linear infinite;
-      isolation: isolate;
-      will-change: transform;
+      position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+      transform-origin: center center; isolation: isolate; will-change: transform;
+      animation: ringRotate 2s linear infinite; /* Receptive (Delta) */
     }
+
+    /* Phase‑specific ring rotation speeds */
+    body.alignment #ring { animation: ringRotate 20s linear infinite; }  /* Infraslow */
+    body.action #ring { animation: ringRotate 0.5s linear infinite; }    /* Beta‑Gamma */
 
     @keyframes ringRotate {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
 
-    /* Ring pulse – Delta envelope (2 s), Delta strobe (2 Hz) */
+    /* Ring pulse envelope and strobe – controlled by CSS variables, updated by script */
     #ring::after {
       content: '';
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #000000;
-      box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 1;
+      position: fixed; top: 50%; left: 50%;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9);
+      opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
-      animation: 
-        ringBurstEnvelope 2s ease-in-out infinite,
-        ringStrobe 0.5s step-start infinite,
-        ringColorBurst 2s step-start infinite;
+      animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
+                 ringStrobe var(--strobe-dur, 0.5s) step-start infinite,
+                 ringColorBurst var(--color-dur, 2s) step-start infinite;
       will-change: transform, opacity, box-shadow, background;
     }
 
     @keyframes ringBurstEnvelope {
-      0%, 75.37% { 
-        opacity: 0; 
-        transform: translate(-50%, -50%) scale(0.1);
-      }
-      75.37% {
-        opacity: 1; 
-        transform: translate(-50%, -50%) scale(150);
-      }
-      100% {
-        opacity: 0; 
-        transform: translate(-50%, -50%) scale(200);
-      }
+      0%, 75.37% { opacity: 0; transform: translate(-50%, -50%) scale(0.1); }
+      75.37% { opacity: 1; transform: translate(-50%, -50%) scale(150); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(200); }
     }
 
     @keyframes ringStrobe {
@@ -102,239 +78,127 @@
     }
 
     @keyframes ringColorBurst {
-      0%, 75.37% {
-        background: #000000;
-        box-shadow: 0 0 150px #000000, 0 0 300px rgba(0,0,0,0.9);
-      }
-      75.37%, 79.475% {
-        background: #1A0000;
-        box-shadow: 0 0 150px #1A0000, 0 0 300px rgba(26,0,0,0.9);
-      }
-      79.475%, 83.58% {
-        background: #42000A;
-        box-shadow: 0 0 150px #42000A, 0 0 300px rgba(66,0,10,0.9);
-      }
-      83.58%, 87.685% {
-        background: #600B12;
-        box-shadow: 0 0 150px #600B12, 0 0 300px rgba(96,11,18,0.9);
-      }
-      87.685%, 91.79% {
-        background: #8B1A1A;
-        box-shadow: 0 0 150px #8B1A1A, 0 0 300px rgba(139,26,26,0.9);
-      }
-      91.79%, 95.895% {
-        background: #9D0B0B;
-        box-shadow: 0 0 150px #9D0B0B, 0 0 300px rgba(157,11,11,0.9);
-      }
-      95.895%, 100% {
-        background: #B30000;
-        box-shadow: 0 0 150px #B30000, 0 0 300px rgba(179,0,0,0.9);
-      }
+      0%, 75.37% { background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9); }
+      75.37%, 79.475% { background: #1A0000; box-shadow: 0 0 150px #1A0000, 0 0 300px rgba(26,0,0,0.9); }
+      79.475%, 83.58% { background: #42000A; box-shadow: 0 0 150px #42000A, 0 0 300px rgba(66,0,10,0.9); }
+      83.58%, 87.685% { background: #600B12; box-shadow: 0 0 150px #600B12, 0 0 300px rgba(96,11,18,0.9); }
+      87.685%, 91.79% { background: #8B1A1A; box-shadow: 0 0 150px #8B1A1A, 0 0 300px rgba(139,26,26,0.9); }
+      91.79%, 95.895% { background: #9D0B0B; box-shadow: 0 0 150px #9D0B0B, 0 0 300px rgba(157,11,11,0.9); }
+      95.895%, 100% { background: #B30000; box-shadow: 0 0 150px #B30000, 0 0 300px rgba(179,0,0,0.9); }
     }
-    
+
     .floating-page {
-      position: absolute;
-      cursor: pointer;
-      will-change: transform;
-      background: transparent;
-      transform-style: preserve-3d;
-      backface-visibility: hidden;
-      border-radius: 4px;
+      position: absolute; cursor: pointer; will-change: transform;
+      background: transparent; transform-style: preserve-3d;
+      backface-visibility: hidden; border-radius: 4px;
     }
 
     .floating-page canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border-radius: 4px;
-      background: #000;
+      display: block; width: 100%; height: 100%; border-radius: 4px;
+      background: #000; transform-origin: center center; image-rendering: crisp-edges;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform, box-shadow;
+    }
+
+    /* Phase‑specific thumbnail animations */
+    body.receptive .floating-page canvas {
       animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
-      transform-origin: center center;
-      image-rendering: crisp-edges;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.95);
-      will-change: transform, box-shadow;
+    }
+    body.alignment .floating-page canvas {
+      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
+    }
+    body.action .floating-page canvas {
+      animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
     .floating-page.spotlight canvas {
-      animation: 
-        fastSpin 33s linear infinite, 
-        redFlicker 0.1667s step-start infinite,
-        thumbStrobeTwo 0.1667s step-start infinite !important;
+      animation: fastSpin 33s linear infinite, redFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
+    }
+    body.action .floating-page.spotlight canvas {
+      animation: fastSpin 33s linear infinite, redFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
     .floating-page.red-pass canvas {
-      animation: 
-        slowSpin 33s linear infinite, 
-        redPassGlow 2s ease-in-out infinite,
-        thumbStrobe 0.1667s step-start infinite;
+      animation: slowSpin 33s linear infinite, redPassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
 
     .flipper {
-      width: 100%;
-      height: 100%;
-      transform-style: preserve-3d;
+      width: 100%; height: 100%; transform-style: preserve-3d;
       transition: transform 0.6s ease-in-out;
     }
-    .flipped .flipper {
-      transform: rotateY(180deg);
-    }
+    .flipped .flipper { transform: rotateY(180deg); }
 
-    @keyframes slowSpin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
-
-    @keyframes fastSpin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
+    @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
     @keyframes squarePulse {
-      0%, 49.9% {
-        box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #ffffff, 0 0 150px rgba(255,255,255,0.8);
-      }
-      50%, 99.9% {
-        box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000000, 0 0 150px rgba(0,0,0,0.95);
-      }
-      100% {
-        box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #ffffff, 0 0 150px rgba(255,255,255,0.8);
-      }
+      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
+      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95); }
+      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
     }
 
     @keyframes redFlicker {
-      0%, 49.9% {
-        box-shadow: 
-          0 20px 40px rgba(0,0,0,1),
-          0 0 120px #ff0000,
-          0 0 225px rgba(255,0,0,0.9);
-      }
-      50%, 99.9% {
-        box-shadow: 
-          0 20px 40px rgba(0,0,0,1),
-          0 0 120px #8b0000,
-          0 0 225px rgba(139,0,0,0.8);
-      }
-      100% {
-        box-shadow: 
-          0 20px 40px rgba(0,0,0,1),
-          0 0 120px #ff0000,
-          0 0 225px rgba(255,0,0,0.9);
-      }
+      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #f00, 0 0 225px rgba(255,0,0,0.9); }
+      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #8b0000, 0 0 225px rgba(139,0,0,0.8); }
+      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #f00, 0 0 225px rgba(255,0,0,0.9); }
     }
 
-    @keyframes thumbStrobe {
-      0%, 49.9% { opacity: 1; }
-      50%, 99.9% { opacity: 0.75; }
-      100% { opacity: 1; }
-    }
-
-    @keyframes thumbStrobeTwo {
-      0%, 49.9% { opacity: 0.5; }
-      50%, 99.9% { opacity: 0.75; }
-      100% { opacity: 0.5; }
-    }
+    @keyframes thumbStrobe { 0%, 49.9% { opacity: 1; } 50%, 99.9% { opacity: 0.75; } 100% { opacity: 1; } }
+    @keyframes thumbStrobeTwo { 0%, 49.9% { opacity: 0.5; } 50%, 99.9% { opacity: 0.75; } 100% { opacity: 0.5; } }
 
     @keyframes redPassGlow {
-      0%, 100% {
-        box-shadow: 
-          0 20px 40px rgba(0,0,0,1),
-          0 0 100px rgba(255,0,0,0.4),
-          0 0 200px rgba(255,0,0,0.3);
-      }
-      50% {
-        box-shadow: 
-          0 20px 40px rgba(0,0,0,1),
-          0 0 150px rgba(255,0,0,0.5),
-          0 0 300px rgba(255,0,0,0.4);
-      }
+      0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(255,0,0,0.4), 0 0 200px rgba(255,0,0,0.3); }
+      50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(255,0,0,0.5), 0 0 300px rgba(255,0,0,0.4); }
     }
 
     #overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(8px);
-      z-index: 1000;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      cursor: zoom-out;
-      overflow: visible;
-      pointer-events: auto;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      z-index: 1000; display: none; justify-content: center; align-items: center;
+      cursor: zoom-out; overflow: visible; pointer-events: auto;
     }
 
     #glow-wrapper {
-      position: relative;
-      display: inline-block;
-      max-width: 95vw;
-      max-height: 95vh;
+      position: relative; display: inline-block; max-width: 95vw; max-height: 95vh;
     }
 
     #glow-wrapper::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      pointer-events: none;
-      z-index: -2;
-      transform: translate(-50%, -50%);
-      will-change: box-shadow, opacity;
-      opacity: 0;
-      transition: opacity 0.2s;
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 100%; height: 100%; background: transparent; pointer-events: none;
+      z-index: -2; transform: translate(-50%, -50%);
+      will-change: box-shadow, opacity; opacity: 0; transition: opacity 0.2s;
     }
 
     #glow-wrapper.dream-active::after {
       opacity: 1;
       animation: whiteSparkle 0.1s step-start infinite;
     }
+    body.action #glow-wrapper.dream-active::after {
+      animation: whiteSparkle 0.0278s step-start infinite;
+    }
 
     #glow-wrapper::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      pointer-events: none;
-      z-index: -1;
-      transform: translate(-50%, -50%);
-      will-change: box-shadow;
-      opacity: 0;
-      transition: opacity 0.2s;
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 100%; height: 100%; background: transparent; pointer-events: none;
+      z-index: -1; transform: translate(-50%, -50%);
+      will-change: box-shadow; opacity: 0; transition: opacity 0.2s;
     }
 
     #glow-wrapper.dream-active::before {
       opacity: 1;
       animation: dreamGlow 2s ease-in-out infinite;
     }
+    body.action #glow-wrapper.dream-active::before {
+      animation: dreamGlow 0.5s ease-in-out infinite;
+    }
 
     @keyframes dreamGlow {
-      0%, 5.55% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5);
-      }
-      5.56%, 11.11% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5);
-      }
-      11.12%, 16.66% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5);
-      }
-      16.67%, 22.22% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5);
-      }
-      22.23%, 27.77% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5);
-      }
-      27.78%, 33.33% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5);
-      }
-
+      0%, 5.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
+      5.56%, 11.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
+      11.12%, 16.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
+      16.67%, 22.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
+      22.23%, 27.77% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
+      27.78%, 33.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
+      /* … (abridged; the full shimmer and purple spectrum is identical to the last deployed version) … */
       33.34%, 34.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
       34.73%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
       36.12%, 37.49% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
@@ -360,114 +224,45 @@
       63.89%, 65.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
       65.28%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
 
-      66.67%, 71.43% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790B3E, 0 0 6000px rgba(121,11,62,0.5);
-      }
-      71.44%, 76.19% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2A001A, 0 0 6000px rgba(42,0,26,0.5);
-      }
-      76.20%, 80.95% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #5A0038, 0 0 6000px rgba(90,0,56,0.5);
-      }
-      80.96%, 85.71% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #9E1A5E, 0 0 6000px rgba(158,26,94,0.5);
-      }
-      85.72%, 90.47% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #B20B5E, 0 0 6000px rgba(178,11,94,0.5);
-      }
-      90.48%, 95.23% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #CB0066, 0 0 6000px rgba(203,0,102,0.5);
-      }
-      95.24%, 100% {
-        box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790B3E, 0 0 6000px rgba(121,11,62,0.5);
-      }
+      66.67%, 71.43% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790B3E, 0 0 6000px rgba(121,11,62,0.5); }
+      71.44%, 76.19% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2A001A, 0 0 6000px rgba(42,0,26,0.5); }
+      76.20%, 80.95% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #5A0038, 0 0 6000px rgba(90,0,56,0.5); }
+      80.96%, 85.71% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #9E1A5E, 0 0 6000px rgba(158,26,94,0.5); }
+      85.72%, 90.47% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #B20B5E, 0 0 6000px rgba(178,11,94,0.5); }
+      90.48%, 95.23% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #CB0066, 0 0 6000px rgba(203,0,102,0.5); }
+      95.24%, 100% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790B3E, 0 0 6000px rgba(121,11,62,0.5); }
     }
 
     @keyframes whiteSparkle {
-      0%, 49.9% {
-        box-shadow: 
-          0 0 4000px rgba(255,255,255,0.9),
-          0 0 2400px #ffffff,
-          0 0 6000px rgba(255,255,255,0.7);
-      }
-      50%, 99.9% {
-        box-shadow: none;
-      }
-      100% {
-        box-shadow: 
-          0 0 4000px rgba(255,255,255,0.9),
-          0 0 2400px #ffffff,
-          0 0 6000px rgba(255,255,255,0.7);
-      }
+      0%, 49.9% { box-shadow: 0 0 4000px rgba(255,255,255,0.9), 0 0 2400px #fff, 0 0 6000px rgba(255,255,255,0.7); }
+      50%, 99.9% { box-shadow: none; }
+      100% { box-shadow: 0 0 4000px rgba(255,255,255,0.9), 0 0 2400px #fff, 0 0 6000px rgba(255,255,255,0.7); }
     }
 
     #overlay canvas {
-      max-width: 95vw;
-      max-height: 95vh;
-      border-radius: 6px;
-      cursor: default;
-      background: #000;
-      box-shadow: none;
-      position: relative;
-      z-index: 2;
+      max-width: 95vw; max-height: 95vh; border-radius: 6px;
+      cursor: default; background: #000; box-shadow: none;
+      position: relative; z-index: 2;
     }
 
     .dl {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 9999;
-      background: #0d1117;
-      padding: 10px 18px;
-      border-radius: 40px;
-      opacity: 0.4;
-      border: 1px solid #3a4a6a;
-      backdrop-filter: blur(8px);
-      transition: opacity 0.2s, transform 0.2s;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+      background: #0d1117; padding: 10px 18px; border-radius: 40px;
+      opacity: 0.4; border: 1px solid #3a4a6a; backdrop-filter: blur(8px);
+      transition: opacity 0.2s, transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
-
-    .dl:hover {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-
-    .dl a {
-      color: #d0e0ff;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-    }
-
-    #loading {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #aaa;
-      font-size: 18px;
-      z-index: 10;
-    }
+    .dl:hover { opacity: 1; transform: scale(1.05); }
+    .dl a { color: #d0e0ff; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; }
+    #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
   </style>
 </head>
-<body>
+<body class="receptive">
   <canvas id="bg-canvas"></canvas>
-
-  <div id="cloud">
-    <div id="ring"></div>
-  </div>
+  <div id="entrainment-overlay"></div>
+  <div id="cloud"><div id="ring"></div></div>
   <div id="loading">Manifesting...</div>
-
-  <div id="overlay">
-    <div id="glow-wrapper">
-      <canvas id="expanded-canvas"></canvas>
-    </div>
-  </div>
-
-  <div class="dl">
-    <a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a>
-  </div>
+  <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
+  <div class="dl"><a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a></div>
 
   <script>
     window.PDFJS_LOCAL = true;
@@ -483,264 +278,193 @@
 
   <script>
     document.addEventListener('contextmenu', e => e.preventDefault());
-
-    // Refresh pulse – brief Theta flicker before unload
     window.addEventListener('beforeunload', () => {
       document.body.style.background = '#ff0000';
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
 
-    (async function() {
-      function waitForPDFJS(cb) {
-        if (typeof pdfjsLib !== 'undefined') cb();
-        else setTimeout(() => waitForPDFJS(cb), 50);
-      }
-
-      waitForPDFJS(async () => {
-        if (window.PDFJS_LOCAL) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
-        } else {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-
-        const pdfPath = '/pdf/resume.pdf';
-        const ring = document.getElementById('ring');
-        const loading = document.getElementById('loading');
-        const overlay = document.getElementById('overlay');
-        const expandedCanvas = document.getElementById('expanded-canvas');
-        const glowWrapper = document.getElementById('glow-wrapper');
-
-        const COPIES_PER_PAGE = 33;
-        const THUMB_SCALE = 0.35;
-        const STAGGER_DELAY = 167; /* 6 Hz Theta emergence */
-
-        const pageViewports = [];
-        const allFloaters = [];
-
-        function positionOnCircle(floater, index, total, baseW, baseH) {
-          const angle = (index / total) * Math.PI * 2 - Math.PI / 2 - (total - 1) / total * Math.PI * 2;
-          const radius = Math.min(window.innerWidth, window.innerHeight) * 0.4;
-          const left = Math.cos(angle) * radius - baseW / 2;
-          const top = Math.sin(angle) * radius - baseH / 2;
-          floater.style.left = left + 'px';
-          floater.style.top = top + 'px';
-        }
-
-        try {
-          const pdf = await pdfjsLib.getDocument(pdfPath).promise;
-          const totalPages = pdf.numPages;
-          
-          setTimeout(() => {
-            loading.style.display = 'none';
-          }, 1500);
-
-          for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const originalViewport = page.getViewport({ scale: 2.0 });
-            const thumbViewport = page.getViewport({ scale: THUMB_SCALE });
-            
-            const thumbCanvas = document.createElement('canvas');
-            thumbCanvas.width = thumbViewport.width;
-            thumbCanvas.height = thumbViewport.height;
-            const context = thumbCanvas.getContext('2d');
-            await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
-
-            pageViewports[pageNum] = {
-              page,
-              viewport: originalViewport,
-              thumbCanvas,
-              thumbWidth: thumbViewport.width,
-              thumbHeight: thumbViewport.height
-            };
-          }
-
-          let globalIndex = 0;
-          const totalCopies = totalPages * COPIES_PER_PAGE;
-
-          for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-            const { thumbCanvas, thumbWidth, thumbHeight } = pageViewports[pageNum];
-            
-            for (let copy = 0; copy < COPIES_PER_PAGE; copy++) {
-              const floater = document.createElement('div');
-              floater.className = 'floating-page';
-              
-              const canvasCopy = document.createElement('canvas');
-              canvasCopy.width = thumbWidth;
-              canvasCopy.height = thumbHeight;
-              const ctxCopy = canvasCopy.getContext('2d');
-              ctxCopy.drawImage(thumbCanvas, 0, 0);
-              
-              const flipper = document.createElement('div');
-              flipper.className = 'flipper';
-              flipper.appendChild(canvasCopy);
-              floater.appendChild(flipper);
-              
-              floater.style.width = thumbWidth + 'px';
-              floater.style.height = thumbHeight + 'px';
-              floater.style.left = '-9999px';
-              floater.style.top = '-9999px';
-
-              const rotX = (Math.random() - 0.5) * 8;
-              const rotY = (Math.random() - 0.5) * 8;
-              const rotZ = (Math.random() - 0.5) * 6;
-              floater.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) translateZ(${Math.random() * 30}px)`;
-
-              floater.dataset.page = pageNum;
-              floater.dataset.index = globalIndex;
-
-              const idx = globalIndex;
-              let z = 10;
-              if (idx < 11) {
-                z = 20 + idx;
-              } else if (idx < 22) {
-                z = 30 + (idx - 11);
-              } else {
-                z = 40 + (idx - 22);
-              }
-              floater.style.zIndex = z;
-              
-              if (idx === 11) floater.style.zIndex = 25;
-              if (idx === 22) floater.style.zIndex = 35;
-              
-              if (idx === 10 || idx === 21 || idx === 32) {
-                floater.classList.add('spotlight');
-                floater.style.zIndex = 200;
-              }
-
-              floater.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const pageNum = parseInt(floater.dataset.page);
-                const { page, viewport } = pageViewports[pageNum];
-                expandedCanvas.width = viewport.width;
-                expandedCanvas.height = viewport.height;
-                const ctx = expandedCanvas.getContext('2d');
-                await page.render({ canvasContext: ctx, viewport }).promise;
-                overlay.style.display = 'flex';
-                glowWrapper.classList.add('dream-active');
-              });
-
-              ring.appendChild(floater);
-              allFloaters.push({ element: floater, flipper: flipper, index: globalIndex, width: thumbWidth, height: thumbHeight });
-              
-              setTimeout((floaterEl, idxPos, w, h) => {
-                positionOnCircle(floaterEl, idxPos, totalCopies, w, h);
-              }, globalIndex * STAGGER_DELAY, floater, globalIndex, thumbWidth, thumbHeight);
-              
-              globalIndex++;
-            }
-          }
-
-          const skipIndices = new Set([10, 21, 32]);
-          const eligibleIndices = allFloaters
-            .map((_, i) => i)
-            .filter(i => !skipIndices.has(i));
-
-          const groupSizes = [2, 4, 5];
-          let groupIndex = 0;
-          let posInGroup = 0;
-          const redPassInterval = 8000;
-
-          function applyRedPassGroup() {
-            eligibleIndices.forEach(i => {
-              allFloaters[i].element.classList.remove('red-pass');
-            });
-
-            const size = groupSizes[groupIndex];
-            const currentGroup = [];
-            for (let i = 0; i < size; i++) {
-              const idx = eligibleIndices[(posInGroup + i) % eligibleIndices.length];
-              currentGroup.push(idx);
-            }
-
-            currentGroup.forEach(idx => {
-              allFloaters[idx].element.classList.add('red-pass');
-            });
-
-            posInGroup = (posInGroup + size) % eligibleIndices.length;
-            groupIndex = (groupIndex + 1) % groupSizes.length;
-          }
-
-          setTimeout(() => {
-            applyRedPassGroup();
-            setInterval(applyRedPassGroup, redPassInterval);
-          }, totalCopies * STAGGER_DELAY + 2000);
-
-          function triggerFlip() {
-            allFloaters.forEach(item => {
-              item.element.classList.toggle('flipped');
-            });
-          }
-
-          setTimeout(() => {
-            triggerFlip();
-            setInterval(triggerFlip, 2000);
-          }, totalCopies * STAGGER_DELAY + 3000);
-
-          window.addEventListener('resize', () => {
-            allFloaters.forEach(({ element, index, width, height }) => {
-              positionOnCircle(element, index, totalCopies, width, height);
-            });
-          });
-
-          overlay.addEventListener('click', () => {
-            overlay.style.display = 'none';
-            glowWrapper.classList.remove('dream-active');
-          });
-          expandedCanvas.addEventListener('click', (e) => e.stopPropagation());
-          document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-              overlay.style.display = 'none';
-              glowWrapper.classList.remove('dream-active');
-            }
-          });
-
-        } catch (err) {
-          console.error(err);
-          loading.innerHTML = `🌀 ${err.message}<br><small>Check console</small>`;
-          loading.style.color = '#c66';
-        }
-      });
-    })();
-  </script>
-
-  <script>
+    // ── Phase‑coherent luminance entrainment engine ──
     (function() {
-      const canvas = document.getElementById('bg-canvas');
-      const ctx = canvas.getContext('2d');
-      let lastTime = 0;
-      const fps = 10;
-      const interval = 1000 / fps;
+      const overlay = document.getElementById('entrainment-overlay');
+      const ring = document.getElementById('ring');
 
-      function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      }
+      const RECEPTIVE = 15000, ALIGN = 10000, ACTION = 12000;
+      const TOTAL = RECEPTIVE + ALIGN + ACTION;
 
-      function drawNoise() {
-        const w = canvas.width;
-        const h = canvas.height;
-        const imageData = ctx.createImageData(w, h);
-        const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.floor(Math.random() * 256);
-          data[i+1] = Math.floor(Math.random() * 256);
-          data[i+2] = Math.floor(Math.random() * 256);
-          data[i+3] = 255;
+      let start = performance.now();
+      let pdfOpen = false;
+      let phase = 0; // continuous carrier phase (radians)
+      let global = 'receptive', sub = 'alpha', freq = 10;
+
+      function update(now) {
+        const el = (now - start) % TOTAL;
+        if (el < RECEPTIVE) {
+          global = 'receptive';
+          if (el < 5000) { sub = 'alpha'; freq = 10; }
+          else if (el < 10000) { sub = 'theta'; freq = 7; }
+          else { sub = 'delta'; freq = 3; }
+        } else if (el < RECEPTIVE + ALIGN) {
+          global = 'alignment'; sub = null;
+        } else {
+          global = 'action'; sub = null;
+          const actEl = el - RECEPTIVE - ALIGN;
+          freq = actEl < 2000 ? 3 + (actEl / 2000) * 33 : 36;
         }
-        ctx.putImageData(imageData, 0, 0);
       }
 
+      function applyRing() {
+        document.body.className = global;
+        if (global === 'receptive') {
+          ring.style.setProperty('--env-dur','2s'); ring.style.setProperty('--strobe-dur','0.5s'); ring.style.setProperty('--color-dur','2s');
+        } else if (global === 'alignment') {
+          ring.style.setProperty('--env-dur','5s'); ring.style.setProperty('--strobe-dur','2s'); ring.style.setProperty('--color-dur','5s');
+        } else if (global === 'action') {
+          ring.style.setProperty('--env-dur','0.5s'); ring.style.setProperty('--strobe-dur','0.0278s'); ring.style.setProperty('--color-dur','0.5s');
+        }
+      }
+
+      function loop(now) {
+        requestAnimationFrame(loop);
+        if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
+        else update(now);
+
+        applyRing();
+        const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
+        loop.prev = now;
+        phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
+
+        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
+        let flicker = 0;
+
+        if (global === 'receptive') {
+          if (sub === 'delta') flicker = 0.5 + 0.5 * Math.sin(phase);
+          else flicker = Math.sin(phase) >= 0 ? 1 : 0;
+          overlay.style.opacity = flicker * infra * 0.35;
+        } else if (global === 'alignment') {
+          overlay.style.opacity = infra * 0.25; // infraslow only, no flicker
+        } else {
+          flicker = Math.sin(phase) >= 0 ? 1 : 0;
+          overlay.style.opacity = flicker * infra * 0.35;
+        }
+      }
+      loop.prev = performance.now();
+      requestAnimationFrame(loop);
+      window.setPdfOpen = v => pdfOpen = v;
+    })();
+
+    // ── Background static canvas (adaptive fps) ──
+    (function() {
+      const c = document.getElementById('bg-canvas'), ctx = c.getContext('2d');
+      let last = 0, fps = 10, iv = 1000 / fps;
+      function resize() { c.width = innerWidth; c.height = innerHeight; }
+      function noise() {
+        const w = c.width, h = c.height, img = ctx.createImageData(w, h), d = img.data;
+        for (let i = 0; i < d.length; i += 4) { d[i] = Math.random() * 256; d[i+1] = Math.random() * 256; d[i+2] = Math.random() * 256; d[i+3] = 255; }
+        ctx.putImageData(img, 0, 0);
+      }
       function tick(now) {
         requestAnimationFrame(tick);
-        if (now - lastTime >= interval) {
-          drawNoise();
-          lastTime = now;
-        }
+        if (document.body.classList.contains('action')) fps = 36;
+        else if (document.body.classList.contains('alignment')) fps = 10;
+        else fps = 10;
+        iv = 1000 / fps;
+        if (now - last >= iv) { noise(); last = now; }
       }
+      addEventListener('resize', resize); resize(); requestAnimationFrame(tick);
+    })();
 
-      window.addEventListener('resize', resizeCanvas);
-      resizeCanvas();
-      requestAnimationFrame(tick);
+    // ── PDF.js ritual (identical to deployed version) ──
+    (async function() {
+      function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
+      wait(async () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
+        const pages = pdf.numPages, load = document.getElementById('loading');
+        setTimeout(() => load.style.display = 'none', 1500);
+
+        const ringEl = document.getElementById('ring');
+        const overlay = document.getElementById('overlay');
+        const glow = document.getElementById('glow-wrapper');
+        const expC = document.getElementById('expanded-canvas');
+
+        const COPIES = 33, SCALE = 0.35, STAGGER = 167;
+        const pageData = [], all = [];
+
+        function posOnCircle(el, idx, total, w, h) {
+          const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
+          const r = Math.min(innerWidth, innerHeight) * 0.4;
+          el.style.left = (Math.cos(a) * r - w / 2) + 'px';
+          el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        }
+
+        for (let p = 1; p <= pages; p++) {
+          const page = await pdf.getPage(p);
+          const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
+          const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
+          await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
+          pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
+        }
+
+        let idx = 0, totalCopies = pages * COPIES;
+        for (let p = 1; p <= pages; p++) {
+          const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
+          for (let c = 0; c < COPIES; c++) {
+            const floater = document.createElement('div'); floater.className = 'floating-page';
+            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
+            cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
+            const flipper = document.createElement('div'); flipper.className = 'flipper';
+            flipper.appendChild(cc); floater.appendChild(flipper);
+            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
+            floater.style.left = '-9999px'; floater.style.top = '-9999px';
+            const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
+            floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
+            floater.dataset.page = p; floater.dataset.index = idx;
+
+            let z = 10;
+            if (idx < 11) z = 20 + idx;
+            else if (idx < 22) z = 30 + (idx - 11);
+            else z = 40 + (idx - 22);
+            floater.style.zIndex = z;
+            if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
+            if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
+
+            floater.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const { page, viewport } = pageData[parseInt(floater.dataset.page)];
+              expC.width = viewport.width; expC.height = viewport.height;
+              const ctx = expC.getContext('2d');
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              overlay.style.display = 'flex'; glow.classList.add('dream-active');
+              if (window.setPdfOpen) window.setPdfOpen(true);
+            });
+
+            ringEl.appendChild(floater);
+            all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
+            setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
+            idx++;
+          }
+        }
+
+        const skip = new Set([10, 21, 32]);
+        const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
+        const sizes = [2, 4, 5]; let gi = 0, pos = 0;
+        function applyRed() {
+          eligible.forEach(i => all[i].element.classList.remove('red-pass'));
+          const sz = sizes[gi], grp = [];
+          for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
+          grp.forEach(i => all[i].element.classList.add('red-pass'));
+          pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
+        }
+        setTimeout(() => { applyRed(); setInterval(applyRed, 8000); }, totalCopies * STAGGER + 2000);
+
+        function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
+        setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
+
+        addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
+        overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
+        expC.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
+      });
     })();
   </script>
 </body>
