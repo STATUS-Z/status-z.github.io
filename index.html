@@ -9,6 +9,9 @@
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
 
+    /* ── Cursor auto‑hide ── */
+    .idle { cursor: none; }
+
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -2; display: block; pointer-events: none;
@@ -172,7 +175,9 @@
       animation: dreamGlow 0.5s ease-in-out infinite;
     }
 
+    /* ── Updated dream glow – divine colors only ── */
     @keyframes dreamGlow {
+      /* Soul green (0–8s) */
       0%, 5.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
       5.56%, 11.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
       11.12%, 16.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
@@ -180,19 +185,21 @@
       22.23%, 27.77% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.5); }
       27.78%, 33.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #00ff00, 0 0 6000px rgba(0,255,0,0.5); }
 
-      33.34%, 34.72% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
-      34.73%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
-      36.12%, 37.49% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
-      37.50%, 38.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #80c000, 0 0 6000px rgba(128,192,0,0.6); }
-      38.89%, 40.27% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
-      40.28%, 41.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
-      41.67%, 43.05% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #206000, 0 0 6000px rgba(32,96,0,0.6); }
-      43.06%, 44.44% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #004000, 0 0 6000px rgba(0,64,0,0.6); }
-      44.45%, 45.83% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #2a0040, 0 0 6000px rgba(42,0,64,0.6); }
-      45.84%, 47.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #4a0060, 0 0 6000px rgba(74,0,96,0.6); }
-      47.23%, 48.61% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #600080, 0 0 6000px rgba(96,0,128,0.6); }
-      48.62%, 50.00% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790b3e, 0 0 6000px rgba(121,11,62,0.6); }
+      /* Divine shimmer (8–16s) – green → gold bridge */
+      33.34%, 36.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ccff00, 0 0 6000px rgba(204,255,0,0.6); }
+      36.12%, 38.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #b8ff00, 0 0 6000px rgba(184,255,0,0.6); }
+      38.89%, 41.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #a0e000, 0 0 6000px rgba(160,224,0,0.6); }
+      41.67%, 44.44% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #80c000, 0 0 6000px rgba(128,192,0,0.6); }
+      44.45%, 47.22% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #60a000, 0 0 6000px rgba(96,160,0,0.6); }
+      47.23%, 50.00% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #408000, 0 0 6000px rgba(64,128,0,0.6); }
+      50.01%, 52.78% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #206000, 0 0 6000px rgba(32,96,0,0.6); }
+      52.79%, 55.55% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #004000, 0 0 6000px rgba(0,64,0,0.6); }
+      55.56%, 58.33% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #4a3500, 0 0 6000px rgba(74,53,0,0.6); }
+      58.34%, 61.11% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #8b6500, 0 0 6000px rgba(139,101,0,0.6); }
+      61.12%, 63.88% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #daa520, 0 0 6000px rgba(218,165,32,0.6); }
+      63.89%, 66.66% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #ffd700, 0 0 6000px rgba(255,215,0,0.6); }
 
+      /* Golden spectrum (16–24s) */
       66.67%, 71.43% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #DAA520, 0 0 6000px rgba(218,165,32,0.5); }
       71.44%, 76.19% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFD700, 0 0 6000px rgba(255,215,0,0.5); }
       76.20%, 80.95% { box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #FFA500, 0 0 6000px rgba(255,165,0,0.5); }
@@ -225,7 +232,7 @@
     #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
   </style>
 </head>
-<body class="receptive">
+<body class="receptive" id="body">
   <canvas id="bg-canvas"></canvas>
   <div id="entrainment-overlay"></div>
   <div id="cloud"><div id="ring"></div></div>
@@ -246,18 +253,30 @@
   </script>
 
   <script>
+    // ── Cursor auto‑hide (idle after 2s) ──
+    (function() {
+      const body = document.getElementById('body');
+      let timeout;
+      function showCursor() {
+        body.classList.remove('idle');
+        clearTimeout(timeout);
+        timeout = setTimeout(() => body.classList.add('idle'), 2000);
+      }
+      document.addEventListener('mousemove', showCursor);
+      // Initial hide after 2s if user doesn't move
+      timeout = setTimeout(() => body.classList.add('idle'), 2000);
+    })();
+
     // ── User preference & capability checks ──
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const prefersLowData = window.matchMedia('(prefers-reduced-data: reduce)').matches;
 
-    // Listen for motion preference changes (dynamic adjustment)
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = prefersReducedMotion;
     motionQuery.addEventListener('change', (e) => {
       reducedMotion = e.matches;
     });
 
-    // Performance / data saver: reduce static resolution
     const staticScale = (prefersLowData || window.navigator.hardwareConcurrency < 4) ? 0.5 : 1.0;
 
     document.addEventListener('contextmenu', e => e.preventDefault());
@@ -316,7 +335,6 @@
         loop.prev = now;
         phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // Stop luminance overlay if reduced motion is preferred
         if (reducedMotion) {
           overlay.style.opacity = 0;
           return;
@@ -368,13 +386,11 @@
         canvas.width = Math.floor(innerWidth * staticScale);
         canvas.height = Math.floor(innerHeight * staticScale);
         if (staticScale < 1.0) {
-          // If we reduced resolution, scale up the canvas via CSS to maintain viewport size
           canvas.style.width = '100%';
           canvas.style.height = '100%';
         }
       }
 
-      // Create a blob worker for noise generation
       function createWorker() {
         const workerCode = () => {
           self.onmessage = function(e) {
@@ -411,7 +427,6 @@
         });
       }
 
-      // Fallback to main‑thread generation if worker fails or isn't supported
       function generateMainThread() {
         const w = canvas.width, h = canvas.height;
         const img = ctx.createImageData(w, h);
@@ -432,7 +447,6 @@
         const img = new ImageData(new Uint8ClampedArray(buffer), canvas.width, canvas.height);
         ctx.putImageData(img, 0, 0);
         pendingFrame = false;
-        // Once the frame is drawn, we can request the next one on next tick
       }
 
       try {
@@ -462,17 +476,12 @@
         }
       }
 
-      addEventListener('resize', () => {
-        resize();
-        if (worker) {
-          worker.postMessage({ resize: true, width: canvas.width, height: canvas.height }); // force resize in worker? No, worker just gets dimensions with each request, so fine.
-        }
-      });
+      addEventListener('resize', resize);
       resize();
       requestAnimationFrame(tick);
     })();
 
-    // ── PDF.js ritual (with gold‑pass in place of red‑pass) ──
+    // ── PDF.js ritual (gold‑pass instead of red‑pass) ──
     (async function() {
       function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
       wait(async () => {
