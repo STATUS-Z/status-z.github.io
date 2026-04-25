@@ -268,13 +268,14 @@
       pointer-events: auto;
     }
 
-   #glow-wrapper {
+#glow-wrapper {
   position: relative;
   display: inline-block;
   max-width: 95vw;
   max-height: 95vh;
 }
 
+/* Slow colour layer – 24‑stop shimmer, soul green flicker, purple spectrum */
 #glow-wrapper::before {
   content: '';
   position: absolute;
@@ -286,7 +287,7 @@
   pointer-events: none;
   z-index: -1;
   transform: translate(-50%, -50%);
-  will-change: box-shadow, filter;
+  will-change: box-shadow;
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -294,6 +295,28 @@
 #glow-wrapper.dream-active::before {
   opacity: 1;
   animation: dreamGlow 24s ease-in-out infinite;
+}
+
+/* White sparkle layer – 36 Hz gamma strobe, independent */
+#glow-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+  z-index: -1;
+  transform: translate(-50%, -50%);
+  will-change: box-shadow, opacity;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#glow-wrapper.dream-active::after {
+  opacity: 1;
+  animation: whiteSparkle 0.0278s step-start infinite;   /* 36 Hz hard on/off */
 }
 
 @keyframes dreamGlow {
@@ -364,6 +387,25 @@
   }
   95.24%, 100% {
     box-shadow: 0 0 4000px rgba(0,0,0,1), 0 0 2400px #790B3E, 0 0 6000px rgba(121,11,62,0.5);
+  }
+}
+
+/* 36 Hz white sparkle – square wave, hard on/off */
+@keyframes whiteSparkle {
+  0%, 49.9% {
+    box-shadow: 
+      0 0 4000px rgba(255,255,255,0.9),
+      0 0 2400px #ffffff,
+      0 0 6000px rgba(255,255,255,0.7);
+  }
+  50%, 99.9% {
+    box-shadow: none;
+  }
+  100% {
+    box-shadow: 
+      0 0 4000px rgba(255,255,255,0.9),
+      0 0 2400px #ffffff,
+      0 0 6000px rgba(255,255,255,0.7);
   }
 }
     
