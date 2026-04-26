@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FunDarkResume</title>
   <style>
+    /* ---------- GLOBAL RESET & DARK FOUNDATION ---------- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
 
+    /* IDLE CURSOR HIDE */
     body.idle { cursor: none; }
 
+    /* BACKGROUND STATIC CANVAS */
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -2; display: block; pointer-events: none;
       will-change: transform; opacity: 0.25;
     }
 
+    /* LUMINANCE ENTRAINMENT OVERLAY */
     #entrainment-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -1; pointer-events: none;
@@ -26,6 +30,7 @@
 
     #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
 
+    /* ---------- THE RITUAL RING ---------- */
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
@@ -60,6 +65,7 @@
       100% { visibility: visible; }
     }
 
+    /* ---------- FLOATING THUMBNAILS ---------- */
     .floating-page {
       position: absolute; cursor: pointer; will-change: transform;
       background: transparent; transform-style: preserve-3d;
@@ -82,6 +88,7 @@
       animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
+    /* SPOTLIGHT & COLOR‑PASS */
     body.receptive .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
@@ -105,6 +112,7 @@
     .flipper { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s ease-in-out; }
     .flipped .flipper { transform: rotateY(180deg); }
 
+    /* ANIMATIONS FOR THUMBNAILS */
     @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -119,13 +127,11 @@
       50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FEFEFE, 0 0 225px rgba(254,254,254,0.8); }
       100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFFFFF, 0 0 225px rgba(255,255,255,0.95); }
     }
-
     @keyframes goldFlicker {
       0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFD700, 0 0 225px rgba(255,215,0,0.95); }
       50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFC000, 0 0 225px rgba(255,192,0,0.8); }
       100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFD700, 0 0 225px rgba(255,215,0,0.95); }
     }
-
     @keyframes greenFlicker {
       0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #00FF00, 0 0 225px rgba(0,255,0,0.95); }
       50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #00EE00, 0 0 225px rgba(0,238,0,0.8); }
@@ -150,6 +156,7 @@
       50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(0,255,0,0.7), 0 0 300px rgba(0,255,0,0.5); }
     }
 
+    /* ---------- EXPANDED PDF GLOW ---------- */
     #overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
@@ -207,17 +214,17 @@
     .dl a { color: #d0e0ff; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; }
     #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
 
-    /* ── Eye of Horus symbol (7 concentric rings + elegant eye) ── */
+    /* ---------- EYE OF HORUS (CURSOR‑TRACKING PUPIL) ---------- */
     #eye-symbol {
       position: fixed; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       width: 130px; height: 130px;
       z-index: 0; pointer-events: none;
       transition: color 0.3s;
-      filter: drop-shadow(0 0 6px currentColor);
+      filter: drop-shadow(0 0 8px currentColor);
     }
-    #eye-symbol svg circle { fill: none; stroke-width: 1.2; }
-    #eye-symbol svg .eye-line { stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    #eye-symbol svg circle.ring { fill: none; stroke-width: 1.2; }
+    #eye-symbol .eye-line { stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
 <body class="receptive" id="body">
@@ -228,17 +235,17 @@
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
   <div class="dl"><a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a></div>
 
-  <!-- Concentric Eye of Horus (7 rings, elegant line art) -->
+  <!-- Concentric Eye of Horus (7 rings, elegant line art, cursor‑tracking pupil) -->
   <div id="eye-symbol">
     <svg viewBox="0 0 100 100">
       <!-- 7 concentric circles, outermost first -->
-      <circle cx="50" cy="50" r="48" />
-      <circle cx="50" cy="50" r="42" />
-      <circle cx="50" cy="50" r="36" />
-      <circle cx="50" cy="50" r="30" />
-      <circle cx="50" cy="50" r="24" />
-      <circle cx="50" cy="50" r="18" />
-      <circle cx="50" cy="50" r="12" />
+      <circle class="ring" cx="50" cy="50" r="48" />
+      <circle class="ring" cx="50" cy="50" r="42" />
+      <circle class="ring" cx="50" cy="50" r="36" />
+      <circle class="ring" cx="50" cy="50" r="30" />
+      <circle class="ring" cx="50" cy="50" r="24" />
+      <circle class="ring" cx="50" cy="50" r="18" />
+      <circle class="ring" cx="50" cy="50" r="12" />
 
       <!-- Elegant Eye of Horus line art -->
       <g class="eye-line">
@@ -248,14 +255,14 @@
         <path d="M 22 44 Q 50 65 78 44 Q 50 32 22 44 Z" />
         <!-- Upper lid line -->
         <path d="M 24 42 Q 50 55 76 42" />
-        <!-- Pupil -->
-        <circle cx="50" cy="45" r="8" fill="currentColor" />
         <!-- Vertical drop line -->
         <path d="M 50 65 L 50 82" />
         <!-- Spiral at bottom -->
         <path d="M 50 82 Q 42 80 43 73" />
         <path d="M 47 78 Q 46 76 48 76" />
       </g>
+      <!-- Pupil (cursor tracking) -->
+      <circle id="pupil" cx="50" cy="45" r="8" fill="currentColor" />
     </svg>
   </div>
 
@@ -299,6 +306,27 @@
       document.body.style.background = '#ff0000';
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
+
+    // ── CURSOR TRACKING FOR EYE OF HORUS PUPIL ──
+    (function() {
+      const svg = document.querySelector('#eye-symbol svg');
+      const pupil = document.getElementById('pupil');
+      if (!svg || !pupil) return;
+      const eyeCenterX = 50, eyeCenterY = 45, maxDist = 8; // pupil can move up to 8px from center
+
+      document.addEventListener('mousemove', (e) => {
+        const pt = new DOMPoint(e.clientX, e.clientY);
+        const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const dx = cursor.x - eyeCenterX;
+        const dy = cursor.y - eyeCenterY;
+        const angle = Math.atan2(dy, dx);
+        const distance = Math.min(maxDist, Math.sqrt(dx*dx + dy*dy));
+        const newX = eyeCenterX + Math.cos(angle) * distance;
+        const newY = eyeCenterY + Math.sin(angle) * distance;
+        pupil.setAttribute('cx', newX);
+        pupil.setAttribute('cy', newY);
+      });
+    })();
 
     // ── Phase‑coherent engine + ring/glow synchronization + infraslow sparkle + eye ──
     (function() {
@@ -388,7 +416,7 @@
         loop.prev = now;
         phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // Eye symbol: colour and flicker
+        // Eye symbol: color and flicker
         let eyeColor = '#FFFFFF';
         if (global === 'alignment') eyeColor = '#FFD700';
         else if (global === 'action') eyeColor = '#790B3E';
@@ -442,8 +470,6 @@
       loop.prev = performance.now();
       requestAnimationFrame(loop);
       window.setPdfOpen = v => pdfOpen = v;
-
-      // Pass global phase to static worker
       window.getCurrentPhase = () => global;
     })();
 
@@ -453,9 +479,9 @@
 
       const palettes = {
         receptive: [
-          '#FFFFFF', '#FEFEFE', '#FAFAFA', '#F8F8F8', '#F0F0F0', '#EAEAEA',
-          '#FFFFFF', '#FEFEFE', '#FAFAFA', '#F8F8F8', '#F0F0F0', '#EAEAEA',
-          '#FFFFFF', '#FEFEFE', '#FAFAFA', '#F8F8F8', '#F0F0F0', '#EAEAEA'
+          '#FFFFFF', '#FEFEFE', '#FCFCFC', '#FAFAFA', '#F8F8F8', '#F5F5F5',
+          '#F0F0F0', '#FFFFFF', '#FEFEFE', '#FCFCFC', '#FAFAFA', '#F8F8F8',
+          '#FFFFFF', '#FEFEFE', '#FCFCFC', '#0A0A0A', '#050505', '#000000'
         ],
         alignment: [
           '#4a3500', '#6b4e00', '#8b6500', '#b8860b', '#daa520', '#ffd700',
@@ -532,7 +558,6 @@
         else fps = 10;
         interval = 1000 / fps;
 
-        // Update palette if phase changed
         if (currentPhase !== lastPhase) {
           lastPhase = currentPhase;
           numericPalette = palettes[currentPhase] ? palettes[currentPhase].map(hex => ({
