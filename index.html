@@ -5,22 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FunDarkResume</title>
   <style>
-    /* ---------- GLOBAL RESET & DARK FOUNDATION ---------- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
 
-    /* IDLE CURSOR HIDE */
-    body.idle { cursor: none; }
-
-    /* BACKGROUND STATIC CANVAS */
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -2; display: block; pointer-events: none;
       will-change: transform; opacity: 0.25;
     }
 
-    /* LUMINANCE ENTRAINMENT OVERLAY */
     #entrainment-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -1; pointer-events: none;
@@ -30,7 +24,6 @@
 
     #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
 
-    /* ---------- THE RITUAL RING ---------- */
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
@@ -65,7 +58,6 @@
       100% { visibility: visible; }
     }
 
-    /* ---------- FLOATING THUMBNAILS ---------- */
     .floating-page {
       position: absolute; cursor: pointer; will-change: transform;
       background: transparent; transform-style: preserve-3d;
@@ -88,7 +80,6 @@
       animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
-    /* SPOTLIGHT & COLOR‑PASS */
     body.receptive .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
@@ -112,7 +103,6 @@
     .flipper { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s ease-in-out; }
     .flipped .flipper { transform: rotateY(180deg); }
 
-    /* ANIMATIONS FOR THUMBNAILS */
     @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -122,109 +112,79 @@
       100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
     }
 
-    @keyframes whiteFlicker {
-      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFFFFF, 0 0 225px rgba(255,255,255,0.95); }
-      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FEFEFE, 0 0 225px rgba(254,254,254,0.8); }
-      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFFFFF, 0 0 225px rgba(255,255,255,0.95); }
-    }
-    @keyframes goldFlicker {
-      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFD700, 0 0 225px rgba(255,215,0,0.95); }
-      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFC000, 0 0 225px rgba(255,192,0,0.8); }
-      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #FFD700, 0 0 225px rgba(255,215,0,0.95); }
-    }
-    @keyframes greenFlicker {
-      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #00FF00, 0 0 225px rgba(0,255,0,0.95); }
-      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #00EE00, 0 0 225px rgba(0,238,0,0.8); }
-      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 120px #00FF00, 0 0 225px rgba(0,255,0,0.95); }
-    }
+    @keyframes whiteFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FEFEFE,0 0 225px rgba(254,254,254,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} }
+    @keyframes goldFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FFC000,0 0 225px rgba(255,192,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} }
+    @keyframes greenFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #0E0,0 0 225px rgba(0,238,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} }
 
-    @keyframes thumbStrobe { 0%, 49.9% { opacity: 1; } 50%, 99.9% { opacity: 0.75; } 100% { opacity: 1; } }
-    @keyframes thumbStrobeTwo { 0%, 49.9% { opacity: 0.5; } 50%, 99.9% { opacity: 0.75; } 100% { opacity: 0.5; } }
+    @keyframes thumbStrobe { 0%,49.9%{opacity:1} 50%,99.9%{opacity:.75} 100%{opacity:1} }
+    @keyframes thumbStrobeTwo { 0%,49.9%{opacity:.5} 50%,99.9%{opacity:.75} 100%{opacity:.5} }
 
-    @keyframes whitePassGlow {
-      0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(255,255,255,0.5), 0 0 200px rgba(255,255,255,0.4); }
-      50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(255,255,255,0.7), 0 0 300px rgba(255,255,255,0.5); }
-    }
+    @keyframes whitePassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,255,255,.5),0 0 200px rgba(255,255,255,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,255,255,.7),0 0 300px rgba(255,255,255,.5)} }
+    @keyframes goldPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,215,0,.5),0 0 200px rgba(255,215,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,215,0,.7),0 0 300px rgba(255,215,0,.5)} }
+    @keyframes greenPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(0,255,0,.5),0 0 200px rgba(0,255,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(0,255,0,.7),0 0 300px rgba(0,255,0,.5)} }
 
-    @keyframes goldPassGlow {
-      0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(255,215,0,0.5), 0 0 200px rgba(255,215,0,0.4); }
-      50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(255,215,0,0.7), 0 0 300px rgba(255,215,0,0.5); }
-    }
-
-    @keyframes greenPassGlow {
-      0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 100px rgba(0,255,0,0.5), 0 0 200px rgba(0,255,0,0.4); }
-      50% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 150px rgba(0,255,0,0.7), 0 0 300px rgba(0,255,0,0.5); }
-    }
-
-    /* ---------- EXPANDED PDF GLOW ---------- */
     #overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-      z-index: 1000; display: none; justify-content: center; align-items: center;
-      cursor: zoom-out; overflow: visible; pointer-events: auto;
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,.85); backdrop-filter: blur(8px);
+      z-index:1000; display:none; justify-content:center; align-items:center;
+      cursor:zoom-out; overflow:visible; pointer-events:auto;
     }
 
-    #glow-wrapper {
-      position: relative; display: inline-block; max-width: 95vw; max-height: 95vh;
-    }
+    #glow-wrapper { position:relative; display:inline-block; max-width:95vw; max-height:95vh; }
 
     #glow-wrapper::after {
-      content: ''; position: absolute; top: 50%; left: 50%;
-      width: 100%; height: 100%; background: transparent; pointer-events: none;
-      z-index: -2; transform: translate(-50%, -50%);
-      will-change: box-shadow, opacity; opacity: 0; transition: opacity 0.2s;
+      content:''; position:absolute; top:50%; left:50%; width:100%; height:100%;
+      background:transparent; pointer-events:none; z-index:-2; transform:translate(-50%,-50%);
+      will-change:box-shadow,opacity; opacity:0; transition:opacity .2s;
     }
 
     #glow-wrapper.dream-active::after {
-      opacity: var(--sparkle-opacity, 0);
-      box-shadow: 0 0 4000px rgba(255,255,255,0.95), 0 0 2400px #fff, 0 0 6000px rgba(255,255,255,0.8);
+      opacity:var(--sparkle-opacity,0);
+      box-shadow:0 0 4000px rgba(255,255,255,.95),0 0 2400px #fff,0 0 6000px rgba(255,255,255,.8);
     }
 
     #glow-wrapper::before {
-      content: ''; position: absolute; top: 50%; left: 50%;
-      width: 100%; height: 100%; background: transparent; pointer-events: none;
-      z-index: -1; transform: translate(-50%, -50%);
-      will-change: box-shadow, background, opacity; opacity: 0; transition: opacity 0.2s;
+      content:''; position:absolute; top:50%; left:50%; width:100%; height:100%;
+      background:transparent; pointer-events:none; z-index:-1; transform:translate(-50%,-50%);
+      will-change:box-shadow,background,opacity; opacity:0; transition:opacity .2s;
     }
 
     #glow-wrapper.dream-active::before {
-      opacity: 1;
-      animation: glowBurstEnvelope var(--env-dur, 2s) ease-in-out infinite;
+      opacity:1;
+      animation:glowBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
     }
 
     @keyframes glowBurstEnvelope {
-      0%, 75.37% { opacity: 0; }
-      75.37% { opacity: 1; }
-      100% { opacity: 0; }
+      0%,75.37%{opacity:0} 75.37%{opacity:1} 100%{opacity:0}
     }
 
     #overlay canvas {
-      max-width: 95vw; max-height: 95vh; border-radius: 6px;
-      cursor: default; background: #000; box-shadow: none;
-      position: relative; z-index: 2;
+      max-width:95vw; max-height:95vh; border-radius:6px;
+      cursor:default; background:#000; box-shadow:none;
+      position:relative; z-index:2;
     }
 
-    .dl {
-      position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-      background: #0d1117; padding: 10px 18px; border-radius: 40px;
-      opacity: 0.4; border: 1px solid #3a4a6a; backdrop-filter: blur(8px);
-      transition: opacity 0.2s, transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    /* Fullscreen button */
+    .fs-btn {
+      position:fixed; bottom:20px; right:20px; z-index:9999;
+      background:#0d1117; padding:10px 18px; border-radius:40px;
+      opacity:.4; border:1px solid #3a4a6a; backdrop-filter:blur(8px);
+      transition:opacity .2s,transform .2s; box-shadow:0 4px 12px rgba(0,0,0,.5);
+      cursor:pointer; color:#d0e0ff; font-size:14px; font-weight:500;
+      letter-spacing:.5px; font-family:system-ui, sans-serif;
     }
-    .dl:hover { opacity: 1; transform: scale(1.05); }
-    .dl a { color: #d0e0ff; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; }
-    #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
+    .fs-btn:hover { opacity:1; transform:scale(1.05); }
 
-    /* ---------- EYE OF HORUS (CURSOR‑TRACKING PUPIL) ---------- */
+    #loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); color:#aaa; font-size:18px; z-index:10; }
+
+    /* Eye of Horus */
     #eye-symbol {
-      position: fixed; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 130px; height: 130px;
-      z-index: 0; pointer-events: none;
-      transition: color 0.3s;
-      filter: drop-shadow(0 0 8px currentColor);
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      width:130px; height:130px; z-index:0; transition:color .3s;
+      filter:drop-shadow(0 0 8px currentColor);
+      cursor:pointer;
     }
-    #eye-symbol svg circle.ring { fill: none; stroke-width: 1.2; }
-    #eye-symbol .eye-line { stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    #eye-symbol svg circle.ring { fill:none; stroke-width:2; stroke-opacity:0.8; }
   </style>
 </head>
 <body class="receptive" id="body">
@@ -233,12 +193,12 @@
   <div id="cloud"><div id="ring"></div></div>
   <div id="loading">Manifesting...</div>
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
-  <div class="dl"><a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a></div>
+  <button class="fs-btn" id="fullscreen-btn">⛶ try full screen</button>
 
-  <!-- Concentric Eye of Horus (7 rings, elegant line art, cursor‑tracking pupil) -->
+  <!-- Eye of Horus with snake pupil and blink -->
   <div id="eye-symbol">
     <svg viewBox="0 0 100 100">
-      <!-- 7 concentric circles, outermost first -->
+      <!-- 7 concentric rings -->
       <circle class="ring" cx="50" cy="50" r="48" />
       <circle class="ring" cx="50" cy="50" r="42" />
       <circle class="ring" cx="50" cy="50" r="36" />
@@ -247,22 +207,23 @@
       <circle class="ring" cx="50" cy="50" r="18" />
       <circle class="ring" cx="50" cy="50" r="12" />
 
-      <!-- Elegant Eye of Horus line art -->
-      <g class="eye-line">
-        <!-- Upper brow (curved, sweeping) -->
+      <!-- Sharp Eye of Horus outline -->
+      <g class="eye-line" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Brow -->
         <path d="M 14 28 Q 35 10 66 10 Q 82 10 86 28 Q 82 22 66 18 Q 35 14 14 28 Z" fill="currentColor" fill-opacity="0.3" />
-        <!-- Eye outline (almond shape) -->
-        <path d="M 22 44 Q 50 65 78 44 Q 50 32 22 44 Z" />
-        <!-- Upper lid line -->
-        <path d="M 24 42 Q 50 55 76 42" />
-        <!-- Vertical drop line -->
-        <path d="M 50 65 L 50 82" />
-        <!-- Spiral at bottom -->
-        <path d="M 50 82 Q 42 80 43 73" />
-        <path d="M 47 78 Q 46 76 48 76" />
+        <!-- Eye outer -->
+        <path d="M 22 44 Q 50 70 78 44 Q 50 26 22 44 Z" />
+        <!-- Upper lid -->
+        <path d="M 24 42 Q 50 56 76 42" />
+        <!-- Tear drop -->
+        <path d="M 50 70 L 50 84" />
+        <path d="M 50 84 Q 42 82 43 75" />
+        <path d="M 47 80 Q 46 78 48 78" />
+        <!-- Eyelid closed (for blink) -->
+        <path id="eyelid" d="M 22 44 Q 50 56 78 44" stroke-width="3" display="none" />
       </g>
-      <!-- Pupil (cursor tracking) -->
-      <circle id="pupil" cx="50" cy="45" r="8" fill="currentColor" />
+      <!-- Snake‑style vertical slit pupil -->
+      <path id="pupil" d="M 47 41 L 47 49 Q 50 54 53 49 L 53 41 Q 50 38 47 41 Z" fill="currentColor" />
     </svg>
   </div>
 
@@ -279,27 +240,20 @@
   </script>
 
   <script>
-    // ── Cursor auto‑hide ──
-    (function() {
-      const body = document.getElementById('body');
-      let timeout;
-      function showCursor() {
-        body.classList.remove('idle');
-        clearTimeout(timeout);
-        timeout = setTimeout(() => body.classList.add('idle'), 2000);
+    // ── Fullscreen button ──
+    document.getElementById('fullscreen-btn').addEventListener('click', () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen();
       }
-      document.addEventListener('mousemove', showCursor);
-      document.addEventListener('mouseenter', showCursor);
-      timeout = setTimeout(() => body.classList.add('idle'), 2000);
-    })();
+    });
 
-    // ── User preferences ──
+    // ── User preferences (no mobile reduction) ──
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const prefersLowData = window.matchMedia('(prefers-reduced-data: reduce)').matches;
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = prefersReducedMotion;
     motionQuery.addEventListener('change', (e) => { reducedMotion = e.matches; });
-    const staticScale = (prefersLowData || window.navigator.hardwareConcurrency < 4) ? 0.5 : 1.0;
 
     document.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('beforeunload', () => {
@@ -307,28 +261,60 @@
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
 
-    // ── CURSOR TRACKING FOR EYE OF HORUS PUPIL ──
+    // ── Eye cursor tracking, pupil scaling, blink ──
     (function() {
       const svg = document.querySelector('#eye-symbol svg');
       const pupil = document.getElementById('pupil');
+      const eyelid = document.getElementById('eyelid');
       if (!svg || !pupil) return;
-      const eyeCenterX = 50, eyeCenterY = 45, maxDist = 8; // pupil can move up to 8px from center
+
+      const eyeCX = 50, eyeCY = 45, baseSlitWidth = 6, baseSlitHeight = 10;
+      const maxDist = 8;
+
+      // Blink every 3-5 seconds
+      function blink() {
+        eyelid.setAttribute('display', 'block');
+        setTimeout(() => eyelid.setAttribute('display', 'none'), 100);
+      }
+      setInterval(blink, 3000 + Math.random() * 2000);
 
       document.addEventListener('mousemove', (e) => {
         const pt = new DOMPoint(e.clientX, e.clientY);
         const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
-        const dx = cursor.x - eyeCenterX;
-        const dy = cursor.y - eyeCenterY;
+        const dx = cursor.x - eyeCX;
+        const dy = cursor.y - eyeCY;
+        const dist = Math.min(maxDist, Math.sqrt(dx*dx + dy*dy));
         const angle = Math.atan2(dy, dx);
-        const distance = Math.min(maxDist, Math.sqrt(dx*dx + dy*dy));
-        const newX = eyeCenterX + Math.cos(angle) * distance;
-        const newY = eyeCenterY + Math.sin(angle) * distance;
-        pupil.setAttribute('cx', newX);
-        pupil.setAttribute('cy', newY);
+
+        // New pupil center
+        const newCX = eyeCX + Math.cos(angle) * dist;
+        const newCY = eyeCY + Math.sin(angle) * dist;
+
+        // Scale based on distance
+        const scale = Math.max(0.4, 1 - (dist / maxDist) * 0.6);
+        const w = baseSlitWidth * scale;
+        const h = baseSlitHeight * scale;
+        const topY = newCY - h/2;
+        const bottomY = newCY + h/2;
+        const leftX = newCX - w/2;
+        const rightX = newCX + w/2;
+        const tipY = newCY + h/2 + 2*scale;
+
+        const path = `M ${leftX} ${topY} L ${rightX} ${topY} Q ${newCX} ${tipY} ${rightX} ${bottomY} L ${leftX} ${bottomY} Q ${newCX} ${newCY - h/2 + 2} ${leftX} ${topY} Z`;
+        pupil.setAttribute('d', path);
+      });
+
+      // Click on eye opens PDF
+      document.getElementById('eye-symbol').addEventListener('click', () => {
+        const overlay = document.getElementById('overlay');
+        const glow = document.getElementById('glow-wrapper');
+        overlay.style.display = 'flex';
+        glow.classList.add('dream-active');
+        if (window.setPdfOpen) window.setPdfOpen(true);
       });
     })();
 
-    // ── Phase‑coherent engine + ring/glow synchronization + infraslow sparkle + eye ──
+    // ── Phase‑coherent engine + ring/glow sync + infraslow sparkle ──
     (function() {
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
@@ -340,40 +326,38 @@
 
       const colorSteps = {
         receptive: [
-          { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
-          { upTo: 0.79475, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' },
-          { upTo: 0.8358, bg: '#FEFEFE', shadow: '0 0 150px #FEFEFE, 0 0 300px rgba(254,254,254,0.9)' },
-          { upTo: 0.87685, bg: '#FAFAFA', shadow: '0 0 150px #FAFAFA, 0 0 300px rgba(250,250,250,0.9)' },
-          { upTo: 0.9179, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.95)' },
-          { upTo: 0.95895, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' },
-          { upTo: 1.0, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' }
+          { upTo:0.7537,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
+          { upTo:0.79475,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},
+          { upTo:0.8358,bg:'#FEFEFE',shadow:'0 0 150px #FEFEFE,0 0 300px rgba(254,254,254,.9)'},
+          { upTo:0.87685,bg:'#FAFAFA',shadow:'0 0 150px #FAFAFA,0 0 300px rgba(250,250,250,.9)'},
+          { upTo:0.9179,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.95)'},
+          { upTo:0.95895,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},
+          { upTo:1.0,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
         ],
         alignment: [
-          { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
-          { upTo: 0.79475, bg: '#FFEA00', shadow: '0 0 150px #FFEA00, 0 0 300px rgba(255,234,0,0.9)' },
-          { upTo: 0.8358, bg: '#FFD700', shadow: '0 0 150px #FFD700, 0 0 300px rgba(255,215,0,0.9)' },
-          { upTo: 0.87685, bg: '#FFC000', shadow: '0 0 150px #FFC000, 0 0 300px rgba(255,192,0,0.9)' },
-          { upTo: 0.9179, bg: '#FFF200', shadow: '0 0 150px #FFF200, 0 0 300px rgba(255,242,0,0.95)' },
-          { upTo: 0.95895, bg: '#FFD700', shadow: '0 0 150px #FFD700, 0 0 300px rgba(255,215,0,0.9)' },
-          { upTo: 1.0, bg: '#FFFFFF', shadow: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' }
+          { upTo:0.7537,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
+          { upTo:0.79475,bg:'#FFEA00',shadow:'0 0 150px #FFEA00,0 0 300px rgba(255,234,0,.9)'},
+          { upTo:0.8358,bg:'#FFD700',shadow:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},
+          { upTo:0.87685,bg:'#FFC000',shadow:'0 0 150px #FFC000,0 0 300px rgba(255,192,0,.9)'},
+          { upTo:0.9179,bg:'#FFF200',shadow:'0 0 150px #FFF200,0 0 300px rgba(255,242,0,.95)'},
+          { upTo:0.95895,bg:'#FFD700',shadow:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},
+          { upTo:1.0,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'}
         ],
         action: [
-          { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
-          { upTo: 0.79475, bg: '#00FF00', shadow: '0 0 150px #00FF00, 0 0 300px rgba(0,255,0,0.9)' },
-          { upTo: 0.8358, bg: '#33FF33', shadow: '0 0 150px #33FF33, 0 0 300px rgba(51,255,51,0.9)' },
-          { upTo: 0.87685, bg: '#00EE00', shadow: '0 0 150px #00EE00, 0 0 300px rgba(0,238,0,0.9)' },
-          { upTo: 0.9179, bg: '#66FF66', shadow: '0 0 150px #66FF66, 0 0 300px rgba(102,255,102,0.95)' },
-          { upTo: 0.95895, bg: '#00FF00', shadow: '0 0 150px #00FF00, 0 0 300px rgba(0,255,0,0.9)' },
-          { upTo: 1.0, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' }
+          { upTo:0.7537,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
+          { upTo:0.79475,bg:'#00FF00',shadow:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},
+          { upTo:0.8358,bg:'#33FF33',shadow:'0 0 150px #33FF33,0 0 300px rgba(51,255,51,.9)'},
+          { upTo:0.87685,bg:'#00EE00',shadow:'0 0 150px #0E0,0 0 300px rgba(0,238,0,.9)'},
+          { upTo:0.9179,bg:'#66FF66',shadow:'0 0 150px #66FF66,0 0 300px rgba(102,255,102,.95)'},
+          { upTo:0.95895,bg:'#00FF00',shadow:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},
+          { upTo:1.0,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
         ]
       };
 
       function getBurstColor(phase, progress) {
         const steps = colorSteps[phase] || colorSteps.receptive;
         for (let i = 0; i < steps.length; i++) {
-          if (progress <= steps[i].upTo) {
-            return { bg: steps[i].bg, shadow: steps[i].shadow };
-          }
+          if (progress <= steps[i].upTo) return { bg: steps[i].bg, shadow: steps[i].shadow };
         }
         return steps[steps.length - 1];
       }
@@ -416,7 +400,7 @@
         loop.prev = now;
         phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // Eye symbol: color and flicker
+        // Eye color & flicker
         let eyeColor = '#FFFFFF';
         if (global === 'alignment') eyeColor = '#FFD700';
         else if (global === 'action') eyeColor = '#790B3E';
@@ -433,38 +417,33 @@
         }
         eyeSVG.style.opacity = reducedMotion ? 0 : eyeOpacity;
 
-        // Ring colour burst
+        // Ring burst
         const burstDuration = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
         const burstProgress = ((now - start) % (burstDuration * 1000)) / (burstDuration * 1000);
         const burst = getBurstColor(global, burstProgress);
         ring.style.setProperty('background', burst.bg);
         ring.style.setProperty('box-shadow', burst.shadow);
 
-        // Glow wrapper ::before colour and shadow (synchronized)
+        // Glow sync
         if (glowWrapper && glowWrapper.style) {
           glowWrapper.style.setProperty('background', burst.bg);
           glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
         }
 
-        // Infraslow envelope (continuous 0.05 Hz)
         const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
-
-        // White sparkle – driven by infraslow envelope
         glowWrapper.style.setProperty('--sparkle-opacity', infra);
 
-        // Luminance overlay
         if (reducedMotion) { overlay.style.opacity = 0; return; }
         let flicker = 0;
-        const intensityFactor = prefersLowData ? 0.5 : 1.0;
         if (global === 'receptive') {
           if (sub === 'delta') flicker = 0.5 + 0.5 * Math.sin(phase);
           else flicker = Math.sin(phase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * infra * 0.35 * intensityFactor;
+          overlay.style.opacity = flicker * infra * 0.35;
         } else if (global === 'alignment') {
-          overlay.style.opacity = infra * 0.25 * intensityFactor;
+          overlay.style.opacity = infra * 0.25;
         } else {
           flicker = Math.sin(phase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * infra * 0.35 * intensityFactor;
+          overlay.style.opacity = flicker * infra * 0.35;
         }
       }
       loop.prev = performance.now();
@@ -473,82 +452,45 @@
       window.getCurrentPhase = () => global;
     })();
 
-    // ── Background static canvas (phase‑matched palette & fps) ──
+    // ── Static background (original TV noise for Receptive, palettes for others) ──
     (function() {
       const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
-
-      const palettes = {
-        receptive: [
-          '#FFFFFF', '#FEFEFE', '#FCFCFC', '#FAFAFA', '#F8F8F8', '#F5F5F5',
-          '#F0F0F0', '#FFFFFF', '#FEFEFE', '#FCFCFC', '#FAFAFA', '#F8F8F8',
-          '#FFFFFF', '#FEFEFE', '#FCFCFC', '#0A0A0A', '#050505', '#000000'
-        ],
-        alignment: [
-          '#4a3500', '#6b4e00', '#8b6500', '#b8860b', '#daa520', '#ffd700',
-          '#ffea00', '#fff200', '#ffc000', '#ffd700', '#b8860b', '#8b6500',
-          '#4a3500', '#6b4e00', '#8b6500', '#daa520', '#ffd700', '#ffea00'
-        ],
-        action: [
-          '#00FF00', '#33FF33', '#00EE00', '#66FF66', '#00FF00', '#33FF33',
-          '#00CC00', '#009900', '#006600', '#00AA00', '#00FF00', '#33FF33',
-          '#00EE00', '#66FF66', '#00FF00', '#33FF33', '#00CC00', '#009900'
-        ]
-      };
-
-      let numericPalette = palettes.receptive.map(hex => ({
-        r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16)
-      }));
-      let lastTime = 0, fps = 10, interval = 1000 / fps, worker, pendingFrame = false;
+      const alignmentPalette = [
+        '#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700',
+        '#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500',
+        '#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'
+      ];
+      const actionPalette = [
+        '#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33',
+        '#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33',
+        '#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'
+      ];
+      let numericPalette = null;
       let lastPhase = 'receptive';
+      let lastTime = 0, fps = 10, interval = 1000 / fps;
 
-      function resize() {
-        canvas.width = Math.floor(innerWidth * staticScale);
-        canvas.height = Math.floor(innerHeight * staticScale);
-        if (staticScale < 1.0) { canvas.style.width = '100%'; canvas.style.height = '100%'; }
-      }
+      function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
 
-      function createWorker() {
-        const workerCode = () => {
-          self.onmessage = function(e) {
-            const { width, height, numericPalette } = e.data;
-            const size = width * height * 4, buffer = new ArrayBuffer(size);
-            const data = new Uint8ClampedArray(buffer);
-            const len = numericPalette.length;
-            for (let i = 0; i < size; i += 4) {
-              const c = numericPalette[Math.floor(Math.random() * len)];
-              data[i] = c.r; data[i+1] = c.g; data[i+2] = c.b; data[i+3] = 255;
-            }
-            self.postMessage({ buffer }, [buffer]);
-          };
-        };
-        const blob = new Blob([`(${workerCode.toString()})()`], { type: 'application/javascript' });
-        const url = URL.createObjectURL(blob);
-        const w = new Worker(url); URL.revokeObjectURL(url); return w;
-      }
-
-      function requestFrame() { if (worker && !pendingFrame) { pendingFrame = true; worker.postMessage({ width: canvas.width, height: canvas.height, numericPalette }); } }
-
-      function generateMainThread() {
+      function drawReceptive() {
         const w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
-        const len = numericPalette.length;
         for (let i = 0; i < d.length; i += 4) {
-          const c = numericPalette[Math.floor(Math.random() * len)];
-          d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
+          d[i] = Math.floor(Math.random() * 256);
+          d[i+1] = Math.floor(Math.random() * 256);
+          d[i+2] = Math.floor(Math.random() * 256);
+          d[i+3] = 255;
         }
         ctx.putImageData(img, 0, 0);
       }
 
-      function onWorkerMessage(e) {
-        const img = new ImageData(new Uint8ClampedArray(e.data.buffer), canvas.width, canvas.height);
+      function drawPalette(palette) {
+        const w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
+        const len = palette.length;
+        for (let i = 0; i < d.length; i += 4) {
+          const c = palette[Math.floor(Math.random() * len)];
+          d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
+        }
         ctx.putImageData(img, 0, 0);
-        pendingFrame = false;
       }
-
-      try {
-        worker = createWorker();
-        worker.onmessage = onWorkerMessage;
-        worker.onerror = () => { worker = null; console.warn('Worker failed'); };
-      } catch (e) { worker = null; }
 
       function tick(now) {
         requestAnimationFrame(tick);
@@ -560,19 +502,34 @@
 
         if (currentPhase !== lastPhase) {
           lastPhase = currentPhase;
-          numericPalette = palettes[currentPhase] ? palettes[currentPhase].map(hex => ({
-            r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16)
-          })) : numericPalette;
+          if (currentPhase === 'alignment') {
+            numericPalette = alignmentPalette.map(hex => ({
+              r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16)
+            }));
+          } else if (currentPhase === 'action') {
+            numericPalette = actionPalette.map(hex => ({
+              r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16)
+            }));
+          } else {
+            numericPalette = null;
+          }
         }
 
-        if (now - lastTime >= interval) { lastTime = now; worker ? requestFrame() : generateMainThread(); }
+        if (now - lastTime >= interval) {
+          lastTime = now;
+          if (currentPhase === 'receptive') {
+            drawReceptive();
+          } else {
+            drawPalette(numericPalette);
+          }
+        }
       }
       addEventListener('resize', resize);
       resize();
       requestAnimationFrame(tick);
     })();
 
-    // ── PDF.js ritual (colour‑pass) ──
+    // ── PDF.js ritual ──
     (async function() {
       function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
       wait(async () => {
