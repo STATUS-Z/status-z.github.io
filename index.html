@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>FunDarkResume</title>
 
-  <!-- Preload critical assets -->
+  <!-- Preload critical PDF.js assets (not bundled, loaded on demand) -->
   <link rel="preload" href="/pdfjs/build/pdf.min.js" as="script">
   <link rel="preload" href="/pdfjs/build/pdf.worker.min.js" as="script">
-  <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
+
+    /* ---- Keyboard focus indicator ---- */
+    :focus { outline: 2px solid #FFD700; outline-offset: 2px; }
 
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -64,31 +66,44 @@
       100% { opacity: 0; transform: translate(-50%, -50%) scale(200); }
     }
 
+    /* ---- floating page thumbnails ---- */
     .floating-page {
       position: absolute; cursor: pointer; will-change: transform;
       background: transparent; transform-style: preserve-3d;
       backface-visibility: hidden; border-radius: 4px;
       opacity: 0; transition: opacity 0.5s;
+      outline: none; /* focus style via :focus above */
     }
+    .floating-page:focus { outline: 2px solid #FFD700; outline-offset: 4px; }
     .floating-page.canvas-loaded { opacity: 1; }
 
     .floating-page canvas {
       display: block; width: 100%; height: 100%; border-radius: 4px;
       background: #000; transform-origin: center center; image-rendering: crisp-edges;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform, box-shadow;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform;
     }
 
+    /* flicker overlay – used instead of box‑shadow pulsing */
+    .floating-page .flicker-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      border-radius: 4px; pointer-events: none;
+      background: var(--flicker-color, transparent);
+      opacity: 0; transition: opacity 0.01s; /* will be driven by JS */
+      will-change: opacity;
+    }
+
+    /* slow spin and transparency strobe only */
     body.receptive .floating-page canvas {
-      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
+      animation: slowSpin 33s linear infinite, thumbStrobe 0.1667s step-start infinite;
     }
     body.alignment .floating-page canvas {
-      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
+      animation: slowSpin 33s linear infinite, thumbStrobe 2s step-start infinite;
     }
     body.action .floating-page canvas {
       animation: slowSpin 33s linear infinite, thumbStrobe 0.0278s step-start infinite;
-      box-shadow: 0 20px 40px rgba(0,0,0,1);
     }
 
+    /* spotlight thumbnails keep their individual colour flicker (via box‑shadow, rare) */
     body.receptive .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
@@ -99,6 +114,7 @@
       animation: fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
+    /* color‑pass uses a soft glow (box‑shadow, but only on small group at a time) */
     body.receptive .floating-page.color-pass canvas {
       animation: slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
@@ -115,19 +131,12 @@
     @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    @keyframes squarePulse {
-      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
-      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95); }
-      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
-    }
-
+    /* leftover box‑shadow keyframes – used only for spotlight/color‑pass (few elements) */
     @keyframes whiteFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FEFEFE,0 0 225px rgba(254,254,254,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} }
     @keyframes goldFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FFC000,0 0 225px rgba(255,192,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} }
     @keyframes greenFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #0E0,0 0 225px rgba(0,238,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} }
-
     @keyframes thumbStrobe { 0%,49.9%{opacity:1} 50%,99.9%{opacity:.75} 100%{opacity:1} }
     @keyframes thumbStrobeTwo { 0%,49.9%{opacity:.5} 50%,99.9%{opacity:.75} 100%{opacity:.5} }
-
     @keyframes whitePassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,255,255,.5),0 0 200px rgba(255,255,255,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,255,255,.7),0 0 300px rgba(255,255,255,.5)} }
     @keyframes goldPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,215,0,.5),0 0 200px rgba(255,215,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,215,0,.7),0 0 300px rgba(255,215,0,.5)} }
     @keyframes greenPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(0,255,0,.5),0 0 200px rgba(0,255,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(0,255,0,.7),0 0 300px rgba(0,255,0,.5)} }
@@ -165,17 +174,22 @@
       animation:glowBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
     }
 
-    @keyframes glowBurstEnvelope {
-      0%,75.37%{opacity:0} 75.37%{opacity:1} 100%{opacity:0}
-    }
+    @keyframes glowBurstEnvelope { 0%,75.37%{opacity:0} 75.37%{opacity:1} 100%{opacity:0} }
 
     #overlay canvas {
       max-width:95vw; max-height:95vh; border-radius:6px;
       cursor:default; background:#000; box-shadow:none;
       position:relative; z-index:2;
     }
+    #close-overlay-btn {
+      position: absolute; top: 10px; right: 10px; z-index: 5;
+      background: #000; color: #fff; border: 1px solid #fff;
+      border-radius: 4px; padding: 6px 12px;
+      cursor: pointer; display: none;
+    }
+    #overlay[style*="display: flex"] #close-overlay-btn { display: block; }
 
-    /* ── Fullscreen Invitation with Atomic Whirl Canvas ── */
+    /* ── Fullscreen Invitation ── */
     #fullscreen-invite {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: radial-gradient(circle at 30% 20%, #1a0d16, #000000);
@@ -228,12 +242,8 @@
     }
 
     @keyframes breatheGlow {
-      0%, 100% {
-        text-shadow: 0 0 8px var(--glow-color), 0 0 16px var(--glow-color), 0 0 32px var(--glow-color);
-      }
-      50% {
-        text-shadow: 0 0 16px var(--glow-color), 0 0 32px var(--glow-color), 0 0 64px var(--glow-color);
-      }
+      0%, 100% { text-shadow: 0 0 8px var(--glow-color), 0 0 16px var(--glow-color), 0 0 32px var(--glow-color); }
+      50% { text-shadow: 0 0 16px var(--glow-color), 0 0 32px var(--glow-color), 0 0 64px var(--glow-color); }
     }
 
     #consent-btn {
@@ -252,6 +262,7 @@
       transition: opacity 0.3s;
     }
     #consent-btn:hover { opacity: 0.9; }
+    #consent-btn:focus { outline: 2px solid #FFD700; outline-offset: 2px; }
 
     /* ── Eye Symbol ── */
     #eye-symbol {
@@ -263,41 +274,44 @@
     }
     #eye-symbol.active { opacity: 1; pointer-events: auto; }
     #eye-symbol svg { display: block; width: 100%; height: 100%; }
+    #eye-symbol:focus { outline: 2px solid #FFF; }
 
     .glow-ring {
       transform-origin: center;
       animation: spinGlow 10s linear infinite;
     }
-    @keyframes spinGlow {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spinGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="receptive">
-  <canvas id="bg-canvas"></canvas>
-  <div id="entrainment-overlay"></div>
-  <div id="cloud"><div id="ring"></div></div>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <div id="entrainment-overlay" aria-hidden="true"></div>
+  <div id="cloud">
+    <div id="ring"></div>
+    <!-- Thumbnails will be inserted here by JS -->
+  </div>
 
   <div id="fullscreen-invite">
-    <!-- Seizure warning -->
-    <div style="position:relative; z-index:2; color:#FFD700; font-size:0.85rem; opacity:0.7; margin-bottom:1.2rem; letter-spacing:0.5px; max-width:80vw;">
+    <div role="alert" style="position:relative; z-index:2; color:#FFD700; font-size:0.85rem; opacity:0.7; margin-bottom:1.2rem; letter-spacing:0.5px; max-width:80vw;">
       ⚠ This experience contains rapidly flashing lights.<br>
       If you are photosensitive, please close this page.
     </div>
-    <canvas id="atomic-canvas"></canvas>
-    <div class="haiku-center">
-      <div class="invite-line line1">hello again world</div>
-      <div class="invite-line line2">please enjoy</div>
-      <div class="invite-line line3">welcome</div>
+    <canvas id="atomic-canvas" aria-label="Decorative atomic whirl animation" role="img"></canvas>
+    <div class="haiku-center" aria-label="Haiku: hello again world, please enjoy, welcome">
+      <div class="invite-line line1" aria-hidden="true">hello again world</div>
+      <div class="invite-line line2" aria-hidden="true">please enjoy</div>
+      <div class="invite-line line3" aria-hidden="true">welcome</div>
     </div>
     <button id="consent-btn">I understand – begin</button>
   </div>
 
-  <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
+  <div id="overlay" role="dialog" aria-modal="true" aria-label="Expanded resume view">
+    <button id="close-overlay-btn" aria-label="Close resume">×</button>
+    <div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div>
+  </div>
 
-  <!-- Eye Symbol – stroke widths and filter increased -->
-  <div id="eye-symbol">
+  <!-- Eye Symbol with aria label and keyboard activation -->
+  <div id="eye-symbol" role="button" tabindex="0" aria-label="Astral eye – click or press Enter to view resume">
     <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="scleraGrad" cx="45%" cy="45%" r="60%">
@@ -332,7 +346,6 @@
         <filter id="tinyBlur" x="-10%" y="-10%" width="120%" height="120%">
           <feGaussianBlur stdDeviation="0.7" />
         </filter>
-        <!-- Intensified glow filter -->
         <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
           <feMerge>
@@ -343,7 +356,6 @@
         </filter>
       </defs>
 
-      <!-- Triple glow rings with thicker strokes -->
       <circle cx="200" cy="200" r="178" fill="none" stroke-width="16" class="glow-ring" filter="url(#glowFilter)" />
       <circle cx="200" cy="200" r="172" fill="none" stroke-width="10" class="glow-ring" />
       <circle cx="200" cy="200" r="168" fill="none" stroke-width="6" class="glow-ring" />
@@ -412,7 +424,6 @@
         <path id="lowerLidStroke" d="M 85,200 Q 205,367 315,200" fill="none" stroke="#1C1C22" stroke-width="4" opacity="0.85" />
       </g>
 
-      <!-- Larger, brighter sparkles -->
       <circle cx="48" cy="78" r="4" class="sparkle" fill="#FFDDA8" opacity="0.9" filter="url(#softBlur)" />
       <circle cx="352" cy="322" r="5" class="sparkle" fill="#FFDDCC" opacity="0.9" filter="url(#softBlur)" />
       <circle cx="332" cy="68" r="4" class="sparkle" fill="#FFDDBB" opacity="0.9" filter="url(#softBlur)" />
@@ -420,830 +431,564 @@
     </svg>
   </div>
 
+  <!-- Atomic whirl canvas animation (delta paced) -->
   <script>
-    window.PDFJS_LOCAL = true;
-
-    // ── Atomic Whirl Canvas – Delta‑paced rings with "enter" text (2s revolution) ──
     (function() {
       const canvas = document.getElementById('atomic-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const size = 600;
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = size; canvas.height = size;
       const center = { x: size/2, y: size/2 };
-
-      // Four elliptical rings, all completing one revolution in 2 seconds (delta 0.5 Hz)
-      // Angular speed = 2π rad / 2000 ms
       const rings = [
-        { a: 140, b: 92, tilt: 0.2,  phaseOffset: 0.0,     lineColor: 'rgba(121, 11, 62, 0.7)',  textColor: '#D86196', words: 6 },
-        { a: 180, b: 125, tilt: 0.85, phaseOffset: 0.4,     lineColor: 'rgba(146, 30, 80, 0.65)', textColor: '#E272A4', words: 7 },
-        { a: 220, b: 160, tilt: 1.45, phaseOffset: 0.8,     lineColor: 'rgba(106, 8, 52, 0.7)',   textColor: '#F097B8', words: 8 },
-        { a: 265, b: 195, tilt: 2.2,  phaseOffset: 1.2,     lineColor: 'rgba(160, 35, 90, 0.6)',  textColor: '#FFB3D0', words: 9 }
+        { a:140, b:92, tilt:0.2, phaseOffset:0.0, lineColor:'rgba(121,11,62,0.7)', textColor:'#D86196', words:6 },
+        { a:180, b:125, tilt:0.85, phaseOffset:0.4, lineColor:'rgba(146,30,80,0.65)', textColor:'#E272A4', words:7 },
+        { a:220, b:160, tilt:1.45, phaseOffset:0.8, lineColor:'rgba(106,8,52,0.7)', textColor:'#F097B8', words:8 },
+        { a:265, b:195, tilt:2.2, phaseOffset:1.2, lineColor:'rgba(160,35,90,0.6)', textColor:'#FFB3D0', words:9 }
       ];
+      const DELTA_MS = 2000;
 
-      const DELTA_PERIOD_MS = 2000; // 2 seconds = 0.5 Hz delta
-
-      function getEllipsePoint(cx, cy, a, b, tilt, angleRad) {
-        const x_ell = a * Math.cos(angleRad);
-        const y_ell = b * Math.sin(angleRad);
-        const cosT = Math.cos(tilt);
-        const sinT = Math.sin(tilt);
-        return {
-          x: cx + x_ell * cosT - y_ell * sinT,
-          y: cy + x_ell * sinT + y_ell * cosT
-        };
+      function ellipsePt(cx,cy,a,b,tilt,ang){
+        const xe=a*Math.cos(ang), ye=b*Math.sin(ang), ct=Math.cos(tilt), st=Math.sin(tilt);
+        return {x:cx+xe*ct-ye*st, y:cy+xe*st+ye*ct};
       }
 
-      function drawNucleus() {
-        const grad = ctx.createRadialGradient(center.x, center.y, 5, center.x, center.y, 32);
-        grad.addColorStop(0, '#790B3E');
-        grad.addColorStop(0.7, '#A62C60');
-        grad.addColorStop(1, '#F27BAE');
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, 18, 0, Math.PI*2);
-        ctx.fillStyle = grad;
-        ctx.fill();
+      function drawNucleus(){
+        const g=ctx.createRadialGradient(center.x,center.y,5,center.x,center.y,32);
+        g.addColorStop(0,'#790B3E'); g.addColorStop(0.7,'#A62C60'); g.addColorStop(1,'#F27BAE');
+        ctx.beginPath(); ctx.arc(center.x,center.y,18,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
       }
 
-      function drawOrbitPath(ring) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(center.x, center.y, ring.a, ring.b, ring.tilt, 0, Math.PI * 2);
-        ctx.strokeStyle = ring.lineColor;
-        ctx.lineWidth = 1.8;
-        ctx.setLineDash([8, 12]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
+      function drawOrbitPath(r){
+        ctx.save(); ctx.beginPath();
+        ctx.ellipse(center.x,center.y,r.a,r.b,r.tilt,0,Math.PI*2);
+        ctx.strokeStyle=r.lineColor; ctx.lineWidth=1.8; ctx.setLineDash([8,12]); ctx.stroke();
+        ctx.setLineDash([]); ctx.restore();
       }
 
-      function drawRingText(ring, now) {
-        const totalAngle = 2 * Math.PI;
-        const count = ring.words;
-        const anglePerWord = totalAngle / count;
-
-        // base angle driven by time
-        const baseAngle = ((now % DELTA_PERIOD_MS) / DELTA_PERIOD_MS) * totalAngle + ring.phaseOffset;
-
-        ctx.save();
-        ctx.font = '13px "Segoe UI", sans-serif';
-        ctx.fillStyle = ring.textColor;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        for (let i = 0; i < count; i++) {
-          const angle = baseAngle + i * anglePerWord;
-          const pos = getEllipsePoint(center.x, center.y, ring.a, ring.b, ring.tilt, angle);
-          // also compute tangent direction for rotating text
-          const nextPos = getEllipsePoint(center.x, center.y, ring.a, ring.b, ring.tilt, angle + 0.01);
-          const dx = nextPos.x - pos.x;
-          const dy = nextPos.y - pos.y;
-          const tangentAngle = Math.atan2(dy, dx);
-
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.rotate(tangentAngle);
-          ctx.fillText('enter', 0, 0);
-          ctx.restore();
-
-          // small dot at each text position
-          ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = ring.textColor;
-          ctx.fill();
+      function drawRingText(r,now){
+        const total=2*Math.PI, count=r.words, angPer=total/count;
+        const base=((now%DELTA_MS)/DELTA_MS)*total+r.phaseOffset;
+        ctx.save(); ctx.font='13px "Segoe UI",sans-serif'; ctx.fillStyle=r.textColor;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        for(let i=0;i<count;i++){
+          const a=base+i*angPer, p=ellipsePt(center.x,center.y,r.a,r.b,r.tilt,a);
+          const p2=ellipsePt(center.x,center.y,r.a,r.b,r.tilt,a+0.01);
+          const ta=Math.atan2(p2.y-p.y,p2.x-p.x);
+          ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(ta); ctx.fillText('enter',0,0); ctx.restore();
+          ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,Math.PI*2); ctx.fillStyle=r.textColor; ctx.fill();
         }
         ctx.restore();
       }
 
-      let lastTime = 0;
-      function animate(now) {
-        requestAnimationFrame(animate);
-        if (!lastTime) { lastTime = now; return; }
-        let dt = Math.min(0.033, (now - lastTime) / 1000);
-        if (dt <= 0) dt = 0.016;
-        lastTime = now;
-
-        ctx.clearRect(0, 0, size, size);
-
-        // draw orbits
-        for (let ring of rings) {
-          drawOrbitPath(ring);
-        }
-        // draw text on each ring
-        for (let ring of rings) {
-          drawRingText(ring, now);
-        }
-        // nucleus on top
+      let lt=0;
+      function anim(now){
+        requestAnimationFrame(anim);
+        if(!lt){lt=now; return;}
+        let dt=Math.min(0.033,(now-lt)/1000); if(dt<=0) dt=0.016; lt=now;
+        ctx.clearRect(0,0,size,size);
+        for(let r of rings) drawOrbitPath(r);
+        for(let r of rings) drawRingText(r,now);
         drawNucleus();
       }
-      requestAnimationFrame(animate);
+      requestAnimationFrame(anim);
     })();
+  </script>
 
-    // ── Haiku display with consent button ──
+  <!-- Haiku + consent flow -->
+  <script>
     const invite = document.getElementById('fullscreen-invite');
     const lines = document.querySelectorAll('.invite-line');
     const consentBtn = document.getElementById('consent-btn');
-    let currentLine = 0;
-    function showNextLine() {
-      if (currentLine < lines.length) {
-        lines[currentLine].style.opacity = '1';
-        currentLine++;
-        setTimeout(showNextLine, 1200);
+    let cur = 0;
+    function nextLine(){
+      if(cur < lines.length){
+        lines[cur].style.opacity = '1';
+        cur++;
+        setTimeout(nextLine, 1200);
       } else {
         consentBtn.style.display = 'inline-block';
-        consentBtn.addEventListener('click', requestFullscreenGate);
+        consentBtn.addEventListener('click', requestFS);
       }
     }
-    function requestFullscreenGate() {
-      consentBtn.removeEventListener('click', requestFullscreenGate);
-      if (document.fullscreenEnabled) {
-        document.documentElement.requestFullscreen().then(() => {
-          invite.style.display = 'none';
-          startRitual();
-        }).catch(() => { invite.style.display = 'none'; startRitual(); });
-      } else { invite.style.display = 'none'; startRitual(); }
+    function requestFS(){
+      consentBtn.removeEventListener('click', requestFS);
+      if(document.fullscreenEnabled){
+        document.documentElement.requestFullscreen().then(()=>{
+          invite.style.display='none'; startRitual();
+        }).catch(()=>{ invite.style.display='none'; startRitual(); });
+      } else { invite.style.display='none'; startRitual(); }
     }
-    setTimeout(showNextLine, 600);
+    setTimeout(nextLine, 600);
   </script>
 
-  <!-- PDF.js loading with fallback and timeout -->
+  <!-- PDF.js fallback loader -->
   <script>
-    (function() {
-      const LOCAL_SRC = '/pdfjs/build/pdf.min.js';
-      const CDN_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      function loadScript(src, callback) {
-        const el = document.createElement('script');
-        el.src = src;
-        el.onload = callback;
-        el.onerror = () => {
-          if (src === LOCAL_SRC) loadScript(CDN_SRC, callback);
-          else console.warn('PDF.js could not be loaded from any source.');
-        };
-        document.head.appendChild(el);
+    (function(){
+      const LOCAL = '/pdfjs/build/pdf.min.js';
+      const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      function load(s,cb){
+        const e=document.createElement('script'); e.src=s; e.onload=cb;
+        e.onerror=()=>{ if(s===LOCAL) load(CDN,cb); else console.warn('PDF.js load failed'); };
+        document.head.appendChild(e);
       }
-      let attempts = 0;
-      const checkInterval = setInterval(() => {
-        if (typeof pdfjsLib !== 'undefined') { clearInterval(checkInterval); return; }
-        attempts++;
-        if (attempts > 200) { clearInterval(checkInterval); console.error('PDF.js failed to load within 10 seconds.'); }
-      }, 50);
-      loadScript(LOCAL_SRC, () => { });
+      let tries=0;
+      const timer=setInterval(()=>{
+        if(typeof pdfjsLib!=='undefined'){ clearInterval(timer); return; }
+        if(++tries>200){ clearInterval(timer); console.error('PDF.js timeout'); }
+      },50);
+      load(LOCAL,()=>{});
     })();
   </script>
 
+  <!-- Main ritual engine -->
   <script>
-    let ritualStarted = false;
-    window.eyeState = { velocityMag: 0, saccading: false };
+    let ritualStarted=false;
+    window.eyeState={velocityMag:0,saccading:false};
+    let audioCtx=null, leftOsc=null, rightOsc=null, leftGain=null, rightGain=null;
 
-    // audio context and oscillators
-    let audioCtx = null;
-    let leftOsc = null, rightOsc = null;
-    let leftGain = null, rightGain = null;
-
-    function initAudio() {
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        leftOsc = audioCtx.createOscillator();
-        rightOsc = audioCtx.createOscillator();
-        leftOsc.type = 'sine';
-        rightOsc.type = 'sine';
-        leftGain = audioCtx.createGain();
-        rightGain = audioCtx.createGain();
-        leftGain.gain.value = 0.08;
-        rightGain.gain.value = 0.08;
-        const leftPanner = audioCtx.createStereoPanner();
-        leftPanner.pan.value = -1;
-        const rightPanner = audioCtx.createStereoPanner();
-        rightPanner.pan.value = 1;
-        leftOsc.connect(leftGain).connect(leftPanner).connect(audioCtx.destination);
-        rightOsc.connect(rightGain).connect(rightPanner).connect(audioCtx.destination);
-        leftOsc.start();
-        rightOsc.start();
-      } catch(e) {
-        console.warn('Audio not available', e);
-        audioCtx = null;
-      }
+    function initAudio(){
+      try{
+        audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+        leftOsc=audioCtx.createOscillator(); rightOsc=audioCtx.createOscillator();
+        leftOsc.type='sine'; rightOsc.type='sine';
+        leftGain=audioCtx.createGain(); rightGain=audioCtx.createGain();
+        leftGain.gain.value=0.08; rightGain.gain.value=0.08;
+        const lp=audioCtx.createStereoPanner(); lp.pan.value=-1;
+        const rp=audioCtx.createStereoPanner(); rp.pan.value=1;
+        leftOsc.connect(leftGain).connect(lp).connect(audioCtx.destination);
+        rightOsc.connect(rightGain).connect(rp).connect(audioCtx.destination);
+        leftOsc.start(); rightOsc.start();
+      }catch(e){ console.warn('Audio unavailable'); audioCtx=null; }
     }
 
-    function updateAudioFrequencies(targetBeatFreq) {
-      if (!audioCtx) return;
-      const baseFreq = 200;
-      const now = audioCtx.currentTime + 0.05;
-      leftOsc.frequency.setTargetAtTime(baseFreq + targetBeatFreq/2, now, 0.02);
-      rightOsc.frequency.setTargetAtTime(baseFreq - targetBeatFreq/2, now, 0.02);
+    function updateAudioFreq(freq){
+      if(!audioCtx) return;
+      const b=200, t=audioCtx.currentTime+0.05;
+      leftOsc.frequency.setTargetAtTime(b+freq/2,t,0.02);
+      rightOsc.frequency.setTargetAtTime(b-freq/2,t,0.02);
     }
 
-    function startRitual() {
-      if (ritualStarted) return;
-      ritualStarted = true;
-
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const useBlur = !reducedMotion && navigator.hardwareConcurrency >= 4;
-      if (!useBlur) {
-        const overlayEl = document.getElementById('overlay');
-        overlayEl.style.backdropFilter = 'none';
-        overlayEl.style.background = 'rgba(0,0,0,0.92)';
+    function startRitual(){
+      if(ritualStarted) return;
+      ritualStarted=true;
+      const redMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const useBlur=!redMot && navigator.hardwareConcurrency>=4;
+      if(!useBlur){
+        const ov=document.getElementById('overlay');
+        ov.style.backdropFilter='none'; ov.style.background='rgba(0,0,0,0.92)';
       }
-
       document.getElementById('ring').classList.add('active');
       document.getElementById('bg-canvas').classList.add('active');
       document.getElementById('eye-symbol').classList.add('active');
-
       initAudio();
       startEntrainmentEngine();
       startStaticCanvas();
       startPDFRitual();
     }
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let reducedMotion = prefersReducedMotion;
-    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => reducedMotion = e.matches);
+    const prefRedMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let reducedMotion=prefRedMot;
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>reducedMotion=e.matches);
 
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    window.addEventListener('beforeunload', () => { document.body.style.background = '#000'; });
+    document.addEventListener('contextmenu',e=>e.preventDefault());
+    window.addEventListener('beforeunload',()=>{ document.body.style.background='#000'; });
 
-    // ── Enhanced Eye Tracking ──
-    (function() {
-      const svgRoot = document.querySelector('#eye-symbol svg');
-      const eyeballGroup = document.getElementById('eyeballGroup');
-      const clipPathShape = document.getElementById('clipPathShape');
-      const upperLidGroup = document.getElementById('upperLidGroup');
-      const lowerLidGroup = document.getElementById('lowerLidGroup');
-      if (!eyeballGroup || !svgRoot) return;
+    // ---- Eye tracking (accessibility: keyboard on eye) ----
+    (function(){
+      const svgRoot=document.querySelector('#eye-symbol svg');
+      const eyeballGroup=document.getElementById('eyeballGroup');
+      const clipPathShape=document.getElementById('clipPathShape');
+      const upperLid=document.getElementById('upperLidGroup');
+      const lowerLid=document.getElementById('lowerLidGroup');
+      if(!eyeballGroup||!svgRoot) return;
 
-      const MAX_TRANSLATE_X = 95;
-      const MAX_TRANSLATE_UP = 55;
-      const MAX_TRANSLATE_DOWN = 85;
+      const MAX_TX=95, MAX_UP=55, MAX_DN=85;
+      let cx=0,cy=0, vx=0,vy=0, tx=0,ty=0, ltx=0,lty=0;
+      const GAIN=6.5, DAMP=0.96, MAXV=45.0;
+      let saccActive=false, ssX=0,ssY=0, seX=0,seY=0, sprog=0;
+      const SACC_DUR=28, SACC_THR=12.0;
+      const UP_LID_UP=-18, LOW_LID_DN=28, SQUINT=6;
 
-      let currentX = 0, currentY = 0;
-      let velocityX = 0, velocityY = 0;
-      let targetX = 0, targetY = 0;
-      let lastTargetX = 0, lastTargetY = 0;
-      const PURSUIT_GAIN = 6.5, PURSUIT_DAMP = 0.96, MAX_VELOCITY = 45.0;
-      let saccadeActive = false;
-      let saccadeStartX = 0, saccadeStartY = 0, saccadeEndX = 0, saccadeEndY = 0;
-      let saccadeProgress = 0;
-      const SACCADE_DURATION_MS = 28, SACCADE_THRESHOLD = 12.0;
-
-      const MAX_UPPER_TRANSLATE_UP = -18, MAX_LOWER_TRANSLATE_DOWN = 28, UPPER_SQUINT_DOWN = 6;
-
-      function updateEyelids(tx, ty) {
-        let normY = ty / (ty >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
-        normY = Math.min(1.0, Math.max(-1.0, normY));
-        let normX = tx / MAX_TRANSLATE_X;
-        
-        let upperYoffset = 0;
-        if (normY < 0) upperYoffset = MAX_UPPER_TRANSLATE_UP * (-normY);
-        else if (normY > 0) upperYoffset = UPPER_SQUINT_DOWN * normY;
-        let horizontalShift = tx * 0.04;
-        upperLidGroup.setAttribute('transform', `translate(${horizontalShift}, ${upperYoffset})`);
-        
-        let lowerYoffset = 0;
-        if (normY > 0) lowerYoffset = MAX_LOWER_TRANSLATE_DOWN * normY;
-        lowerLidGroup.setAttribute('transform', `translate(${horizontalShift}, ${lowerYoffset})`);
-        
-        let upperY = 35, lowerY = 367;
-        if (normY < 0) { const upFactor = -normY; upperY = 35 - upFactor * 15; lowerY = 367 - upFactor * 8; }
-        else if (normY > 0) { const downFactor = normY; upperY = 35 + downFactor * 4; lowerY = 367 + downFactor * 25; }
-        upperY = Math.min(50, Math.max(20, upperY));
-        lowerY = Math.min(400, Math.max(340, lowerY));
-        const shiftX = tx * 0.06;
-        const leftX = 85 + shiftX, rightX = 315 + shiftX;
-        const upperMidX = 195 + shiftX * 0.5, lowerMidX = 205 + shiftX * 0.5;
-        const clipPathStr = `M ${leftX},200 Q ${upperMidX},${upperY} ${rightX},200 Q ${lowerMidX},${lowerY} ${leftX},200 Z`;
-        clipPathShape.setAttribute('d', clipPathStr);
+      function updEyelids(px,py){
+        let ny=py/(py>=0?MAX_DN:MAX_UP); ny=Math.min(1,Math.max(-1,ny));
+        let nx=px/MAX_TX;
+        let uy=0;
+        if(ny<0) uy=UP_LID_UP*(-ny); else if(ny>0) uy=SQUINT*ny;
+        let hs=px*0.04; upperLid.setAttribute('transform',`translate(${hs},${uy})`);
+        let ly=0; if(ny>0) ly=LOW_LID_DN*ny;
+        lowerLid.setAttribute('transform',`translate(${hs},${ly})`);
+        let uY=35, lY=367;
+        if(ny<0){ let f=-ny; uY=35-f*15; lY=367-f*8; }
+        else if(ny>0){ let f=ny; uY=35+f*4; lY=367+f*25; }
+        uY=Math.min(50,Math.max(20,uY)); lY=Math.min(400,Math.max(340,lY));
+        let sx=px*0.06; let lx=85+sx, rx=315+sx;
+        let umx=195+sx*0.5, lmx=205+sx*0.5;
+        let d=`M ${lx},200 Q ${umx},${uY} ${rx},200 Q ${lmx},${lY} ${lx},200 Z`;
+        clipPathShape.setAttribute('d',d);
       }
 
-      function constrainTarget(x, y) {
-        let cx = Math.min(MAX_TRANSLATE_X, Math.max(-MAX_TRANSLATE_X, x));
-        let maxY = (y >= 0) ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP;
-        let cy = Math.min(maxY, Math.max(-maxY, y));
-
-        const normX = cx / MAX_TRANSLATE_X;
-        const normY = cy / (cy >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
-        const dist = Math.sqrt(normX * normX + normY * normY);
-        if (dist > 1.0) {
-          const scale = 1.0 / dist;
-          cx = (normX * scale) * MAX_TRANSLATE_X;
-          cy = (normY * scale) * (cy >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
-        }
-        return { x: cx, y: cy };
+      function constrainTarget(x,y){
+        let cx=Math.min(MAX_TX,Math.max(-MAX_TX,x));
+        let maxY=y>=0?MAX_DN:MAX_UP, cy=Math.min(maxY,Math.max(-maxY,y));
+        let nx=cx/MAX_TX, ny=cy/(cy>=0?MAX_DN:MAX_UP);
+        let dist=Math.sqrt(nx*nx+ny*ny);
+        if(dist>1){ let sc=1/dist; cx=(nx*sc)*MAX_TX; cy=(ny*sc)*(cy>=0?MAX_DN:MAX_UP); }
+        return {x:cx,y:cy};
       }
 
-      function getRawTarget(clientX, clientY) {
-        const pt = new DOMPoint(clientX, clientY);
-        const ctm = svgRoot.getScreenCTM();
-        if (!ctm) return { x: 0, y: 0 };
-        const cursor = pt.matrixTransform(ctm.inverse());
-        return constrainTarget(cursor.x - 200, cursor.y - 200);
+      function getTarget(cx,cy){
+        let pt=new DOMPoint(cx,cy); let ctm=svgRoot.getScreenCTM();
+        if(!ctm) return {x:0,y:0};
+        let cur=pt.matrixTransform(ctm.inverse());
+        return constrainTarget(cur.x-200,cur.y-200);
       }
 
-      function startSaccade(toX, toY) {
-        saccadeActive = true;
-        saccadeStartX = currentX; saccadeStartY = currentY;
-        saccadeEndX = toX; saccadeEndY = toY;
-        saccadeProgress = 0; velocityX = 0; velocityY = 0;
-      }
+      function startSacc(toX,toY){ saccActive=true; ssX=cx; ssY=cy; seX=toX; seY=toY; sprog=0; vx=vy=0; }
 
-      function updateEyePosition(deltaMs) {
-        const deltaSec = Math.min(0.033, deltaMs / 1000);
-        if (saccadeActive) {
-          saccadeProgress += deltaMs / SACCADE_DURATION_MS;
-          if (saccadeProgress >= 1.0) { currentX = saccadeEndX; currentY = saccadeEndY; saccadeActive = false; }
-          else {
-            const t = saccadeProgress;
-            const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
-            currentX = saccadeStartX + (saccadeEndX - saccadeStartX)*ease;
-            currentY = saccadeStartY + (saccadeEndY - saccadeStartY)*ease;
-          }
-          eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
-          updateEyelids(currentX, currentY);
-          window.eyeState.velocityMag = Math.hypot(saccadeEndX - saccadeStartX, saccadeEndY - saccadeStartY) / SACCADE_DURATION_MS * 20;
-          window.eyeState.saccading = true;
+      function updEye(ms){
+        let ds=Math.min(0.033,ms/1000);
+        if(saccActive){
+          sprog+=ms/SACC_DUR; if(sprog>=1){ cx=seX; cy=seY; saccActive=false; }
+          else{ let t=sprog, e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; cx=ssX+(seX-ssX)*e; cy=ssY+(seY-ssY)*e; }
+          eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
+          updEyelids(cx,cy);
+          window.eyeState.velocityMag=Math.hypot(seX-ssX,seY-ssY)/SACC_DUR*20; window.eyeState.saccading=true;
           return;
         }
-        let dtPred = Math.min(0.1, deltaSec);
-        let targetVelX = (targetX - lastTargetX)/dtPred, targetVelY = (targetY - lastTargetY)/dtPred;
-        targetVelX = Math.min(80, Math.max(-80, targetVelX));
-        targetVelY = Math.min(80, Math.max(-80, targetVelY));
-        let predictedTargetX = targetX + targetVelX * 0.033;
-        let predictedTargetY = targetY + targetVelY * 0.033;
-        const predConstrained = constrainTarget(predictedTargetX, predictedTargetY);
-        predictedTargetX = predConstrained.x; predictedTargetY = predConstrained.y;
-        let errorX = predictedTargetX - currentX, errorY = predictedTargetY - currentY;
-        if (Math.hypot(errorX, errorY) > SACCADE_THRESHOLD && deltaMs > 10) {
-          startSaccade(predictedTargetX, predictedTargetY);
-          return;
-        }
-        const pursuitForceX = errorX * PURSUIT_GAIN * deltaSec;
-        const pursuitForceY = errorY * PURSUIT_GAIN * deltaSec;
-        velocityX += pursuitForceX; velocityY += pursuitForceY;
-        velocityX *= PURSUIT_DAMP; velocityY *= PURSUIT_DAMP;
-        let spd = Math.hypot(velocityX, velocityY);
-        if (spd > MAX_VELOCITY) { velocityX = velocityX/spd * MAX_VELOCITY; velocityY = velocityY/spd * MAX_VELOCITY; }
-        let newX = currentX + velocityX * deltaSec;
-        let newY = currentY + velocityY * deltaSec;
-        const finalPos = constrainTarget(newX, newY);
-        currentX = finalPos.x; currentY = finalPos.y;
-        eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
-        lastTargetX = targetX; lastTargetY = targetY;
-        window.eyeState.velocityMag = spd;
-        window.eyeState.saccading = false;
-        updateEyelids(currentX, currentY);
+        let dtPred=Math.min(0.1,ds);
+        let tvx=(tx-ltx)/dtPred, tvy=(ty-lty)/dtPred;
+        tvx=Math.min(80,Math.max(-80,tvx)); tvy=Math.min(80,Math.max(-80,tvy));
+        let ptx=tx+tvx*0.033, pty=ty+tvy*0.033;
+        let pc=constrainTarget(ptx,pty); ptx=pc.x; pty=pc.y;
+        let ex=ptx-cx, ey=pty-cy;
+        if(Math.hypot(ex,ey)>SACC_THR&&ms>10){ startSacc(ptx,pty); return; }
+        let fx=ex*GAIN*ds, fy=ey*GAIN*ds;
+        vx+=fx; vy+=fy; vx*=DAMP; vy*=DAMP;
+        let sp=Math.hypot(vx,vy); if(sp>MAXV){ vx=vx/sp*MAXV; vy=vy/sp*MAXV; }
+        let nx=cx+vx*ds, ny=cy+vy*ds;
+        let fpos=constrainTarget(nx,ny); cx=fpos.x; cy=fpos.y;
+        eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
+        ltx=tx; lty=ty; window.eyeState.velocityMag=sp; window.eyeState.saccading=false;
+        updEyelids(cx,cy);
       }
 
-      function onPointerMove(clientX, clientY) {
-        const raw = getRawTarget(clientX, clientY);
-        targetX = raw.x; targetY = raw.y;
-      }
-      function resetEye() {
-        currentX = 0; currentY = 0; velocityX = 0; velocityY = 0;
-        targetX = 0; targetY = 0; lastTargetX = 0; lastTargetY = 0;
-        saccadeActive = false;
-        eyeballGroup.setAttribute('transform', 'translate(0,0)');
-        updateEyelids(0, 0);
-        upperLidGroup.setAttribute('transform', 'translate(0,0)');
-        lowerLidGroup.setAttribute('transform', 'translate(0,0)');
-        window.eyeState.velocityMag = 0;
-        window.eyeState.saccading = false;
+      function onMove(cx,cy){ let t=getTarget(cx,cy); tx=t.x; ty=t.y; }
+      function reset(){
+        cx=cy=vx=vy=tx=ty=ltx=lty=0; saccActive=false;
+        eyeballGroup.setAttribute('transform','translate(0,0)');
+        updEyelids(0,0); upperLid.setAttribute('transform','translate(0,0)'); lowerLid.setAttribute('transform','translate(0,0)');
+        window.eyeState.velocityMag=0; window.eyeState.saccading=false;
       }
 
-      let lastFrameTime = 0;
-      function animate(now) {
-        requestAnimationFrame(animate);
-        const delta = Math.min(50, now - lastFrameTime);
-        if (delta > 2) updateEyePosition(delta);
-        lastFrameTime = now;
+      let lft=0;
+      function anim(now){
+        requestAnimationFrame(anim); let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now;
       }
 
-      window.addEventListener('mousemove', e => { if (ritualStarted) onPointerMove(e.clientX, e.clientY); });
-      window.addEventListener('mouseleave', resetEye);
-      window.addEventListener('touchmove', e => {
-        if (ritualStarted && e.touches.length) { onPointerMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }
-      }, { passive: false });
-      window.addEventListener('touchend', resetEye);
-      window.addEventListener('touchstart', e => { if (ritualStarted && e.touches.length) onPointerMove(e.touches[0].clientX, e.touches[0].clientY); });
+      window.addEventListener('mousemove',e=>{ if(ritualStarted) onMove(e.clientX,e.clientY); });
+      window.addEventListener('mouseleave',reset);
+      window.addEventListener('touchmove',e=>{ if(ritualStarted&&e.touches.length){ onMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); } },{passive:false});
+      window.addEventListener('touchend',reset);
+      window.addEventListener('touchstart',e=>{ if(ritualStarted&&e.touches.length) onMove(e.touches[0].clientX,e.touches[0].clientY); });
 
-      document.getElementById('eye-symbol').addEventListener('click', () => {
-        if (!ritualStarted || !window.setPdfOpen) return;
-        const overlay = document.getElementById('overlay');
-        const glow = document.getElementById('glow-wrapper');
-        overlay.style.display = 'flex';
-        glow.classList.add('dream-active');
+      // eye keyboard activation
+      const eyeEl=document.getElementById('eye-symbol');
+      eyeEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); openPdfOverlay(); } });
+      // also click
+      eyeEl.addEventListener('click',()=>{ if(ritualStarted) openPdfOverlay(); });
+
+      function openPdfOverlay(){
+        if(!ritualStarted||!window.setPdfOpen) return;
+        document.getElementById('overlay').style.display='flex';
+        document.getElementById('glow-wrapper').classList.add('dream-active');
         window.setPdfOpen(true);
-      });
+      }
 
-      resetEye();
-      lastFrameTime = performance.now();
-      animate(lastFrameTime);
+      reset(); lft=performance.now(); anim(lft);
     })();
 
-    // ── Entrainment engine ──
-    function startEntrainmentEngine() {
-      const overlay = document.getElementById('entrainment-overlay');
-      const ring = document.getElementById('ring');
-      const glowWrapper = document.getElementById('glow-wrapper');
-      const eyeSymbol = document.getElementById('eye-symbol');
+    // ---- Entrainment engine ----
+    function startEntrainmentEngine(){
+      const overlay=document.getElementById('entrainment-overlay');
+      const ring=document.getElementById('ring');
+      const glow=document.getElementById('glow-wrapper');
+      const eyeSym=document.getElementById('eye-symbol');
 
-      const REC = 15000, ALIGN = 10000, ACT = 12000, TOTAL = REC + ALIGN + ACT;
-      let start = performance.now(), pdfOpen = false, phase = 0, global = 'receptive', sub = 'alpha', freq = 10;
+      const REC=15000, ALIGN=10000, ACT=12000, TOTAL=REC+ALIGN+ACT;
+      let start=performance.now(), pdfOpen=false, phase=0, global='receptive', sub='alpha', freq=10;
+      let strobePhase=0, infraPhase=0, hrvOff=0, lastGlobal=global, ptt=0, smoothVel=0;
 
-      let strobePhase = 0;
-      let infraPhase = 0;
-      let hrvOffset = 0;
-      let lastGlobal = global;
-      let phaseTransitionTime = 0;
-      let smoothVel = 0;
-
-      const phaseColors = { receptive: '#FFFFFF', alignment: '#FFD700', action: '#790B3E' };
-      function updateEyeColors(phase) {
-        const color = phaseColors[phase] || '#FFFFFF';
-        document.querySelectorAll('.glow-ring').forEach(el => el.setAttribute('stroke', color));
-        document.querySelectorAll('.sparkle').forEach(el => el.setAttribute('fill', color));
-        eyeSymbol.style.color = color;
+      const phaseColors={receptive:'#FFFFFF', alignment:'#FFD700', action:'#790B3E'};
+      function updEyeColors(ph){
+        const c=phaseColors[ph]||'#FFFFFF';
+        document.querySelectorAll('.glow-ring').forEach(e=>e.setAttribute('stroke',c));
+        document.querySelectorAll('.sparkle').forEach(e=>e.setAttribute('fill',c));
+        eyeSym.style.color=c;
       }
 
-      const colorSteps = {
-        receptive: [
-          { upTo:0.7537,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
-          { upTo:0.79475,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},
-          { upTo:0.8358,bg:'#FEFEFE',shadow:'0 0 150px #FEFEFE,0 0 300px rgba(254,254,254,.9)'},
-          { upTo:0.87685,bg:'#FAFAFA',shadow:'0 0 150px #FAFAFA,0 0 300px rgba(250,250,250,.9)'},
-          { upTo:0.9179,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.95)'},
-          { upTo:0.95895,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},
-          { upTo:1.0,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
+      const colorSteps={
+        receptive:[
+          {u:0.7537,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
+          {u:0.79475,bg:'#FFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},
+          {u:0.8358,bg:'#FEFEFE',s:'0 0 150px #FEFEFE,0 0 300px rgba(254,254,254,.9)'},
+          {u:0.87685,bg:'#FAFAFA',s:'0 0 150px #FAFAFA,0 0 300px rgba(250,250,250,.9)'},
+          {u:0.9179,bg:'#FFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.95)'},
+          {u:0.95895,bg:'#FFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},
+          {u:1.0,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
         ],
-        alignment: [
-          { upTo:0.7537,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
-          { upTo:0.79475,bg:'#FFEA00',shadow:'0 0 150px #FFEA00,0 0 300px rgba(255,234,0,.9)'},
-          { upTo:0.8358,bg:'#FFD700',shadow:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},
-          { upTo:0.87685,bg:'#FFC000',shadow:'0 0 150px #FFC000,0 0 300px rgba(255,192,0,.9)'},
-          { upTo:0.9179,bg:'#FFF200',shadow:'0 0 150px #FFF200,0 0 300px rgba(255,242,0,.95)'},
-          { upTo:0.95895,bg:'#FFD700',shadow:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},
-          { upTo:1.0,bg:'#FFFFFF',shadow:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'}
+        alignment:[
+          {u:0.7537,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
+          {u:0.79475,bg:'#FFEA00',s:'0 0 150px #FFEA00,0 0 300px rgba(255,234,0,.9)'},
+          {u:0.8358,bg:'#FFD700',s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},
+          {u:0.87685,bg:'#FFC000',s:'0 0 150px #FFC000,0 0 300px rgba(255,192,0,.9)'},
+          {u:0.9179,bg:'#FFF200',s:'0 0 150px #FFF200,0 0 300px rgba(255,242,0,.95)'},
+          {u:0.95895,bg:'#FFD700',s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},
+          {u:1.0,bg:'#FFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'}
         ],
-        action: [
-          { upTo:0.7537,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
-          { upTo:0.79475,bg:'#00FF00',shadow:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},
-          { upTo:0.8358,bg:'#33FF33',shadow:'0 0 150px #33FF33,0 0 300px rgba(51,255,51,.9)'},
-          { upTo:0.87685,bg:'#00EE00',shadow:'0 0 150px #0E0,0 0 300px rgba(0,238,0,.9)'},
-          { upTo:0.9179,bg:'#66FF66',shadow:'0 0 150px #66FF66,0 0 300px rgba(102,255,102,.95)'},
-          { upTo:0.95895,bg:'#00FF00',shadow:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},
-          { upTo:1.0,bg:'#000',shadow:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
+        action:[
+          {u:0.7537,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},
+          {u:0.79475,bg:'#0F0',s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},
+          {u:0.8358,bg:'#33FF33',s:'0 0 150px #33FF33,0 0 300px rgba(51,255,51,.9)'},
+          {u:0.87685,bg:'#0E0',s:'0 0 150px #0E0,0 0 300px rgba(0,238,0,.9)'},
+          {u:0.9179,bg:'#66FF66',s:'0 0 150px #66FF66,0 0 300px rgba(102,255,102,.95)'},
+          {u:0.95895,bg:'#0F0',s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},
+          {u:1.0,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
         ]
       };
-
-      function getBurstColor(phase, progress) {
-        const steps = colorSteps[phase] || colorSteps.receptive;
-        for (let i = 0; i < steps.length; i++) {
-          if (progress <= steps[i].upTo) return { bg: steps[i].bg, shadow: steps[i].shadow };
-        }
-        return steps[steps.length - 1];
+      function getBurst(ph,prog){
+        const st=colorSteps[ph]||colorSteps.receptive;
+        for(let i=0;i<st.length;i++) if(prog<=st[i].u) return {bg:st[i].bg, s:st[i].s};
+        return st[st.length-1];
       }
 
-      function update(now) {
-        const el = (now - start) % TOTAL;
-        if (el < REC) {
-          global = 'receptive';
-          if (el < 5000) { sub = 'alpha'; freq = 10; }
-          else if (el < 10000) { sub = 'theta'; freq = 7; }
-          else { sub = 'delta'; freq = 3; }
-        } else if (el < REC + ALIGN) {
-          global = 'alignment'; sub = null;
-          freq = 0.05;
-        } else {
-          global = 'action'; sub = null;
-          const actEl = el - REC - ALIGN;
-          const t = actEl / 2000;
-          let ef;
-          if (t <= 0.5) ef = 2 * t * t;
-          else ef = 1 - Math.pow(-2 * t + 2, 2) / 2;
-          freq = actEl < 2000 ? 3 + (36 - 3) * ef : 36;
+      function upd(now){
+        const el=(now-start)%TOTAL;
+        if(el<REC){
+          global='receptive';
+          if(el<5000){ sub='alpha'; freq=10; }
+          else if(el<10000){ sub='theta'; freq=7; }
+          else { sub='delta'; freq=3; }
+        }else if(el<REC+ALIGN){ global='alignment'; sub=null; freq=0.05; }
+        else{
+          global='action'; sub=null; const ae=el-REC-ALIGN; const t=ae/2000;
+          let ef; if(t<=0.5) ef=2*t*t; else ef=1-Math.pow(-2*t+2,2)/2;
+          freq=ae<2000?3+(36-3)*ef:36;
         }
       }
 
-      function applyRing() {
-        document.body.className = global;
-        if (global === 'receptive') {
-          ring.style.setProperty('--env-dur','2s');
-          glowWrapper.style.setProperty('--env-dur','2s');
-        } else if (global === 'alignment') {
-          ring.style.setProperty('--env-dur','5s');
-          glowWrapper.style.setProperty('--env-dur','5s');
-        } else {
-          ring.style.setProperty('--env-dur','0.5s');
-          glowWrapper.style.setProperty('--env-dur','0.5s');
-        }
+      function applyRing(){
+        document.body.className=global;
+        if(global==='receptive'){ ring.style.setProperty('--env-dur','2s'); glow.style.setProperty('--env-dur','2s'); }
+        else if(global==='alignment'){ ring.style.setProperty('--env-dur','5s'); glow.style.setProperty('--env-dur','5s'); }
+        else{ ring.style.setProperty('--env-dur','0.5s'); glow.style.setProperty('--env-dur','0.5s'); }
       }
 
-      function computeCorrectPhase(prevTime, now) {
-        let current = prevTime;
-        let deltaPhase = 0;
-        while (current < now) {
-          const segEnd = Math.min(now, current + 100);
-          update(current);
-          const segDur = (segEnd - current) / 1000;
-          deltaPhase += 2 * Math.PI * freq * segDur;
-          current = segEnd;
-        }
-        return deltaPhase % (2 * Math.PI);
+      function computePhase(prev,now){
+        let cur=prev, dp=0;
+        while(cur<now){ let se=Math.min(now,cur+100); upd(cur); dp+=2*Math.PI*freq*(se-cur)/1000; cur=se; }
+        return dp%(2*Math.PI);
       }
 
       let prevTime;
-      function loop(now) {
+      function loop(now){
         requestAnimationFrame(loop);
-        const dt = prevTime ? (now - prevTime) / 1000 : 0;
-        prevTime = now;
-
-        if (dt > 0) {
-          if (dt > 1) {
-            const deltaPhase = computeCorrectPhase(prevTime - dt*1000, now);
-            phase = (phase + deltaPhase) % (2 * Math.PI);
-          } else {
-            const step = 0.001;
-            let remaining = dt;
-            while (remaining > 0) {
-              const delta = Math.min(step, remaining);
-              if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
-              else update(now);
-              phase = (phase + 2 * Math.PI * freq * delta) % (2 * Math.PI);
-              remaining -= delta;
-            }
+        const dt=prevTime?(now-prevTime)/1000:0; prevTime=now;
+        if(dt>0){
+          if(dt>1){ const dp=computePhase(prevTime-dt*1000,now); phase=(phase+dp)%(2*Math.PI); }
+          else{
+            const step=0.001; let rem=dt;
+            while(rem>0){ const d=Math.min(step,rem); if(pdfOpen){ global='action'; sub=null; freq=36; } else upd(now);
+              phase=(phase+2*Math.PI*freq*d)%(2*Math.PI); rem-=d; }
           }
-        } else {
-          if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
-          else update(now);
-        }
+        } else{ if(pdfOpen){ global='action'; sub=null; freq=36; } else upd(now); }
 
-        if (global !== lastGlobal) {
-          phaseTransitionTime = now;
-          lastGlobal = global;
-        }
+        if(global!==lastGlobal){ ptt=now; lastGlobal=global; }
+        applyRing(); updEyeColors(global);
 
-        applyRing();
-        updateEyeColors(global);
-
-        if (reducedMotion) {
-          overlay.style.opacity = 0;
-          eyeSymbol.style.opacity = 0;
-          const burstDur = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
-          const burstProgress = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
-          const burst = getBurstColor(global, burstProgress);
-          ring.style.setProperty('--burst-bg', burst.bg);
-          ring.style.setProperty('--burst-shadow', burst.shadow);
-          if (glowWrapper) {
-            glowWrapper.style.setProperty('--burst-bg', burst.bg);
-            glowWrapper.style.setProperty('--burst-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
-          }
+        if(reducedMotion){
+          overlay.style.opacity=0; eyeSym.style.opacity=0;
+          const bd=global==='receptive'?2:(global==='alignment'?5:0.5);
+          const bp=((now-start)%(bd*1000))/(bd*1000); const b=getBurst(global,bp);
+          ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s);
+          if(glow){ glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
           return;
         }
 
-        eyeSymbol.style.opacity = 1;
-        updateAudioFrequencies(freq);
+        eyeSym.style.opacity=1; updateAudioFreq(freq);
 
-        if (dt > 0) {
-          hrvOffset += (Math.random() - 0.5) * 0.0002 * dt;
-          hrvOffset = Math.max(-0.015, Math.min(0.015, hrvOffset));
-          const infraFreq = 0.05 + hrvOffset;
-          infraPhase += 2 * Math.PI * infraFreq * dt;
-          if (infraPhase > 2*Math.PI) infraPhase -= 2*Math.PI;
-        }
-        const infra = 0.5 + 0.5 * Math.sin(infraPhase);
+        if(dt>0){ hrvOff+=(Math.random()-0.5)*0.0002*dt; hrvOff=Math.max(-0.015,Math.min(0.015,hrvOff));
+          const infraF=0.05+hrvOff; infraPhase+=2*Math.PI*infraF*dt; if(infraPhase>2*Math.PI) infraPhase-=2*Math.PI; }
+        const infra=0.5+0.5*Math.sin(infraPhase);
 
-        const burstDur = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
-        const burstProgress = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
-        const burst = getBurstColor(global, burstProgress);
+        const bd=global==='receptive'?2:(global==='alignment'?5:0.5);
+        const bp=((now-start)%(bd*1000))/(bd*1000); const b=getBurst(global,bp);
+        ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s);
+        if(glow){ glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
+        glow.style.setProperty('--sparkle-opacity',infra);
 
-        ring.style.setProperty('--burst-bg', burst.bg);
-        ring.style.setProperty('--burst-shadow', burst.shadow);
-        if (glowWrapper) {
-          glowWrapper.style.setProperty('--burst-bg', burst.bg);
-          glowWrapper.style.setProperty('--burst-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
-        }
+        const sf=global==='action'?36:2;
+        if(dt>0) strobePhase=(strobePhase+2*Math.PI*sf*dt)%(2*Math.PI);
+        ring.style.visibility=Math.sin(strobePhase)>=0?'visible':'hidden';
+        if(glow) glow.style.visibility=ring.style.visibility;
 
-        glowWrapper.style.setProperty('--sparkle-opacity', infra);
+        let flick=0;
+        if(global==='receptive'){
+          if(sub==='delta') flick=0.5+0.5*Math.sin(phase); else flick=Math.sin(phase)>=0?1:0;
+        }else if(global==='alignment') flick=1;
+        else flick=Math.sin(phase)>=0?1:0;
 
-        const strobeFreq = (global === 'action') ? 36 : 2;
-        if (dt > 0) {
-          strobePhase = (strobePhase + 2 * Math.PI * strobeFreq * dt) % (2 * Math.PI);
-        }
-        ring.style.visibility = Math.sin(strobePhase) >= 0 ? 'visible' : 'hidden';
-        if (glowWrapper) glowWrapper.style.visibility = ring.style.visibility;
+        let op=0;
+        if(global==='receptive') op=flick*infra*0.35;
+        else if(global==='alignment') op=infra*0.25;
+        else op=flick*infra*0.35;
 
-        let flicker = 0;
-        if (global === 'receptive') {
-          if (sub === 'delta') flicker = 0.5 + 0.5 * Math.sin(phase);
-          else flicker = Math.sin(phase) >= 0 ? 1 : 0;
-        } else if (global === 'alignment') {
-          flicker = 1;
-        } else {
-          flicker = Math.sin(phase) >= 0 ? 1 : 0;
-        }
+        if(window.eyeState){ smoothVel=smoothVel*0.9+window.eyeState.velocityMag*0.1; const ag=1+Math.min(0.5,smoothVel*0.02); op=Math.min(1,op*ag); }
 
-        let overlayOpacity = 0;
-        if (global === 'receptive') {
-          overlayOpacity = flicker * infra * 0.35;
-        } else if (global === 'alignment') {
-          overlayOpacity = infra * 0.25;
-        } else {
-          overlayOpacity = flicker * infra * 0.35;
-        }
+        if(ptt){ const ts=(now-ptt)/1000; if(ts<0.15){ op*=Math.sin((ts/0.15)*Math.PI); }else if(ts<0.25){} else ptt=0; }
 
-        if (window.eyeState) {
-          smoothVel = smoothVel * 0.9 + window.eyeState.velocityMag * 0.1;
-          const attnGain = 1 + Math.min(0.5, smoothVel * 0.02);
-          overlayOpacity = Math.min(1, overlayOpacity * attnGain);
-        }
-
-        if (phaseTransitionTime) {
-          const tSince = (now - phaseTransitionTime) / 1000;
-          if (tSince < 0.15) {
-            const dip = Math.sin((tSince / 0.15) * Math.PI);
-            overlayOpacity *= dip;
-          } else if (tSince < 0.25) {
-          } else {
-            phaseTransitionTime = 0;
-          }
-        }
-
-        overlay.style.opacity = overlayOpacity;
+        overlay.style.opacity=op;
       }
-
       requestAnimationFrame(loop);
-      window.setPdfOpen = v => pdfOpen = v;
-      window.getCurrentPhase = () => global;
+      window.setPdfOpen=v=>pdfOpen=v;
+      window.getCurrentPhase=()=>global;
     }
 
-    // ── Static canvas ──
-    function startStaticCanvas() {
-      const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
-      const alignPal = ['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
-      const actionPal = ['#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'];
-      const scaleFactor = navigator.hardwareConcurrency < 4 ? 0.5 : 1;
-      let numPal = null, lastPhase = 'receptive', lastTime = 0, fps = 10;
-
-      function resize() {
-        canvas.width = Math.floor(innerWidth * scaleFactor);
-        canvas.height = Math.floor(innerHeight * scaleFactor);
-        if (scaleFactor < 1) canvas.style.imageRendering = 'pixelated';
-      }
-
-      function drawReceptive() {
-        const w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
-        for (let i = 0; i < d.length; i += 4) {
-          d[i]=Math.random()*256; d[i+1]=Math.random()*256; d[i+2]=Math.random()*256; d[i+3]=255;
-        }
-        ctx.putImageData(img,0,0);
-      }
-
-      function drawPalette(palette) {
-        const w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
-        const len = palette.length;
-        for (let i = 0; i < d.length; i += 4) {
-          const c = palette[Math.floor(Math.random()*len)];
-          d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255;
-        }
-        ctx.putImageData(img,0,0);
-      }
-
-      function tick(now) {
-        requestAnimationFrame(tick);
-        if (document.hidden) return;
-        const currentPhase = window.getCurrentPhase ? window.getCurrentPhase() : 'receptive';
-        if (document.body.classList.contains('action')) fps = 36;
-        else if (document.body.classList.contains('alignment')) fps = 10;
-        else fps = 10;
-        const interval = 1000 / fps;
-        if (currentPhase !== lastPhase) {
-          lastPhase = currentPhase;
-          if (currentPhase === 'alignment') {
-            numPal = alignPal.map(h => ({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
-          } else if (currentPhase === 'action') {
-            numPal = actionPal.map(h => ({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
-          } else { numPal = null; }
-        }
-        if (now - lastTime >= interval) {
-          lastTime = now;
-          if (currentPhase === 'receptive') drawReceptive();
-          else drawPalette(numPal);
-        }
-      }
-      let resizeTimeout;
-      addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resize, 16); });
-      resize();
-      requestAnimationFrame(tick);
+    // static canvas
+    function startStaticCanvas(){
+      const c=document.getElementById('bg-canvas'), ctx=c.getContext('2d');
+      const aP=['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
+      const gP=['#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'];
+      const sf=navigator.hardwareConcurrency<4?0.5:1;
+      let pal=null, lastP='receptive', lt=0, fps=10;
+      function resize(){ c.width=Math.floor(innerWidth*sf); c.height=Math.floor(innerHeight*sf); if(sf<1) c.style.imageRendering='pixelated'; }
+      function drawR(){ const w=c.width,h=c.height, img=ctx.createImageData(w,h), d=img.data; for(let i=0;i<d.length;i+=4){ d[i]=Math.random()*256; d[i+1]=Math.random()*256; d[i+2]=Math.random()*256; d[i+3]=255; } ctx.putImageData(img,0,0); }
+      function drawP(pl){ const w=c.width,h=c.height, img=ctx.createImageData(w,h), d=img.data; const len=pl.length; for(let i=0;i<d.length;i+=4){ const c=pl[Math.floor(Math.random()*len)]; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; } ctx.putImageData(img,0,0); }
+      function tick(now){ requestAnimationFrame(tick); if(document.hidden) return; const cp=window.getCurrentPhase?window.getCurrentPhase():'receptive';
+        if(document.body.classList.contains('action')) fps=36; else if(document.body.classList.contains('alignment')) fps=10; else fps=10;
+        const iv=1000/fps; if(cp!==lastP){ lastP=cp; if(cp==='alignment') pal=aP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
+          else if(cp==='action') pal=gP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)})); else pal=null; }
+        if(now-lt>=iv){ lt=now; if(cp==='receptive') drawR(); else drawP(pal); } }
+      let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(resize,16); }); resize(); requestAnimationFrame(tick);
     }
 
-    // ── PDF ritual ──
-    function startPDFRitual() {
-      (async function() {
-        const MAX_WAIT = 10000;
-        const startWait = performance.now();
-
-        function waitForLib(resolve) {
-          if (typeof pdfjsLib !== 'undefined') return resolve();
-          if (performance.now() - startWait > MAX_WAIT) {
-            console.error('PDF.js not available after timeout.');
-            return;
-          }
-          setTimeout(() => waitForLib(resolve), 50);
+    // PDF ritual – with dynamic spotlight & memory fix
+    function startPDFRitual(){
+      (async function(){
+        const MW=10000, sw=performance.now();
+        function waitForLib(resolve){
+          if(typeof pdfjsLib!=='undefined') return resolve();
+          if(performance.now()-sw>MW){ showPdfError('PDF library could not be loaded.'); return; }
+          setTimeout(()=>waitForLib(resolve),50);
         }
-
         await new Promise(waitForLib);
-        if (typeof pdfjsLib === 'undefined') return;
+        if(typeof pdfjsLib==='undefined') return;
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
+        pdfjsLib.GlobalWorkerOptions.workerSrc=window.PDFJS_LOCAL?'/pdfjs/build/pdf.worker.min.js':'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         let pdf;
-        try {
-          pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
-        } catch (e) {
-          console.error('Failed to load PDF:', e);
-          return;
+        try{ pdf=await pdfjsLib.getDocument('/pdf/resume.pdf').promise; }
+        catch(e){ showPdfError('Resume file not found.'); return; }
+
+        const pages=pdf.numPages;
+        const ringEl=document.getElementById('ring');
+        const overlay=document.getElementById('overlay');
+        const glow=document.getElementById('glow-wrapper');
+        const expC=document.getElementById('expanded-canvas');
+        const COPIES=15, SCALE=0.35, STAGGER=111;
+        const pageData=[], all=[];
+        function posOnCircle(el,idx,tot,w,h){
+          const a=idx/tot*2*Math.PI-Math.PI/2-(tot-1)/tot*2*Math.PI;
+          const r=Math.min(innerWidth,innerHeight)*0.4;
+          el.style.left=(Math.cos(a)*r-w/2)+'px'; el.style.top=(Math.sin(a)*r-h/2)+'px';
         }
 
-        const pages = pdf.numPages;
-        const ringEl = document.getElementById('ring');
-        const overlay = document.getElementById('overlay');
-        const glow = document.getElementById('glow-wrapper');
-        const expC = document.getElementById('expanded-canvas');
-        const COPIES = 15, SCALE = 0.35, STAGGER = 111;
-        const pageData = [], all = [];
-        function posOnCircle(el, idx, total, w, h) {
-          const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
-          const r = Math.min(innerWidth, innerHeight) * 0.4;
-          el.style.left = (Math.cos(a) * r - w / 2) + 'px';
-          el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        for(let p=1;p<=pages;p++){
+          const page=await pdf.getPage(p); const vp=page.getViewport({scale:SCALE}), orig=page.getViewport({scale:2.0});
+          const tc=document.createElement('canvas'); tc.width=vp.width; tc.height=vp.height;
+          await page.render({canvasContext:tc.getContext('2d'), viewport:vp}).promise;
+          pageData[p]={page, viewport:orig, thumbCanvas:tc, thumbWidth:vp.width, thumbHeight:vp.height};
         }
 
-        for (let p = 1; p <= pages; p++) {
-          const page = await pdf.getPage(p);
-          const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
-          const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
-          await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
-          pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
-        }
-
-        let idx = 0, totalCopies = pages * COPIES;
-        for (let p = 1; p <= pages; p++) {
-          const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
-          for (let c = 0; c < COPIES; c++) {
-            const floater = document.createElement('div'); floater.className = 'floating-page';
-            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
-            cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
-            const flipper = document.createElement('div'); flipper.className = 'flipper';
+        const totalCopies=pages*COPIES;
+        // dynamic spotlight indices
+        const spotlightIndices = [];
+        for(let i=0;i<3;i++) spotlightIndices.push(Math.floor(totalCopies*(i+1)/(4))); // spread at 25%,50%,75% of total
+        const skipSet = new Set(spotlightIndices);
+        let idx=0;
+        for(let p=1;p<=pages;p++){
+          const {thumbCanvas,thumbWidth,thumbHeight}=pageData[p];
+          for(let c=0;c<COPIES;c++){
+            const floater=document.createElement('div'); floater.className='floating-page';
+            const cc=document.createElement('canvas'); cc.width=thumbWidth; cc.height=thumbHeight;
+            cc.getContext('2d').drawImage(thumbCanvas,0,0);
+            // add flicker overlay (opacity only, no box-shadow)
+            const fov=document.createElement('div'); fov.className='flicker-overlay'; floater.appendChild(fov);
+            const flipper=document.createElement('div'); flipper.className='flipper';
             flipper.appendChild(cc); floater.appendChild(flipper);
-            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
-            floater.style.left = '-9999px'; floater.style.top = '-9999px';
-            const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
-            floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
-            floater.dataset.page = p; floater.dataset.index = idx;
+            floater.style.width=thumbWidth+'px'; floater.style.height=thumbHeight+'px';
+            floater.style.left='-9999px'; floater.style.top='-9999px';
+            const rx=(Math.random()-0.5)*8, ry=(Math.random()-0.5)*8, rz=(Math.random()-0.5)*6;
+            floater.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random()*30}px)`;
+            floater.dataset.page=p; floater.dataset.index=idx;
+            // keyboard accessibility
+            floater.setAttribute('tabindex','0'); floater.setAttribute('role','button');
+            floater.setAttribute('aria-label',`Resume page ${p}`);
+            let z=10;
+            if(idx<11) z=20+idx; else if(idx<22) z=30+(idx-11); else z=40+(idx-22);
+            floater.style.zIndex=z;
+            if(spotlightIndices.includes(idx)){ floater.classList.add('spotlight'); floater.style.zIndex=200; }
 
-            let z = 10;
-            if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
-            floater.style.zIndex = z;
-            if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
-            if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
-
-            floater.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const { page, viewport } = pageData[parseInt(floater.dataset.page)];
-              expC.width = viewport.width; expC.height = viewport.height;
-              const ctx = expC.getContext('2d');
-              await page.render({ canvasContext: ctx, viewport }).promise;
-              overlay.style.display = 'flex'; glow.classList.add('dream-active');
-              if (window.setPdfOpen) window.setPdfOpen(true);
-            });
+            floater.addEventListener('click',async(e)=>{ e.stopPropagation(); openPage(parseInt(floater.dataset.page)); });
+            floater.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); openPage(parseInt(floater.dataset.page)); } });
 
             ringEl.appendChild(floater);
-            all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
-            setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
-            setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
+            all.push({element:floater, flipper, index:idx, width:thumbWidth, height:thumbHeight, fov});
+            setTimeout((el,i,w,h)=>posOnCircle(el,i,totalCopies,w,h), idx*STAGGER, floater, idx, thumbWidth, thumbHeight);
+            setTimeout(()=>floater.classList.add('canvas-loaded'), idx*STAGGER+200);
             idx++;
           }
+          // free original thumbCanvas memory after copies
+          pageData[p].thumbCanvas=null;
         }
 
-        const skip = new Set([10, 21, 32]);
-        const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
-        const sizes = [2, 4, 5]; let gi = 0, pos = 0;
-        function applyColorPass() {
-          eligible.forEach(i => all[i].element.classList.remove('color-pass'));
-          const sz = sizes[gi], grp = [];
-          for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
-          grp.forEach(i => all[i].element.classList.add('color-pass'));
-          pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
+        async function openPage(pageNum){
+          const {page, viewport}=pageData[pageNum];
+          expC.width=viewport.width; expC.height=viewport.height;
+          const ctx=expC.getContext('2d');
+          await page.render({canvasContext:ctx, viewport}).promise;
+          overlay.style.display='flex'; glow.classList.add('dream-active');
+          if(window.setPdfOpen) window.setPdfOpen(true);
         }
-        setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
-        function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
-        setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
+        // color‑pass (existing logic, uses skipSet)
+        const eligible=all.map((_,i)=>i).filter(i=>!skipSet.has(i));
+        const sizes=[2,4,5]; let gi=0, pos=0;
+        function applyColorPass(){
+          eligible.forEach(i=>all[i].element.classList.remove('color-pass'));
+          const sz=sizes[gi], grp=[]; for(let i=0;i<sz;i++) grp.push(eligible[(pos+i)%eligible.length]);
+          grp.forEach(i=>all[i].element.classList.add('color-pass'));
+          pos=(pos+sz)%eligible.length; gi=(gi+1)%sizes.length;
+        }
+        setTimeout(()=>{ applyColorPass(); setInterval(applyColorPass,8000); }, totalCopies*STAGGER+2000);
+        function flip(){ all.forEach(item=>item.element.classList.toggle('flipped')); }
+        setTimeout(()=>{ flip(); setInterval(flip,2000); }, totalCopies*STAGGER+3000);
 
-        addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
-        overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
-        expC.addEventListener('click', e => e.stopPropagation());
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
+        addEventListener('resize',()=>all.forEach(({element, index, width, height})=>posOnCircle(element, index, totalCopies, width, height)));
+
+        // close overlay (keyboard: escape already, but also button)
+        const closeBtn=document.getElementById('close-overlay-btn');
+        closeBtn.addEventListener('click',closeOverlay);
+        overlay.addEventListener('click',(e)=>{ if(e.target===overlay) closeOverlay(); });
+        function closeOverlay(){ overlay.style.display='none'; glow.classList.remove('dream-active'); if(window.setPdfOpen) window.setPdfOpen(false); }
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeOverlay(); });
       })();
+    }
+
+    function showPdfError(msg){
+      const err=document.createElement('div');
+      err.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:10px 20px;border:1px solid #fff;z-index:9999;border-radius:4px;';
+      err.textContent=msg; document.body.appendChild(err);
+      setTimeout(()=>err.remove(),6000);
     }
   </script>
 </body>
