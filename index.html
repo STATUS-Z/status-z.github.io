@@ -5,16 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>FunDarkResume</title>
 
-  <!-- Preload critical PDF.js assets (not bundled, loaded on demand) -->
+  <!-- Preload critical assets -->
   <link rel="preload" href="/pdfjs/build/pdf.min.js" as="script">
   <link rel="preload" href="/pdfjs/build/pdf.worker.min.js" as="script">
+  <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
-
-    /* ---- Keyboard focus indicator ---- */
     :focus { outline: 2px solid #FFD700; outline-offset: 2px; }
 
     #bg-canvas {
@@ -66,13 +65,13 @@
       100% { opacity: 0; transform: translate(-50%, -50%) scale(200); }
     }
 
-    /* ---- floating page thumbnails ---- */
+    /* floating page thumbnails */
     .floating-page {
       position: absolute; cursor: pointer; will-change: transform;
       background: transparent; transform-style: preserve-3d;
       backface-visibility: hidden; border-radius: 4px;
       opacity: 0; transition: opacity 0.5s;
-      outline: none; /* focus style via :focus above */
+      outline: none;
     }
     .floating-page:focus { outline: 2px solid #FFD700; outline-offset: 4px; }
     .floating-page.canvas-loaded { opacity: 1; }
@@ -80,30 +79,21 @@
     .floating-page canvas {
       display: block; width: 100%; height: 100%; border-radius: 4px;
       background: #000; transform-origin: center center; image-rendering: crisp-edges;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform, box-shadow;
     }
 
-    /* flicker overlay – used instead of box‑shadow pulsing */
-    .floating-page .flicker-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      border-radius: 4px; pointer-events: none;
-      background: var(--flicker-color, transparent);
-      opacity: 0; transition: opacity 0.01s; /* will be driven by JS */
-      will-change: opacity;
-    }
-
-    /* slow spin and transparency strobe only */
+    /* ordinary thumbnail animations (full flicker) */
     body.receptive .floating-page canvas {
-      animation: slowSpin 33s linear infinite, thumbStrobe 0.1667s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
     }
     body.alignment .floating-page canvas {
-      animation: slowSpin 33s linear infinite, thumbStrobe 2s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
     }
     body.action .floating-page canvas {
-      animation: slowSpin 33s linear infinite, thumbStrobe 0.0278s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
-    /* spotlight thumbnails keep their individual colour flicker (via box‑shadow, rare) */
+    /* spotlight thumbnails (coloured flicker) */
     body.receptive .floating-page.spotlight canvas {
       animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
@@ -114,7 +104,7 @@
       animation: fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
-    /* color‑pass uses a soft glow (box‑shadow, but only on small group at a time) */
+    /* color-pass sweep */
     body.receptive .floating-page.color-pass canvas {
       animation: slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
@@ -131,7 +121,11 @@
     @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    /* leftover box‑shadow keyframes – used only for spotlight/color‑pass (few elements) */
+    @keyframes squarePulse {
+      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
+      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95); }
+      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
+    }
     @keyframes whiteFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FEFEFE,0 0 225px rgba(254,254,254,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} }
     @keyframes goldFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FFC000,0 0 225px rgba(255,192,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} }
     @keyframes greenFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #0E0,0 0 225px rgba(0,238,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} }
@@ -155,7 +149,6 @@
       background:transparent; pointer-events:none; z-index:-2; transform:translate(-50%,-50%);
       will-change:box-shadow,opacity; opacity:0; transition:opacity .2s;
     }
-
     #glow-wrapper.dream-active::after {
       opacity:var(--sparkle-opacity,0);
       box-shadow:0 0 4000px rgba(255,255,255,.95),0 0 2400px #fff,0 0 6000px rgba(255,255,255,.8);
@@ -168,7 +161,6 @@
       pointer-events:none; z-index:-1; transform:translate(-50%,-50%);
       will-change:box-shadow,background,opacity; opacity:0; transition:opacity .2s;
     }
-
     #glow-wrapper.dream-active::before {
       opacity:1;
       animation:glowBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
@@ -207,39 +199,17 @@
       background: transparent;
     }
     .haiku-center {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 2.2rem;
-      letter-spacing: 1px;
-      background: transparent;
-      padding: 1.5rem 2rem;
-      border-radius: 20px;
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #fff; font-size: 2.2rem; letter-spacing: 1px;
+      background: transparent; padding: 1.5rem 2rem; border-radius: 20px;
     }
     .invite-line {
-      opacity: 0;
-      transition: opacity 1.2s ease;
-      margin: 8px 0;
+      opacity: 0; transition: opacity 1.2s ease; margin: 8px 0;
     }
-    .line1 {
-      color: #FFFFFF;
-      --glow-color: rgba(255,255,255,0.9);
-      animation: breatheGlow 3s ease-in-out infinite;
-    }
-    .line2 {
-      color: #FFD700;
-      --glow-color: rgba(255,215,0,0.9);
-      animation: breatheGlow 3s ease-in-out infinite 0.5s;
-    }
-    .line3 {
-      color: #00FF00;
-      --glow-color: rgba(0,255,0,0.9);
-      animation: breatheGlow 3s ease-in-out infinite 1s;
-    }
+    .line1 { color: #FFFFFF; --glow-color: rgba(255,255,255,0.9); animation: breatheGlow 3s ease-in-out infinite; }
+    .line2 { color: #FFD700; --glow-color: rgba(255,215,0,0.9); animation: breatheGlow 3s ease-in-out infinite 0.5s; }
+    .line3 { color: #00FF00; --glow-color: rgba(0,255,0,0.9); animation: breatheGlow 3s ease-in-out infinite 1s; }
 
     @keyframes breatheGlow {
       0%, 100% { text-shadow: 0 0 8px var(--glow-color), 0 0 16px var(--glow-color), 0 0 32px var(--glow-color); }
@@ -247,19 +217,9 @@
     }
 
     #consent-btn {
-      position: relative;
-      z-index: 3;
-      margin-top: 24px;
-      padding: 12px 24px;
-      background: #790B3E;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
-      cursor: pointer;
-      display: none;
-      letter-spacing: 0.5px;
-      transition: opacity 0.3s;
+      position: relative; z-index: 3; margin-top: 24px; padding: 12px 24px;
+      background: #790B3E; color: #fff; border: none; border-radius: 6px;
+      font-size: 1rem; cursor: pointer; display: none; letter-spacing: 0.5px; transition: opacity 0.3s;
     }
     #consent-btn:hover { opacity: 0.9; }
     #consent-btn:focus { outline: 2px solid #FFD700; outline-offset: 2px; }
@@ -288,7 +248,7 @@
   <div id="entrainment-overlay" aria-hidden="true"></div>
   <div id="cloud">
     <div id="ring"></div>
-    <!-- Thumbnails will be inserted here by JS -->
+    <!-- Thumbnails inserted by JS -->
   </div>
 
   <div id="fullscreen-invite">
@@ -310,7 +270,7 @@
     <div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div>
   </div>
 
-  <!-- Eye Symbol with aria label and keyboard activation -->
+  <!-- Eye Symbol -->
   <div id="eye-symbol" role="button" tabindex="0" aria-label="Astral eye – click or press Enter to view resume">
     <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -431,14 +391,12 @@
     </svg>
   </div>
 
-  <!-- Atomic whirl canvas animation (delta paced) -->
   <script>
     (function() {
       const canvas = document.getElementById('atomic-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      const size = 600;
-      canvas.width = size; canvas.height = size;
+      const size = 600; canvas.width = size; canvas.height = size;
       const center = { x: size/2, y: size/2 };
       const rings = [
         { a:140, b:92, tilt:0.2, phaseOffset:0.0, lineColor:'rgba(121,11,62,0.7)', textColor:'#D86196', words:6 },
@@ -482,8 +440,7 @@
       }
 
       let lt=0;
-      function anim(now){
-        requestAnimationFrame(anim);
+      function anim(now){ requestAnimationFrame(anim);
         if(!lt){lt=now; return;}
         let dt=Math.min(0.033,(now-lt)/1000); if(dt<=0) dt=0.016; lt=now;
         ctx.clearRect(0,0,size,size);
@@ -495,7 +452,6 @@
     })();
   </script>
 
-  <!-- Haiku + consent flow -->
   <script>
     const invite = document.getElementById('fullscreen-invite');
     const lines = document.querySelectorAll('.invite-line');
@@ -503,8 +459,7 @@
     let cur = 0;
     function nextLine(){
       if(cur < lines.length){
-        lines[cur].style.opacity = '1';
-        cur++;
+        lines[cur].style.opacity = '1'; cur++;
         setTimeout(nextLine, 1200);
       } else {
         consentBtn.style.display = 'inline-block';
@@ -522,14 +477,13 @@
     setTimeout(nextLine, 600);
   </script>
 
-  <!-- PDF.js fallback loader -->
   <script>
     (function(){
       const LOCAL = '/pdfjs/build/pdf.min.js';
       const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      function load(s,cb){
-        const e=document.createElement('script'); e.src=s; e.onload=cb;
-        e.onerror=()=>{ if(s===LOCAL) load(CDN,cb); else console.warn('PDF.js load failed'); };
+      function loadScript(src,cb){
+        const e=document.createElement('script'); e.src=src; e.onload=cb;
+        e.onerror=()=>{ if(src===LOCAL) loadScript(CDN,cb); else console.warn('PDF.js load failed.'); };
         document.head.appendChild(e);
       }
       let tries=0;
@@ -537,11 +491,10 @@
         if(typeof pdfjsLib!=='undefined'){ clearInterval(timer); return; }
         if(++tries>200){ clearInterval(timer); console.error('PDF.js timeout'); }
       },50);
-      load(LOCAL,()=>{});
+      loadScript(LOCAL,()=>{});
     })();
   </script>
 
-  <!-- Main ritual engine -->
   <script>
     let ritualStarted=false;
     window.eyeState={velocityMag:0,saccading:false};
@@ -590,11 +543,10 @@
     const prefRedMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let reducedMotion=prefRedMot;
     window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>reducedMotion=e.matches);
-
     document.addEventListener('contextmenu',e=>e.preventDefault());
     window.addEventListener('beforeunload',()=>{ document.body.style.background='#000'; });
 
-    // ---- Eye tracking (accessibility: keyboard on eye) ----
+    // Eye tracking + keyboard
     (function(){
       const svgRoot=document.querySelector('#eye-symbol svg');
       const eyeballGroup=document.getElementById('eyeballGroup');
@@ -682,9 +634,7 @@
       }
 
       let lft=0;
-      function anim(now){
-        requestAnimationFrame(anim); let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now;
-      }
+      function anim(now){ requestAnimationFrame(anim); let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now; }
 
       window.addEventListener('mousemove',e=>{ if(ritualStarted) onMove(e.clientX,e.clientY); });
       window.addEventListener('mouseleave',reset);
@@ -692,10 +642,8 @@
       window.addEventListener('touchend',reset);
       window.addEventListener('touchstart',e=>{ if(ritualStarted&&e.touches.length) onMove(e.touches[0].clientX,e.touches[0].clientY); });
 
-      // eye keyboard activation
       const eyeEl=document.getElementById('eye-symbol');
       eyeEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); openPdfOverlay(); } });
-      // also click
       eyeEl.addEventListener('click',()=>{ if(ritualStarted) openPdfOverlay(); });
 
       function openPdfOverlay(){
@@ -708,7 +656,6 @@
       reset(); lft=performance.now(); anim(lft);
     })();
 
-    // ---- Entrainment engine ----
     function startEntrainmentEngine(){
       const overlay=document.getElementById('entrainment-overlay');
       const ring=document.getElementById('ring');
@@ -756,6 +703,7 @@
           {u:1.0,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}
         ]
       };
+
       function getBurst(ph,prog){
         const st=colorSteps[ph]||colorSteps.receptive;
         for(let i=0;i<st.length;i++) if(prog<=st[i].u) return {bg:st[i].bg, s:st[i].s};
@@ -827,7 +775,8 @@
         if(glow){ glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
         glow.style.setProperty('--sparkle-opacity',infra);
 
-        const sf=global==='action'?36:2;
+        // ring strobe: receptive 2Hz, alignment 0.5Hz, action 36Hz
+        const sf=global==='action'?36:(global==='alignment'?0.5:2);
         if(dt>0) strobePhase=(strobePhase+2*Math.PI*sf*dt)%(2*Math.PI);
         ring.style.visibility=Math.sin(strobePhase)>=0?'visible':'hidden';
         if(glow) glow.style.visibility=ring.style.visibility;
@@ -854,7 +803,6 @@
       window.getCurrentPhase=()=>global;
     }
 
-    // static canvas
     function startStaticCanvas(){
       const c=document.getElementById('bg-canvas'), ctx=c.getContext('2d');
       const aP=['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
@@ -872,7 +820,6 @@
       let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(resize,16); }); resize(); requestAnimationFrame(tick);
     }
 
-    // PDF ritual – with dynamic spotlight & memory fix
     function startPDFRitual(){
       (async function(){
         const MW=10000, sw=performance.now();
@@ -894,7 +841,7 @@
         const overlay=document.getElementById('overlay');
         const glow=document.getElementById('glow-wrapper');
         const expC=document.getElementById('expanded-canvas');
-        const COPIES=15, SCALE=0.35, STAGGER=111;
+        const COPIES=33, SCALE=0.35, STAGGER=167;
         const pageData=[], all=[];
         function posOnCircle(el,idx,tot,w,h){
           const a=idx/tot*2*Math.PI-Math.PI/2-(tot-1)/tot*2*Math.PI;
@@ -910,9 +857,7 @@
         }
 
         const totalCopies=pages*COPIES;
-        // dynamic spotlight indices
-        const spotlightIndices = [];
-        for(let i=0;i<3;i++) spotlightIndices.push(Math.floor(totalCopies*(i+1)/(4))); // spread at 25%,50%,75% of total
+        const spotlightIndices = [10, 21, 32]; // #11, #22, #33 (0‑based)
         const skipSet = new Set(spotlightIndices);
         let idx=0;
         for(let p=1;p<=pages;p++){
@@ -921,8 +866,6 @@
             const floater=document.createElement('div'); floater.className='floating-page';
             const cc=document.createElement('canvas'); cc.width=thumbWidth; cc.height=thumbHeight;
             cc.getContext('2d').drawImage(thumbCanvas,0,0);
-            // add flicker overlay (opacity only, no box-shadow)
-            const fov=document.createElement('div'); fov.className='flicker-overlay'; floater.appendChild(fov);
             const flipper=document.createElement('div'); flipper.className='flipper';
             flipper.appendChild(cc); floater.appendChild(flipper);
             floater.style.width=thumbWidth+'px'; floater.style.height=thumbHeight+'px';
@@ -930,7 +873,6 @@
             const rx=(Math.random()-0.5)*8, ry=(Math.random()-0.5)*8, rz=(Math.random()-0.5)*6;
             floater.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random()*30}px)`;
             floater.dataset.page=p; floater.dataset.index=idx;
-            // keyboard accessibility
             floater.setAttribute('tabindex','0'); floater.setAttribute('role','button');
             floater.setAttribute('aria-label',`Resume page ${p}`);
             let z=10;
@@ -942,13 +884,12 @@
             floater.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); openPage(parseInt(floater.dataset.page)); } });
 
             ringEl.appendChild(floater);
-            all.push({element:floater, flipper, index:idx, width:thumbWidth, height:thumbHeight, fov});
+            all.push({element:floater, flipper, index:idx, width:thumbWidth, height:thumbHeight});
             setTimeout((el,i,w,h)=>posOnCircle(el,i,totalCopies,w,h), idx*STAGGER, floater, idx, thumbWidth, thumbHeight);
             setTimeout(()=>floater.classList.add('canvas-loaded'), idx*STAGGER+200);
             idx++;
           }
-          // free original thumbCanvas memory after copies
-          pageData[p].thumbCanvas=null;
+          pageData[p].thumbCanvas=null; // free memory
         }
 
         async function openPage(pageNum){
@@ -960,7 +901,6 @@
           if(window.setPdfOpen) window.setPdfOpen(true);
         }
 
-        // color‑pass (existing logic, uses skipSet)
         const eligible=all.map((_,i)=>i).filter(i=>!skipSet.has(i));
         const sizes=[2,4,5]; let gi=0, pos=0;
         function applyColorPass(){
@@ -975,7 +915,6 @@
 
         addEventListener('resize',()=>all.forEach(({element, index, width, height})=>posOnCircle(element, index, totalCopies, width, height)));
 
-        // close overlay (keyboard: escape already, but also button)
         const closeBtn=document.getElementById('close-overlay-btn');
         closeBtn.addEventListener('click',closeOverlay);
         overlay.addEventListener('click',(e)=>{ if(e.target===overlay) closeOverlay(); });
@@ -988,7 +927,6 @@
       const err=document.createElement('div');
       err.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:10px 20px;border:1px solid #fff;z-index:9999;border-radius:4px;';
       err.textContent=msg; document.body.appendChild(err);
-      setTimeout(()=>err.remove(),6000);
     }
   </script>
 </body>
