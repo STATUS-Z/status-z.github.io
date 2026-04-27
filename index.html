@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FunDarkResume</title>
+
+  <!-- Preload critical assets -->
+  <link rel="preload" href="/pdfjs/build/pdf.min.js" as="script">
+  <link rel="preload" href="/pdfjs/build/pdf.worker.min.js" as="script">
+  <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -12,7 +18,7 @@
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -2; display: block; pointer-events: none;
-      will-change: transform; opacity: 0;
+      will-change: transform, opacity; opacity: 0;
       transition: opacity 0.8s;
     }
     #bg-canvas.active { opacity: 0.25; }
@@ -42,26 +48,20 @@
       content: '';
       position: fixed; top: 50%; left: 50%;
       width: 20px; height: 20px; border-radius: 50%;
-      background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9);
+      background: var(--burst-bg, #000);
+      box-shadow: var(--burst-shadow, 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9));
       opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
       animation: none;
     }
     #ring.active::after {
-      animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
-                 ringStrobe var(--strobe-dur, 0.5s) step-start infinite;
+      animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite;
     }
 
     @keyframes ringBurstEnvelope {
       0%, 75.37% { opacity: 0; transform: translate(-50%, -50%) scale(0.1); }
       75.37% { opacity: 1; transform: translate(-50%, -50%) scale(150); }
       100% { opacity: 0; transform: translate(-50%, -50%) scale(200); }
-    }
-
-    @keyframes ringStrobe {
-      0%, 49.9% { visibility: visible; }
-      50%, 99.9% { visibility: hidden; }
-      100% { visibility: visible; }
     }
 
     .floating-page {
@@ -85,7 +85,8 @@
       animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
     }
     body.action .floating-page canvas {
-      animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
+      animation: slowSpin 33s linear infinite, thumbStrobe 0.0278s step-start infinite;
+      box-shadow: 0 20px 40px rgba(0,0,0,1);
     }
 
     body.receptive .floating-page.spotlight canvas {
@@ -153,7 +154,9 @@
 
     #glow-wrapper::before {
       content:''; position:absolute; top:50%; left:50%; width:100%; height:100%;
-      background:transparent; pointer-events:none; z-index:-1; transform:translate(-50%,-50%);
+      background: var(--burst-bg, transparent);
+      box-shadow: var(--burst-shadow, none);
+      pointer-events:none; z-index:-1; transform:translate(-50%,-50%);
       will-change:box-shadow,background,opacity; opacity:0; transition:opacity .2s;
     }
 
@@ -178,7 +181,7 @@
       background: radial-gradient(circle at 30% 20%, #1a0d16, #000000);
       z-index: 5000; display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      cursor: pointer; text-align: center;
+      cursor: default; text-align: center;
       user-select: none;
     }
     #atomic-canvas {
@@ -208,15 +211,55 @@
       transition: opacity 1.2s ease;
       margin: 8px 0;
     }
-    .line1 { color: #FFFFFF; }
-    .line2 { color: #FFD700; }
-    .line3 { color: #00FF00; }
+    .line1 {
+      color: #FFFFFF;
+      --glow-color: rgba(255,255,255,0.9);
+      animation: breatheGlow 3s ease-in-out infinite;
+    }
+    .line2 {
+      color: #FFD700;
+      --glow-color: rgba(255,215,0,0.9);
+      animation: breatheGlow 3s ease-in-out infinite 0.5s;
+    }
+    .line3 {
+      color: #00FF00;
+      --glow-color: rgba(0,255,0,0.9);
+      animation: breatheGlow 3s ease-in-out infinite 1s;
+    }
+
+    @keyframes breatheGlow {
+      0%, 100% {
+        text-shadow: 0 0 8px var(--glow-color), 0 0 16px var(--glow-color), 0 0 32px var(--glow-color);
+      }
+      50% {
+        text-shadow: 0 0 16px var(--glow-color), 0 0 32px var(--glow-color), 0 0 64px var(--glow-color);
+      }
+    }
+
+    #consent-btn {
+      position: relative;
+      z-index: 3;
+      margin-top: 24px;
+      padding: 12px 24px;
+      background: #790B3E;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: none;
+      letter-spacing: 0.5px;
+      transition: opacity 0.3s;
+    }
+    #consent-btn:hover { opacity: 0.9; }
 
     /* ── Eye Symbol ── */
     #eye-symbol {
       position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
       width: 160px; height: 160px; z-index:0;
       cursor:pointer; opacity: 0; pointer-events: none;
+      filter: drop-shadow(0 0 25px currentColor);
+      transition: filter 0.3s;
     }
     #eye-symbol.active { opacity: 1; pointer-events: auto; }
     #eye-symbol svg { display: block; width: 100%; height: 100%; }
@@ -237,16 +280,23 @@
   <div id="cloud"><div id="ring"></div></div>
 
   <div id="fullscreen-invite">
+    <!-- Seizure warning -->
+    <div style="position:relative; z-index:2; color:#FFD700; font-size:0.85rem; opacity:0.7; margin-bottom:1.2rem; letter-spacing:0.5px; max-width:80vw;">
+      ⚠ This experience contains rapidly flashing lights.<br>
+      If you are photosensitive, please close this page.
+    </div>
     <canvas id="atomic-canvas"></canvas>
     <div class="haiku-center">
       <div class="invite-line line1">hello again world</div>
       <div class="invite-line line2">please enjoy</div>
       <div class="invite-line line3">welcome</div>
     </div>
+    <button id="consent-btn">I understand – begin</button>
   </div>
 
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
 
+  <!-- Eye Symbol – stroke widths and filter increased -->
   <div id="eye-symbol">
     <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -269,8 +319,8 @@
           <stop offset="100%" stop-color="#0a0a0e" />
         </radialGradient>
         <radialGradient id="highlightGrad" cx="40%" cy="35%" r="50%">
-          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.98" />
-          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+          <stop offset="0%" stop-color="currentColor" stop-opacity="0.98" />
+          <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
         </radialGradient>
         <radialGradient id="corneaGlint" cx="60%" cy="30%" r="40%">
           <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35" />
@@ -282,15 +332,21 @@
         <filter id="tinyBlur" x="-10%" y="-10%" width="120%" height="120%">
           <feGaussianBlur stdDeviation="0.7" />
         </filter>
-        <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        <!-- Intensified glow filter -->
+        <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
       </defs>
 
-      <circle cx="200" cy="200" r="178" fill="none" stroke-width="6" class="glow-ring" filter="url(#glowFilter)" />
-      <circle cx="200" cy="200" r="172" fill="none" stroke-width="4" class="glow-ring" />
-      <circle cx="200" cy="200" r="168" fill="none" stroke-width="2" class="glow-ring" />
+      <!-- Triple glow rings with thicker strokes -->
+      <circle cx="200" cy="200" r="178" fill="none" stroke-width="16" class="glow-ring" filter="url(#glowFilter)" />
+      <circle cx="200" cy="200" r="172" fill="none" stroke-width="10" class="glow-ring" />
+      <circle cx="200" cy="200" r="168" fill="none" stroke-width="6" class="glow-ring" />
 
       <clipPath id="eyelidClip">
         <path id="clipPathShape" d="M 85,200 Q 195,35 315,200 Q 205,365 85,200 Z" />
@@ -340,8 +396,8 @@
             <circle cx="200" cy="200" r="17" fill="url(#pupilGrad)" />
             <circle cx="200" cy="200" r="13" fill="none" stroke="#000" stroke-width="0.5" opacity="0.35" />
             <ellipse cx="179" cy="179" rx="6" ry="5" fill="url(#highlightGrad)" filter="url(#softBlur)" />
-            <ellipse cx="179.5" cy="179.5" rx="3" ry="2" fill="#FFFFFF" opacity="0.98" />
-            <path d="M 224 176 Q 236 192, 230 210" stroke="#FFFFFF" stroke-width="1.8" fill="none" opacity="0.3" stroke-linecap="round" filter="url(#tinyBlur)" />
+            <ellipse cx="179.5" cy="179.5" rx="3" ry="2" fill="currentColor" opacity="0.98" />
+            <path d="M 224 176 Q 236 192, 230 210" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.3" stroke-linecap="round" filter="url(#tinyBlur)" />
             <ellipse cx="212" cy="191" rx="28" ry="18" fill="url(#corneaGlint)" />
           </g>
         </g>
@@ -356,17 +412,18 @@
         <path id="lowerLidStroke" d="M 85,200 Q 205,367 315,200" fill="none" stroke="#1C1C22" stroke-width="4" opacity="0.85" />
       </g>
 
-      <circle cx="48" cy="78" r="2.5" class="sparkle" fill="#FFDDA8" opacity="0.8" filter="url(#softBlur)" />
-      <circle cx="352" cy="322" r="3" class="sparkle" fill="#FFDDCC" opacity="0.8" filter="url(#softBlur)" />
-      <circle cx="332" cy="68" r="2" class="sparkle" fill="#FFDDBB" opacity="0.8" filter="url(#softBlur)" />
-      <circle cx="68" cy="332" r="2.5" class="sparkle" fill="#FFEECC" opacity="0.8" filter="url(#softBlur)" />
+      <!-- Larger, brighter sparkles -->
+      <circle cx="48" cy="78" r="4" class="sparkle" fill="#FFDDA8" opacity="0.9" filter="url(#softBlur)" />
+      <circle cx="352" cy="322" r="5" class="sparkle" fill="#FFDDCC" opacity="0.9" filter="url(#softBlur)" />
+      <circle cx="332" cy="68" r="4" class="sparkle" fill="#FFDDBB" opacity="0.9" filter="url(#softBlur)" />
+      <circle cx="68" cy="332" r="5" class="sparkle" fill="#FFEECC" opacity="0.9" filter="url(#softBlur)" />
     </svg>
   </div>
 
   <script>
     window.PDFJS_LOCAL = true;
 
-    // ── Atomic Whirl Canvas Animation ──
+    // ── Atomic Whirl Canvas – Delta‑paced rings with "enter" text (2s revolution) ──
     (function() {
       const canvas = document.getElementById('atomic-canvas');
       if (!canvas) return;
@@ -375,20 +432,17 @@
       canvas.width = size;
       canvas.height = size;
       const center = { x: size/2, y: size/2 };
-      const orbits = [
-        { a: 140, b: 92, tilt: 0.2, speed: 0.012, electrons: 3, lineColor: 'rgba(121, 11, 62, 0.55)', electronColor: '#D86196' },
-        { a: 180, b: 125, tilt: 0.85, speed: -0.008, electrons: 4, lineColor: 'rgba(146, 30, 80, 0.5)', electronColor: '#E272A4' },
-        { a: 220, b: 160, tilt: 1.45, speed: 0.006, electrons: 5, lineColor: 'rgba(106, 8, 52, 0.6)', electronColor: '#F097B8' },
-        { a: 265, b: 195, tilt: 2.2, speed: -0.005, electrons: 6, lineColor: 'rgba(160, 35, 90, 0.45)', electronColor: '#FFB3D0' }
+
+      // Four elliptical rings, all completing one revolution in 2 seconds (delta 0.5 Hz)
+      // Angular speed = 2π rad / 2000 ms
+      const rings = [
+        { a: 140, b: 92, tilt: 0.2,  phaseOffset: 0.0,     lineColor: 'rgba(121, 11, 62, 0.7)',  textColor: '#D86196', words: 6 },
+        { a: 180, b: 125, tilt: 0.85, phaseOffset: 0.4,     lineColor: 'rgba(146, 30, 80, 0.65)', textColor: '#E272A4', words: 7 },
+        { a: 220, b: 160, tilt: 1.45, phaseOffset: 0.8,     lineColor: 'rgba(106, 8, 52, 0.7)',   textColor: '#F097B8', words: 8 },
+        { a: 265, b: 195, tilt: 2.2,  phaseOffset: 1.2,     lineColor: 'rgba(160, 35, 90, 0.6)',  textColor: '#FFB3D0', words: 9 }
       ];
-      for (let orbit of orbits) {
-        orbit.electronsAngles = [];
-        orbit.prevPositions = [];
-        for (let i = 0; i < orbit.electrons; i++) {
-          orbit.electronsAngles.push((i / orbit.electrons) * Math.PI * 2);
-          orbit.prevPositions.push([]);
-        }
-      }
+
+      const DELTA_PERIOD_MS = 2000; // 2 seconds = 0.5 Hz delta
 
       function getEllipsePoint(cx, cy, a, b, tilt, angleRad) {
         const x_ell = a * Math.cos(angleRad);
@@ -412,11 +466,11 @@
         ctx.fill();
       }
 
-      function drawOrbitPath(orbit) {
+      function drawOrbitPath(ring) {
         ctx.save();
         ctx.beginPath();
-        ctx.ellipse(center.x, center.y, orbit.a, orbit.b, orbit.tilt, 0, Math.PI * 2);
-        ctx.strokeStyle = orbit.lineColor;
+        ctx.ellipse(center.x, center.y, ring.a, ring.b, ring.tilt, 0, Math.PI * 2);
+        ctx.strokeStyle = ring.lineColor;
         ctx.lineWidth = 1.8;
         ctx.setLineDash([8, 12]);
         ctx.stroke();
@@ -424,56 +478,40 @@
         ctx.restore();
       }
 
-      function drawElectron(x, y, color, size, trail) {
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI*2);
-        ctx.fillStyle = color;
-        ctx.fill();
-        if (trail && trail.length > 1) {
-          for (let i = 0; i < trail.length; i++) {
-            const t = trail[i];
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, size * 0.7, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(210, 100, 150, ${0.2 * (1 - i / trail.length)})`;
-            ctx.fill();
-          }
-        }
-      }
+      function drawRingText(ring, now) {
+        const totalAngle = 2 * Math.PI;
+        const count = ring.words;
+        const anglePerWord = totalAngle / count;
 
-      function updateElectrons(orbit, dtFactor) {
-        const step = orbit.speed * 0.8 * dtFactor;
-        for (let i = 0; i < orbit.electronsAngles.length; i++) {
-          orbit.electronsAngles[i] += step;
-          if (orbit.electronsAngles[i] > Math.PI*2) orbit.electronsAngles[i] -= Math.PI*2;
-          const pos = getEllipsePoint(center.x, center.y, orbit.a, orbit.b, orbit.tilt, orbit.electronsAngles[i]);
-          orbit.prevPositions[i].unshift({ x: pos.x, y: pos.y });
-          if (orbit.prevPositions[i].length > 6) orbit.prevPositions[i].pop();
-        }
-      }
+        // base angle driven by time
+        const baseAngle = ((now % DELTA_PERIOD_MS) / DELTA_PERIOD_MS) * totalAngle + ring.phaseOffset;
 
-      const textWords = Array(12).fill('enter');
-      const textRadius = 270;
-
-      function drawRotatingText(now) {
-        const totalWords = textWords.length;
-        const anglePerWord = (2 * Math.PI) / totalWords;
-        const baseAngle = (now / 2000) * 2 * Math.PI;
         ctx.save();
-        ctx.translate(center.x, center.y);
-        ctx.font = '14px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#790B3E';
+        ctx.font = '13px "Segoe UI", sans-serif';
+        ctx.fillStyle = ring.textColor;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        for (let i = 0; i < totalWords; i++) {
-          const word = textWords[i];
+
+        for (let i = 0; i < count; i++) {
           const angle = baseAngle + i * anglePerWord;
-          const x = Math.cos(angle) * textRadius;
-          const y = Math.sin(angle) * textRadius;
+          const pos = getEllipsePoint(center.x, center.y, ring.a, ring.b, ring.tilt, angle);
+          // also compute tangent direction for rotating text
+          const nextPos = getEllipsePoint(center.x, center.y, ring.a, ring.b, ring.tilt, angle + 0.01);
+          const dx = nextPos.x - pos.x;
+          const dy = nextPos.y - pos.y;
+          const tangentAngle = Math.atan2(dy, dx);
+
           ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(angle + Math.PI/2);
-          ctx.fillText(word, 0, 0);
+          ctx.translate(pos.x, pos.y);
+          ctx.rotate(tangentAngle);
+          ctx.fillText('enter', 0, 0);
           ctx.restore();
+
+          // small dot at each text position
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = ring.textColor;
+          ctx.fill();
         }
         ctx.restore();
       }
@@ -487,29 +525,25 @@
         lastTime = now;
 
         ctx.clearRect(0, 0, size, size);
-        // No background drawn – the invite div's gradient shows through
 
-        for (let orbit of orbits) {
-          updateElectrons(orbit, dt * 45);
+        // draw orbits
+        for (let ring of rings) {
+          drawOrbitPath(ring);
         }
-        for (let orbit of orbits) {
-          drawOrbitPath(orbit);
+        // draw text on each ring
+        for (let ring of rings) {
+          drawRingText(ring, now);
         }
-        for (let orbit of orbits) {
-          for (let i = 0; i < orbit.electronsAngles.length; i++) {
-            const pos = getEllipsePoint(center.x, center.y, orbit.a, orbit.b, orbit.tilt, orbit.electronsAngles[i]);
-            drawElectron(pos.x, pos.y, orbit.electronColor, 5.5, orbit.prevPositions[i]);
-          }
-        }
+        // nucleus on top
         drawNucleus();
-        drawRotatingText(now);
       }
       requestAnimationFrame(animate);
     })();
 
-    // ── Haiku display ──
+    // ── Haiku display with consent button ──
     const invite = document.getElementById('fullscreen-invite');
     const lines = document.querySelectorAll('.invite-line');
+    const consentBtn = document.getElementById('consent-btn');
     let currentLine = 0;
     function showNextLine() {
       if (currentLine < lines.length) {
@@ -517,12 +551,12 @@
         currentLine++;
         setTimeout(showNextLine, 1200);
       } else {
-        invite.style.cursor = 'pointer';
-        invite.addEventListener('click', requestFullscreenGate);
+        consentBtn.style.display = 'inline-block';
+        consentBtn.addEventListener('click', requestFullscreenGate);
       }
     }
     function requestFullscreenGate() {
-      invite.removeEventListener('click', requestFullscreenGate);
+      consentBtn.removeEventListener('click', requestFullscreenGate);
       if (document.fullscreenEnabled) {
         document.documentElement.requestFullscreen().then(() => {
           invite.style.display = 'none';
@@ -532,21 +566,91 @@
     }
     setTimeout(showNextLine, 600);
   </script>
-  <script src="/pdfjs/build/pdf.min.js" defer></script>
+
+  <!-- PDF.js loading with fallback and timeout -->
   <script>
-    if (typeof pdfjsLib === 'undefined') {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
-      window.PDFJS_LOCAL = false;
-    }
+    (function() {
+      const LOCAL_SRC = '/pdfjs/build/pdf.min.js';
+      const CDN_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      function loadScript(src, callback) {
+        const el = document.createElement('script');
+        el.src = src;
+        el.onload = callback;
+        el.onerror = () => {
+          if (src === LOCAL_SRC) loadScript(CDN_SRC, callback);
+          else console.warn('PDF.js could not be loaded from any source.');
+        };
+        document.head.appendChild(el);
+      }
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        if (typeof pdfjsLib !== 'undefined') { clearInterval(checkInterval); return; }
+        attempts++;
+        if (attempts > 200) { clearInterval(checkInterval); console.error('PDF.js failed to load within 10 seconds.'); }
+      }, 50);
+      loadScript(LOCAL_SRC, () => { });
+    })();
   </script>
+
   <script>
     let ritualStarted = false;
+    window.eyeState = { velocityMag: 0, saccading: false };
+
+    // audio context and oscillators
+    let audioCtx = null;
+    let leftOsc = null, rightOsc = null;
+    let leftGain = null, rightGain = null;
+
+    function initAudio() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        leftOsc = audioCtx.createOscillator();
+        rightOsc = audioCtx.createOscillator();
+        leftOsc.type = 'sine';
+        rightOsc.type = 'sine';
+        leftGain = audioCtx.createGain();
+        rightGain = audioCtx.createGain();
+        leftGain.gain.value = 0.08;
+        rightGain.gain.value = 0.08;
+        const leftPanner = audioCtx.createStereoPanner();
+        leftPanner.pan.value = -1;
+        const rightPanner = audioCtx.createStereoPanner();
+        rightPanner.pan.value = 1;
+        leftOsc.connect(leftGain).connect(leftPanner).connect(audioCtx.destination);
+        rightOsc.connect(rightGain).connect(rightPanner).connect(audioCtx.destination);
+        leftOsc.start();
+        rightOsc.start();
+      } catch(e) {
+        console.warn('Audio not available', e);
+        audioCtx = null;
+      }
+    }
+
+    function updateAudioFrequencies(targetBeatFreq) {
+      if (!audioCtx) return;
+      const baseFreq = 200;
+      const now = audioCtx.currentTime + 0.05;
+      leftOsc.frequency.setTargetAtTime(baseFreq + targetBeatFreq/2, now, 0.02);
+      rightOsc.frequency.setTargetAtTime(baseFreq - targetBeatFreq/2, now, 0.02);
+    }
+
     function startRitual() {
       if (ritualStarted) return;
       ritualStarted = true;
+
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const useBlur = !reducedMotion && navigator.hardwareConcurrency >= 4;
+      if (!useBlur) {
+        const overlayEl = document.getElementById('overlay');
+        overlayEl.style.backdropFilter = 'none';
+        overlayEl.style.background = 'rgba(0,0,0,0.92)';
+      }
+
       document.getElementById('ring').classList.add('active');
       document.getElementById('bg-canvas').classList.add('active');
       document.getElementById('eye-symbol').classList.add('active');
+
+      initAudio();
       startEntrainmentEngine();
       startStaticCanvas();
       startPDFRitual();
@@ -555,13 +659,11 @@
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let reducedMotion = prefersReducedMotion;
     window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => reducedMotion = e.matches);
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    window.addEventListener('beforeunload', () => {
-      // Pure black flash – no red
-      document.body.style.background = '#000';
-    });
 
-    // ── Enhanced Eye Tracking (saccades + pursuit + eyelids) ──
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('beforeunload', () => { document.body.style.background = '#000'; });
+
+    // ── Enhanced Eye Tracking ──
     (function() {
       const svgRoot = document.querySelector('#eye-symbol svg');
       const eyeballGroup = document.getElementById('eyeballGroup');
@@ -614,19 +716,19 @@
       }
 
       function constrainTarget(x, y) {
-        let constrainedX = Math.min(MAX_TRANSLATE_X, Math.max(-MAX_TRANSLATE_X, x));
+        let cx = Math.min(MAX_TRANSLATE_X, Math.max(-MAX_TRANSLATE_X, x));
         let maxY = (y >= 0) ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP;
-        let constrainedY = Math.min(maxY, Math.max(-maxY, y));
-        const normX = constrainedX / MAX_TRANSLATE_X;
-        const normY = constrainedY / (constrainedY >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
-        let dist = Math.sqrt(normX*normX + normY*normY);
+        let cy = Math.min(maxY, Math.max(-maxY, y));
+
+        const normX = cx / MAX_TRANSLATE_X;
+        const normY = cy / (cy >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
+        const dist = Math.sqrt(normX * normX + normY * normY);
         if (dist > 1.0) {
-          constrainedX /= dist;
-          constrainedY /= dist;
-          if (constrainedY >= 0) constrainedY = Math.min(MAX_TRANSLATE_DOWN, constrainedY);
-          else constrainedY = Math.max(-MAX_TRANSLATE_UP, constrainedY);
+          const scale = 1.0 / dist;
+          cx = (normX * scale) * MAX_TRANSLATE_X;
+          cy = (normY * scale) * (cy >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
         }
-        return { x: constrainedX, y: constrainedY };
+        return { x: cx, y: cy };
       }
 
       function getRawTarget(clientX, clientY) {
@@ -657,6 +759,8 @@
           }
           eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
           updateEyelids(currentX, currentY);
+          window.eyeState.velocityMag = Math.hypot(saccadeEndX - saccadeStartX, saccadeEndY - saccadeStartY) / SACCADE_DURATION_MS * 20;
+          window.eyeState.saccading = true;
           return;
         }
         let dtPred = Math.min(0.1, deltaSec);
@@ -684,6 +788,8 @@
         currentX = finalPos.x; currentY = finalPos.y;
         eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
         lastTargetX = targetX; lastTargetY = targetY;
+        window.eyeState.velocityMag = spd;
+        window.eyeState.saccading = false;
         updateEyelids(currentX, currentY);
       }
 
@@ -699,6 +805,8 @@
         updateEyelids(0, 0);
         upperLidGroup.setAttribute('transform', 'translate(0,0)');
         lowerLidGroup.setAttribute('transform', 'translate(0,0)');
+        window.eyeState.velocityMag = 0;
+        window.eyeState.saccading = false;
       }
 
       let lastFrameTime = 0;
@@ -740,6 +848,13 @@
 
       const REC = 15000, ALIGN = 10000, ACT = 12000, TOTAL = REC + ALIGN + ACT;
       let start = performance.now(), pdfOpen = false, phase = 0, global = 'receptive', sub = 'alpha', freq = 10;
+
+      let strobePhase = 0;
+      let infraPhase = 0;
+      let hrvOffset = 0;
+      let lastGlobal = global;
+      let phaseTransitionTime = 0;
+      let smoothVel = 0;
 
       const phaseColors = { receptive: '#FFFFFF', alignment: '#FFD700', action: '#790B3E' };
       function updateEyeColors(phase) {
@@ -794,26 +909,45 @@
           if (el < 5000) { sub = 'alpha'; freq = 10; }
           else if (el < 10000) { sub = 'theta'; freq = 7; }
           else { sub = 'delta'; freq = 3; }
-        } else if (el < REC + ALIGN) { global = 'alignment'; sub = null; }
-        else {
+        } else if (el < REC + ALIGN) {
+          global = 'alignment'; sub = null;
+          freq = 0.05;
+        } else {
           global = 'action'; sub = null;
           const actEl = el - REC - ALIGN;
-          freq = actEl < 2000 ? 3 + (actEl / 2000) * 33 : 36;
+          const t = actEl / 2000;
+          let ef;
+          if (t <= 0.5) ef = 2 * t * t;
+          else ef = 1 - Math.pow(-2 * t + 2, 2) / 2;
+          freq = actEl < 2000 ? 3 + (36 - 3) * ef : 36;
         }
       }
 
       function applyRing() {
         document.body.className = global;
         if (global === 'receptive') {
-          ring.style.setProperty('--env-dur','2s'); ring.style.setProperty('--strobe-dur','0.5s');
+          ring.style.setProperty('--env-dur','2s');
           glowWrapper.style.setProperty('--env-dur','2s');
         } else if (global === 'alignment') {
-          ring.style.setProperty('--env-dur','5s'); ring.style.setProperty('--strobe-dur','2s');
+          ring.style.setProperty('--env-dur','5s');
           glowWrapper.style.setProperty('--env-dur','5s');
         } else {
-          ring.style.setProperty('--env-dur','0.5s'); ring.style.setProperty('--strobe-dur','0.0278s');
+          ring.style.setProperty('--env-dur','0.5s');
           glowWrapper.style.setProperty('--env-dur','0.5s');
         }
+      }
+
+      function computeCorrectPhase(prevTime, now) {
+        let current = prevTime;
+        let deltaPhase = 0;
+        while (current < now) {
+          const segEnd = Math.min(now, current + 100);
+          update(current);
+          const segDur = (segEnd - current) / 1000;
+          deltaPhase += 2 * Math.PI * freq * segDur;
+          current = segEnd;
+        }
+        return deltaPhase % (2 * Math.PI);
       }
 
       let prevTime;
@@ -821,51 +955,121 @@
         requestAnimationFrame(loop);
         const dt = prevTime ? (now - prevTime) / 1000 : 0;
         prevTime = now;
+
         if (dt > 0) {
-          const step = 0.001;
-          let remaining = dt;
-          while (remaining > 0) {
-            const delta = Math.min(step, remaining);
-            if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
-            else update(now);
-            phase = (phase + 2 * Math.PI * freq * delta) % (2 * Math.PI);
-            remaining -= delta;
+          if (dt > 1) {
+            const deltaPhase = computeCorrectPhase(prevTime - dt*1000, now);
+            phase = (phase + deltaPhase) % (2 * Math.PI);
+          } else {
+            const step = 0.001;
+            let remaining = dt;
+            while (remaining > 0) {
+              const delta = Math.min(step, remaining);
+              if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
+              else update(now);
+              phase = (phase + 2 * Math.PI * freq * delta) % (2 * Math.PI);
+              remaining -= delta;
+            }
           }
         } else {
           if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
           else update(now);
         }
-        applyRing();
 
+        if (global !== lastGlobal) {
+          phaseTransitionTime = now;
+          lastGlobal = global;
+        }
+
+        applyRing();
         updateEyeColors(global);
-        eyeSymbol.style.opacity = reducedMotion ? 0 : 1;
+
+        if (reducedMotion) {
+          overlay.style.opacity = 0;
+          eyeSymbol.style.opacity = 0;
+          const burstDur = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
+          const burstProgress = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
+          const burst = getBurstColor(global, burstProgress);
+          ring.style.setProperty('--burst-bg', burst.bg);
+          ring.style.setProperty('--burst-shadow', burst.shadow);
+          if (glowWrapper) {
+            glowWrapper.style.setProperty('--burst-bg', burst.bg);
+            glowWrapper.style.setProperty('--burst-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
+          }
+          return;
+        }
+
+        eyeSymbol.style.opacity = 1;
+        updateAudioFrequencies(freq);
+
+        if (dt > 0) {
+          hrvOffset += (Math.random() - 0.5) * 0.0002 * dt;
+          hrvOffset = Math.max(-0.015, Math.min(0.015, hrvOffset));
+          const infraFreq = 0.05 + hrvOffset;
+          infraPhase += 2 * Math.PI * infraFreq * dt;
+          if (infraPhase > 2*Math.PI) infraPhase -= 2*Math.PI;
+        }
+        const infra = 0.5 + 0.5 * Math.sin(infraPhase);
 
         const burstDur = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
         const burstProgress = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
         const burst = getBurstColor(global, burstProgress);
-        ring.style.setProperty('background', burst.bg);
-        ring.style.setProperty('box-shadow', burst.shadow);
 
+        ring.style.setProperty('--burst-bg', burst.bg);
+        ring.style.setProperty('--burst-shadow', burst.shadow);
         if (glowWrapper) {
-          glowWrapper.style.setProperty('background', burst.bg);
-          glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
+          glowWrapper.style.setProperty('--burst-bg', burst.bg);
+          glowWrapper.style.setProperty('--burst-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
         }
-        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
+
         glowWrapper.style.setProperty('--sparkle-opacity', infra);
 
-        if (reducedMotion) { overlay.style.opacity = 0; return; }
+        const strobeFreq = (global === 'action') ? 36 : 2;
+        if (dt > 0) {
+          strobePhase = (strobePhase + 2 * Math.PI * strobeFreq * dt) % (2 * Math.PI);
+        }
+        ring.style.visibility = Math.sin(strobePhase) >= 0 ? 'visible' : 'hidden';
+        if (glowWrapper) glowWrapper.style.visibility = ring.style.visibility;
+
         let flicker = 0;
         if (global === 'receptive') {
           if (sub === 'delta') flicker = 0.5 + 0.5 * Math.sin(phase);
           else flicker = Math.sin(phase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * infra * 0.35;
         } else if (global === 'alignment') {
-          overlay.style.opacity = infra * 0.25;
+          flicker = 1;
         } else {
           flicker = Math.sin(phase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * infra * 0.35;
         }
+
+        let overlayOpacity = 0;
+        if (global === 'receptive') {
+          overlayOpacity = flicker * infra * 0.35;
+        } else if (global === 'alignment') {
+          overlayOpacity = infra * 0.25;
+        } else {
+          overlayOpacity = flicker * infra * 0.35;
+        }
+
+        if (window.eyeState) {
+          smoothVel = smoothVel * 0.9 + window.eyeState.velocityMag * 0.1;
+          const attnGain = 1 + Math.min(0.5, smoothVel * 0.02);
+          overlayOpacity = Math.min(1, overlayOpacity * attnGain);
+        }
+
+        if (phaseTransitionTime) {
+          const tSince = (now - phaseTransitionTime) / 1000;
+          if (tSince < 0.15) {
+            const dip = Math.sin((tSince / 0.15) * Math.PI);
+            overlayOpacity *= dip;
+          } else if (tSince < 0.25) {
+          } else {
+            phaseTransitionTime = 0;
+          }
+        }
+
+        overlay.style.opacity = overlayOpacity;
       }
+
       requestAnimationFrame(loop);
       window.setPdfOpen = v => pdfOpen = v;
       window.getCurrentPhase = () => global;
@@ -882,7 +1086,7 @@
       function resize() {
         canvas.width = Math.floor(innerWidth * scaleFactor);
         canvas.height = Math.floor(innerHeight * scaleFactor);
-        if (scaleFactor < 1) { canvas.style.imageRendering = 'pixelated'; }
+        if (scaleFactor < 1) canvas.style.imageRendering = 'pixelated';
       }
 
       function drawReceptive() {
@@ -934,89 +1138,111 @@
     // ── PDF ritual ──
     function startPDFRitual() {
       (async function() {
-        function wait(cb) { if (typeof pdfjsLib !== 'undefined') cb(); else setTimeout(()=>wait(cb), 50); }
-        wait(async () => {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          const pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
-          const pages = pdf.numPages;
-          const ringEl = document.getElementById('ring');
-          const overlay = document.getElementById('overlay');
-          const glow = document.getElementById('glow-wrapper');
-          const expC = document.getElementById('expanded-canvas');
-          const COPIES = 33, SCALE = 0.35, STAGGER = 167;
-          const pageData = [], all = [];
-          function posOnCircle(el, idx, total, w, h) {
-            const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
-            const r = Math.min(innerWidth, innerHeight) * 0.4;
-            el.style.left = (Math.cos(a) * r - w / 2) + 'px';
-            el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        const MAX_WAIT = 10000;
+        const startWait = performance.now();
+
+        function waitForLib(resolve) {
+          if (typeof pdfjsLib !== 'undefined') return resolve();
+          if (performance.now() - startWait > MAX_WAIT) {
+            console.error('PDF.js not available after timeout.');
+            return;
           }
-          for (let p = 1; p <= pages; p++) {
-            const page = await pdf.getPage(p);
-            const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
-            const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
-            await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
-            pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
+          setTimeout(() => waitForLib(resolve), 50);
+        }
+
+        await new Promise(waitForLib);
+        if (typeof pdfjsLib === 'undefined') return;
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdf;
+        try {
+          pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
+        } catch (e) {
+          console.error('Failed to load PDF:', e);
+          return;
+        }
+
+        const pages = pdf.numPages;
+        const ringEl = document.getElementById('ring');
+        const overlay = document.getElementById('overlay');
+        const glow = document.getElementById('glow-wrapper');
+        const expC = document.getElementById('expanded-canvas');
+        const COPIES = 15, SCALE = 0.35, STAGGER = 111;
+        const pageData = [], all = [];
+        function posOnCircle(el, idx, total, w, h) {
+          const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
+          const r = Math.min(innerWidth, innerHeight) * 0.4;
+          el.style.left = (Math.cos(a) * r - w / 2) + 'px';
+          el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        }
+
+        for (let p = 1; p <= pages; p++) {
+          const page = await pdf.getPage(p);
+          const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
+          const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
+          await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
+          pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
+        }
+
+        let idx = 0, totalCopies = pages * COPIES;
+        for (let p = 1; p <= pages; p++) {
+          const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
+          for (let c = 0; c < COPIES; c++) {
+            const floater = document.createElement('div'); floater.className = 'floating-page';
+            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
+            cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
+            const flipper = document.createElement('div'); flipper.className = 'flipper';
+            flipper.appendChild(cc); floater.appendChild(flipper);
+            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
+            floater.style.left = '-9999px'; floater.style.top = '-9999px';
+            const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
+            floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
+            floater.dataset.page = p; floater.dataset.index = idx;
+
+            let z = 10;
+            if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
+            floater.style.zIndex = z;
+            if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
+            if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
+
+            floater.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const { page, viewport } = pageData[parseInt(floater.dataset.page)];
+              expC.width = viewport.width; expC.height = viewport.height;
+              const ctx = expC.getContext('2d');
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              overlay.style.display = 'flex'; glow.classList.add('dream-active');
+              if (window.setPdfOpen) window.setPdfOpen(true);
+            });
+
+            ringEl.appendChild(floater);
+            all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
+            setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
+            setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
+            idx++;
           }
-          let idx = 0, totalCopies = pages * COPIES;
-          for (let p = 1; p <= pages; p++) {
-            const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
-            for (let c = 0; c < COPIES; c++) {
-              const floater = document.createElement('div'); floater.className = 'floating-page';
-              const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
-              cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
-              const flipper = document.createElement('div'); flipper.className = 'flipper';
-              flipper.appendChild(cc); floater.appendChild(flipper);
-              floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
-              floater.style.left = '-9999px'; floater.style.top = '-9999px';
-              const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
-              floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
-              floater.dataset.page = p; floater.dataset.index = idx;
+        }
 
-              let z = 10;
-              if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
-              floater.style.zIndex = z;
-              if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
-              if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
+        const skip = new Set([10, 21, 32]);
+        const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
+        const sizes = [2, 4, 5]; let gi = 0, pos = 0;
+        function applyColorPass() {
+          eligible.forEach(i => all[i].element.classList.remove('color-pass'));
+          const sz = sizes[gi], grp = [];
+          for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
+          grp.forEach(i => all[i].element.classList.add('color-pass'));
+          pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
+        }
+        setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
-              floater.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const { page, viewport } = pageData[parseInt(floater.dataset.page)];
-                expC.width = viewport.width; expC.height = viewport.height;
-                const ctx = expC.getContext('2d');
-                await page.render({ canvasContext: ctx, viewport }).promise;
-                overlay.style.display = 'flex'; glow.classList.add('dream-active');
-                if (window.setPdfOpen) window.setPdfOpen(true);
-              });
+        function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
+        setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
 
-              ringEl.appendChild(floater);
-              all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
-              setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
-              setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
-              idx++;
-            }
-          }
-
-          const skip = new Set([10, 21, 32]);
-          const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
-          const sizes = [2, 4, 5]; let gi = 0, pos = 0;
-          function applyColorPass() {
-            eligible.forEach(i => all[i].element.classList.remove('color-pass'));
-            const sz = sizes[gi], grp = [];
-            for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
-            grp.forEach(i => all[i].element.classList.add('color-pass'));
-            pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
-          }
-          setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
-
-          function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
-          setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
-
-          addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
-          overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
-          expC.addEventListener('click', e => e.stopPropagation());
-          document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
-        });
+        addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
+        overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
+        expC.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
       })();
     }
   </script>
