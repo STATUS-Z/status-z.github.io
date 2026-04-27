@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FunDarkResume</title>
-  <link rel="preload" href="/pdfjs/build/pdf.min.js" as="script">
-  <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -177,7 +175,7 @@
     /* ── Fullscreen Invitation with Atomic Whirl Canvas ── */
     #fullscreen-invite {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: radial-gradient(circle at 30% 20%, #0a0106, #000000);
+      background: radial-gradient(circle at 30% 20%, #1a0d16, #000000);
       z-index: 5000; display: flex; flex-direction: column;
       justify-content: center; align-items: center;
       cursor: pointer; text-align: center;
@@ -189,6 +187,7 @@
       height: min(80vw, 80vh);
       pointer-events: none;
       z-index: 1;
+      background: transparent;
     }
     .haiku-center {
       position: relative;
@@ -222,7 +221,6 @@
     #eye-symbol.active { opacity: 1; pointer-events: auto; }
     #eye-symbol svg { display: block; width: 100%; height: 100%; }
 
-    /* Glow ring motion */
     .glow-ring {
       transform-origin: center;
       animation: spinGlow 10s linear infinite;
@@ -249,7 +247,6 @@
 
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
 
-  <!-- Eye with dark eyelids, fully opaque sclera, new tracking logic -->
   <div id="eye-symbol">
     <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -291,7 +288,6 @@
         </filter>
       </defs>
 
-      <!-- Phase‑colored glow rings (rotating, behind the eyeball) -->
       <circle cx="200" cy="200" r="178" fill="none" stroke-width="6" class="glow-ring" filter="url(#glowFilter)" />
       <circle cx="200" cy="200" r="172" fill="none" stroke-width="4" class="glow-ring" />
       <circle cx="200" cy="200" r="168" fill="none" stroke-width="2" class="glow-ring" />
@@ -351,7 +347,6 @@
         </g>
       </g>
 
-      <!-- Rigid eyelids -->
       <g id="upperLidGroup">
         <path id="upperLidShape" d="M 85,200 Q 195,35 315,200 Q 200,85 85,200 Z" fill="#0A0A0C" opacity="0.98" />
         <path id="upperLidStroke" d="M 85,200 Q 195,35 315,200" fill="none" stroke="#1C1C22" stroke-width="4.5" opacity="0.9" />
@@ -361,7 +356,6 @@
         <path id="lowerLidStroke" d="M 85,200 Q 205,367 315,200" fill="none" stroke="#1C1C22" stroke-width="4" opacity="0.85" />
       </g>
 
-      <!-- Static sparkles (outside the eye) -->
       <circle cx="48" cy="78" r="2.5" class="sparkle" fill="#FFDDA8" opacity="0.8" filter="url(#softBlur)" />
       <circle cx="352" cy="322" r="3" class="sparkle" fill="#FFDDCC" opacity="0.8" filter="url(#softBlur)" />
       <circle cx="332" cy="68" r="2" class="sparkle" fill="#FFDDBB" opacity="0.8" filter="url(#softBlur)" />
@@ -394,19 +388,6 @@
           orbit.electronsAngles.push((i / orbit.electrons) * Math.PI * 2);
           orbit.prevPositions.push([]);
         }
-      }
-
-      const dustParticles = [];
-      const dustPalette = ["#9C2D62", "#B53A73", "#D26A98", "#F0A2C3", "#FFC0D0"];
-      for (let i = 0; i < 180; i++) {
-        dustParticles.push({
-          angle: Math.random() * Math.PI * 2,
-          radius: 30 + Math.random() * 110,
-          speed: 0.02 + Math.random() * 0.03,
-          size: 1.5 + Math.random() * 3,
-          alpha: 0.3 + Math.random() * 0.5,
-          color: dustPalette[Math.floor(Math.random() * dustPalette.length)]
-        });
       }
 
       function getEllipsePoint(cx, cy, a, b, tilt, angleRad) {
@@ -506,11 +487,7 @@
         lastTime = now;
 
         ctx.clearRect(0, 0, size, size);
-        const grad = ctx.createRadialGradient(center.x, center.y, 10, center.x, center.y, size/2);
-        grad.addColorStop(0, '#1a0d16');
-        grad.addColorStop(1, '#000');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, size, size);
+        // No background drawn – the invite div's gradient shows through
 
         for (let orbit of orbits) {
           updateElectrons(orbit, dt * 45);
@@ -580,8 +557,8 @@
     window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => reducedMotion = e.matches);
     document.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('beforeunload', () => {
-      document.body.style.background = '#ff0000';
-      setTimeout(() => { document.body.style.background = '#000'; }, 167);
+      // Pure black flash – no red
+      document.body.style.background = '#000';
     });
 
     // ── Enhanced Eye Tracking (saccades + pursuit + eyelids) ──
@@ -601,19 +578,13 @@
       let velocityX = 0, velocityY = 0;
       let targetX = 0, targetY = 0;
       let lastTargetX = 0, lastTargetY = 0;
-      let lastTimestamp = 0;
-      const PURSUIT_GAIN = 6.5;
-      const PURSUIT_DAMP = 0.96;
-      const MAX_VELOCITY = 45.0;
+      const PURSUIT_GAIN = 6.5, PURSUIT_DAMP = 0.96, MAX_VELOCITY = 45.0;
       let saccadeActive = false;
       let saccadeStartX = 0, saccadeStartY = 0, saccadeEndX = 0, saccadeEndY = 0;
       let saccadeProgress = 0;
-      const SACCADE_DURATION_MS = 28;
-      const SACCADE_THRESHOLD = 12.0;
+      const SACCADE_DURATION_MS = 28, SACCADE_THRESHOLD = 12.0;
 
-      const MAX_UPPER_TRANSLATE_UP = -18;
-      const MAX_LOWER_TRANSLATE_DOWN = 28;
-      const UPPER_SQUINT_DOWN = 6;
+      const MAX_UPPER_TRANSLATE_UP = -18, MAX_LOWER_TRANSLATE_DOWN = 28, UPPER_SQUINT_DOWN = 6;
 
       function updateEyelids(tx, ty) {
         let normY = ty / (ty >= 0 ? MAX_TRANSLATE_DOWN : MAX_TRANSLATE_UP);
@@ -621,41 +592,23 @@
         let normX = tx / MAX_TRANSLATE_X;
         
         let upperYoffset = 0;
-        if (normY < 0) {
-          const upFactor = -normY;
-          upperYoffset = MAX_UPPER_TRANSLATE_UP * upFactor;
-        } else if (normY > 0) {
-          const downFactor = normY;
-          upperYoffset = UPPER_SQUINT_DOWN * downFactor;
-        }
+        if (normY < 0) upperYoffset = MAX_UPPER_TRANSLATE_UP * (-normY);
+        else if (normY > 0) upperYoffset = UPPER_SQUINT_DOWN * normY;
         let horizontalShift = tx * 0.04;
         upperLidGroup.setAttribute('transform', `translate(${horizontalShift}, ${upperYoffset})`);
         
         let lowerYoffset = 0;
-        if (normY > 0) {
-          const downFactor = normY;
-          lowerYoffset = MAX_LOWER_TRANSLATE_DOWN * downFactor;
-        }
+        if (normY > 0) lowerYoffset = MAX_LOWER_TRANSLATE_DOWN * normY;
         lowerLidGroup.setAttribute('transform', `translate(${horizontalShift}, ${lowerYoffset})`);
         
-        let upperY = 35;
-        let lowerY = 367;
-        if (normY < 0) {
-          const upFactor = -normY;
-          upperY = 35 - upFactor * 15;
-          lowerY = 367 - upFactor * 8;
-        } else if (normY > 0) {
-          const downFactor = normY;
-          upperY = 35 + downFactor * 4;
-          lowerY = 367 + downFactor * 25;
-        }
+        let upperY = 35, lowerY = 367;
+        if (normY < 0) { const upFactor = -normY; upperY = 35 - upFactor * 15; lowerY = 367 - upFactor * 8; }
+        else if (normY > 0) { const downFactor = normY; upperY = 35 + downFactor * 4; lowerY = 367 + downFactor * 25; }
         upperY = Math.min(50, Math.max(20, upperY));
         lowerY = Math.min(400, Math.max(340, lowerY));
         const shiftX = tx * 0.06;
-        const leftX = 85 + shiftX;
-        const rightX = 315 + shiftX;
-        const upperMidX = 195 + shiftX * 0.5;
-        const lowerMidX = 205 + shiftX * 0.5;
+        const leftX = 85 + shiftX, rightX = 315 + shiftX;
+        const upperMidX = 195 + shiftX * 0.5, lowerMidX = 205 + shiftX * 0.5;
         const clipPathStr = `M ${leftX},200 Q ${upperMidX},${upperY} ${rightX},200 Q ${lowerMidX},${lowerY} ${leftX},200 Z`;
         clipPathShape.setAttribute('d', clipPathStr);
       }
@@ -681,97 +634,66 @@
         const ctm = svgRoot.getScreenCTM();
         if (!ctm) return { x: 0, y: 0 };
         const cursor = pt.matrixTransform(ctm.inverse());
-        let rawX = cursor.x - 200;
-        let rawY = cursor.y - 200;
-        return constrainTarget(rawX, rawY);
+        return constrainTarget(cursor.x - 200, cursor.y - 200);
       }
 
       function startSaccade(toX, toY) {
         saccadeActive = true;
-        saccadeStartX = currentX;
-        saccadeStartY = currentY;
-        saccadeEndX = toX;
-        saccadeEndY = toY;
-        saccadeProgress = 0;
-        velocityX = 0;
-        velocityY = 0;
+        saccadeStartX = currentX; saccadeStartY = currentY;
+        saccadeEndX = toX; saccadeEndY = toY;
+        saccadeProgress = 0; velocityX = 0; velocityY = 0;
       }
 
       function updateEyePosition(deltaMs) {
         const deltaSec = Math.min(0.033, deltaMs / 1000);
-        
         if (saccadeActive) {
           saccadeProgress += deltaMs / SACCADE_DURATION_MS;
-          if (saccadeProgress >= 1.0) {
-            currentX = saccadeEndX;
-            currentY = saccadeEndY;
-            saccadeActive = false;
-          } else {
+          if (saccadeProgress >= 1.0) { currentX = saccadeEndX; currentY = saccadeEndY; saccadeActive = false; }
+          else {
             const t = saccadeProgress;
-            const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-            currentX = saccadeStartX + (saccadeEndX - saccadeStartX) * ease;
-            currentY = saccadeStartY + (saccadeEndY - saccadeStartY) * ease;
+            const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+            currentX = saccadeStartX + (saccadeEndX - saccadeStartX)*ease;
+            currentY = saccadeStartY + (saccadeEndY - saccadeStartY)*ease;
           }
           eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
-          lastTargetX = targetX;
-          lastTargetY = targetY;
           updateEyelids(currentX, currentY);
           return;
         }
-        
         let dtPred = Math.min(0.1, deltaSec);
-        let targetVelX = (targetX - lastTargetX) / dtPred;
-        let targetVelY = (targetY - lastTargetY) / dtPred;
+        let targetVelX = (targetX - lastTargetX)/dtPred, targetVelY = (targetY - lastTargetY)/dtPred;
         targetVelX = Math.min(80, Math.max(-80, targetVelX));
         targetVelY = Math.min(80, Math.max(-80, targetVelY));
-        const PREDICTION_MS = 0.033;
-        let predictedTargetX = targetX + targetVelX * PREDICTION_MS;
-        let predictedTargetY = targetY + targetVelY * PREDICTION_MS;
+        let predictedTargetX = targetX + targetVelX * 0.033;
+        let predictedTargetY = targetY + targetVelY * 0.033;
         const predConstrained = constrainTarget(predictedTargetX, predictedTargetY);
-        predictedTargetX = predConstrained.x;
-        predictedTargetY = predConstrained.y;
-        
-        let errorX = predictedTargetX - currentX;
-        let errorY = predictedTargetY - currentY;
+        predictedTargetX = predConstrained.x; predictedTargetY = predConstrained.y;
+        let errorX = predictedTargetX - currentX, errorY = predictedTargetY - currentY;
         if (Math.hypot(errorX, errorY) > SACCADE_THRESHOLD && deltaMs > 10) {
           startSaccade(predictedTargetX, predictedTargetY);
-          lastTargetX = targetX;
-          lastTargetY = targetY;
           return;
         }
-        
         const pursuitForceX = errorX * PURSUIT_GAIN * deltaSec;
         const pursuitForceY = errorY * PURSUIT_GAIN * deltaSec;
-        velocityX += pursuitForceX;
-        velocityY += pursuitForceY;
-        velocityX *= PURSUIT_DAMP;
-        velocityY *= PURSUIT_DAMP;
+        velocityX += pursuitForceX; velocityY += pursuitForceY;
+        velocityX *= PURSUIT_DAMP; velocityY *= PURSUIT_DAMP;
         let spd = Math.hypot(velocityX, velocityY);
-        if (spd > MAX_VELOCITY) {
-          velocityX = velocityX / spd * MAX_VELOCITY;
-          velocityY = velocityY / spd * MAX_VELOCITY;
-        }
+        if (spd > MAX_VELOCITY) { velocityX = velocityX/spd * MAX_VELOCITY; velocityY = velocityY/spd * MAX_VELOCITY; }
         let newX = currentX + velocityX * deltaSec;
         let newY = currentY + velocityY * deltaSec;
         const finalPos = constrainTarget(newX, newY);
-        currentX = finalPos.x;
-        currentY = finalPos.y;
+        currentX = finalPos.x; currentY = finalPos.y;
         eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
-        lastTargetX = targetX;
-        lastTargetY = targetY;
+        lastTargetX = targetX; lastTargetY = targetY;
         updateEyelids(currentX, currentY);
       }
 
       function onPointerMove(clientX, clientY) {
         const raw = getRawTarget(clientX, clientY);
-        targetX = raw.x;
-        targetY = raw.y;
+        targetX = raw.x; targetY = raw.y;
       }
       function resetEye() {
-        currentX = 0; currentY = 0;
-        velocityX = 0; velocityY = 0;
-        targetX = 0; targetY = 0;
-        lastTargetX = 0; lastTargetY = 0;
+        currentX = 0; currentY = 0; velocityX = 0; velocityY = 0;
+        targetX = 0; targetY = 0; lastTargetX = 0; lastTargetY = 0;
         saccadeActive = false;
         eyeballGroup.setAttribute('transform', 'translate(0,0)');
         updateEyelids(0, 0);
@@ -779,31 +701,22 @@
         lowerLidGroup.setAttribute('transform', 'translate(0,0)');
       }
 
-      let frameRequest;
       let lastFrameTime = 0;
       function animate(now) {
-        frameRequest = requestAnimationFrame(animate);
+        requestAnimationFrame(animate);
         const delta = Math.min(50, now - lastFrameTime);
         if (delta > 2) updateEyePosition(delta);
         lastFrameTime = now;
       }
 
-      window.addEventListener('mousemove', (e) => {
-        if (ritualStarted) onPointerMove(e.clientX, e.clientY);
-      });
+      window.addEventListener('mousemove', e => { if (ritualStarted) onPointerMove(e.clientX, e.clientY); });
       window.addEventListener('mouseleave', resetEye);
-      window.addEventListener('touchmove', (e) => {
-        if (ritualStarted && e.touches.length) {
-          onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
-          e.preventDefault();
-        }
+      window.addEventListener('touchmove', e => {
+        if (ritualStarted && e.touches.length) { onPointerMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }
       }, { passive: false });
       window.addEventListener('touchend', resetEye);
-      window.addEventListener('touchstart', (e) => {
-        if (ritualStarted && e.touches.length) onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
-      });
+      window.addEventListener('touchstart', e => { if (ritualStarted && e.touches.length) onPointerMove(e.touches[0].clientX, e.touches[0].clientY); });
 
-      // Open PDF on eye click
       document.getElementById('eye-symbol').addEventListener('click', () => {
         if (!ritualStarted || !window.setPdfOpen) return;
         const overlay = document.getElementById('overlay');
@@ -831,11 +744,8 @@
       const phaseColors = { receptive: '#FFFFFF', alignment: '#FFD700', action: '#790B3E' };
       function updateEyeColors(phase) {
         const color = phaseColors[phase] || '#FFFFFF';
-        // Update glow rings stroke
         document.querySelectorAll('.glow-ring').forEach(el => el.setAttribute('stroke', color));
-        // Update sparkle fills
         document.querySelectorAll('.sparkle').forEach(el => el.setAttribute('fill', color));
-        // Set currentColor for the eye reflection gradient (not used in this SVG but keep for consistency)
         eyeSymbol.style.color = color;
       }
 
