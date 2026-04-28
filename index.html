@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FunDarkResume</title>
-  <link rel="preload" href="/pdfjs/build/pdf.min.js" as="script">
-  <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -14,17 +12,14 @@
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -2; display: block; pointer-events: none;
-      will-change: transform; opacity: 0;
-      transition: opacity 0.8s;
+      will-change: transform; opacity: 0.25;
     }
-    #bg-canvas.active { opacity: 0.25; }
 
     #entrainment-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -1; pointer-events: none;
       background: white; opacity: 0;
       will-change: opacity; mix-blend-mode: overlay;
-      contain: strict;
     }
 
     #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
@@ -32,11 +27,10 @@
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
-      animation: none; /* paused until ritual starts */
+      animation: ringRotate 2s linear infinite;
     }
-    #ring.active { animation: ringRotate 2s linear infinite; }
-    body.alignment #ring.active { animation: ringRotate 20s linear infinite; }
-    body.action #ring.active { animation: ringRotate 0.5s linear infinite; }
+    body.alignment #ring { animation: ringRotate 20s linear infinite; }
+    body.action #ring { animation: ringRotate 0.5s linear infinite; }
 
     @keyframes ringRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -47,11 +41,9 @@
       background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9);
       opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
-      animation: none; /* paused */
-    }
-    #ring.active::after {
       animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
                  ringStrobe var(--strobe-dur, 0.5s) step-start infinite;
+      will-change: transform, opacity, box-shadow, background;
     }
 
     @keyframes ringBurstEnvelope {
@@ -70,9 +62,7 @@
       position: absolute; cursor: pointer; will-change: transform;
       background: transparent; transform-style: preserve-3d;
       backface-visibility: hidden; border-radius: 4px;
-      opacity: 0; transition: opacity 0.5s;
     }
-    .floating-page.canvas-loaded { opacity: 1; }
 
     .floating-page canvas {
       display: block; width: 100%; height: 100%; border-radius: 4px;
@@ -174,53 +164,41 @@
       position:relative; z-index:2;
     }
 
-    /* Fullscreen invitation – haiku sequence */
-    #fullscreen-invite {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #000;
-      z-index: 5000; display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      color: #fff; font-family: system-ui, sans-serif;
-      font-size: 2.2rem; letter-spacing: 1px;
-      cursor: pointer; text-align: center;
-      user-select: none;
+    /* Fullscreen button */
+    .fs-btn {
+      position:fixed; bottom:20px; right:20px; z-index:9999;
+      background:#0d1117; padding:10px 18px; border-radius:40px;
+      opacity:.4; border:1px solid #3a4a6a; backdrop-filter:blur(8px);
+      transition:opacity .2s,transform .2s; box-shadow:0 4px 12px rgba(0,0,0,.5);
+      cursor:pointer; color:#d0e0ff; font-size:14px; font-weight:500;
+      letter-spacing:.5px; font-family:system-ui, sans-serif;
     }
-    .invite-line {
-      opacity: 0;
-      transition: opacity 1.2s ease;
-      margin: 12px 0;
-    }
-    .line1 { color: #FFFFFF; }
-    .line2 { color: #FFD700; }
-    .line3 { color: #00FF00; }
+    .fs-btn:hover { opacity:1; transform:scale(1.05); }
 
+    #loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); color:#aaa; font-size:18px; z-index:10; }
+
+    /* Eye of Horus */
     #eye-symbol {
       position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
       width:130px; height:130px; z-index:0; transition:color .3s;
       filter:drop-shadow(0 0 8px currentColor);
       cursor:pointer;
-      opacity: 0;
-      pointer-events: none;
     }
-    #eye-symbol.active { opacity: 1; pointer-events: auto; }
     #eye-symbol svg circle.ring { fill:none; stroke-width:2; stroke-opacity:0.8; }
   </style>
 </head>
-<body class="receptive">
+<body class="receptive" id="body">
   <canvas id="bg-canvas"></canvas>
   <div id="entrainment-overlay"></div>
   <div id="cloud"><div id="ring"></div></div>
-
-  <div id="fullscreen-invite">
-    <div class="invite-line line1">hello world</div>
-    <div class="invite-line line2">thank you for coming</div>
-    <div class="invite-line line3">enter full screen</div>
-  </div>
-
+  <div id="loading">Manifesting...</div>
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
+  <button class="fs-btn" id="fullscreen-btn">⛶ try full screen</button>
 
+  <!-- Eye of Horus with snake pupil and blink -->
   <div id="eye-symbol">
     <svg viewBox="0 0 100 100">
+      <!-- 7 concentric rings -->
       <circle class="ring" cx="50" cy="50" r="48" />
       <circle class="ring" cx="50" cy="50" r="42" />
       <circle class="ring" cx="50" cy="50" r="36" />
@@ -229,94 +207,53 @@
       <circle class="ring" cx="50" cy="50" r="18" />
       <circle class="ring" cx="50" cy="50" r="12" />
 
+      <!-- Sharp Eye of Horus outline -->
       <g class="eye-line" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Brow -->
         <path d="M 14 28 Q 35 10 66 10 Q 82 10 86 28 Q 82 22 66 18 Q 35 14 14 28 Z" fill="currentColor" fill-opacity="0.3" />
+        <!-- Eye outer -->
         <path d="M 22 44 Q 50 70 78 44 Q 50 26 22 44 Z" />
+        <!-- Upper lid -->
         <path d="M 24 42 Q 50 56 76 42" />
+        <!-- Tear drop -->
         <path d="M 50 70 L 50 84" />
         <path d="M 50 84 Q 42 82 43 75" />
         <path d="M 47 80 Q 46 78 48 78" />
+        <!-- Eyelid closed (for blink) -->
         <path id="eyelid" d="M 22 44 Q 50 56 78 44" stroke-width="3" display="none" />
       </g>
+      <!-- Snake‑style vertical slit pupil -->
       <path id="pupil" d="M 47 41 L 47 49 Q 50 54 53 49 L 53 41 Q 50 38 47 41 Z" fill="currentColor" />
     </svg>
   </div>
 
   <script>
     window.PDFJS_LOCAL = true;
-    // ── Haiku animation & fullscreen gate ──
-    const invite = document.getElementById('fullscreen-invite');
-    const lines = document.querySelectorAll('.invite-line');
-    let currentLine = 0;
-
-    function showNextLine() {
-      if (currentLine < lines.length) {
-        lines[currentLine].style.opacity = '1';
-        currentLine++;
-        setTimeout(showNextLine, 1200);
-      } else {
-        invite.style.cursor = 'pointer';
-        invite.addEventListener('click', requestFullscreenGate);
-      }
-    }
-
-    function requestFullscreenGate() {
-      invite.removeEventListener('click', requestFullscreenGate);
-      if (document.fullscreenEnabled) {
-        document.documentElement.requestFullscreen().then(() => {
-          invite.style.display = 'none';
-          startRitual();
-        }).catch(() => {
-          // fallback: start ritual anyway if fullscreen denied
-          invite.style.display = 'none';
-          startRitual();
-        });
-      } else {
-        invite.style.display = 'none';
-        startRitual();
-      }
-    }
-
-    // Start showing haiku after a tiny delay
-    setTimeout(showNextLine, 600);
   </script>
-
-  <script src="/pdfjs/build/pdf.min.js" defer></script>
+  <script src="/pdfjs/build/pdf.min.js"></script>
   <script>
     if (typeof pdfjsLib === 'undefined') {
+      console.warn('Local pdf.min.js not found, using CDN fallback.');
       document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
       window.PDFJS_LOCAL = false;
     }
   </script>
 
   <script>
-    // ── Entrainment + ritual engine (paused until fullscreen) ──
-    let ritualStarted = false;
-    function startRitual() {
-      if (ritualStarted) return;
-      ritualStarted = true;
+    // ── Fullscreen button ──
+    document.getElementById('fullscreen-btn').addEventListener('click', () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen();
+      }
+    });
 
-      // Activate ring animation
-      document.getElementById('ring').classList.add('active');
-      // Activate static canvas opacity
-      document.getElementById('bg-canvas').classList.add('active');
-      // Show eye symbol
-      document.getElementById('eye-symbol').classList.add('active');
-
-      // Start entrainment loop
-      startEntrainmentEngine();
-
-      // Start static canvas ticker
-      startStaticCanvas();
-
-      // Start PDF ritual (thumbnail generation)
-      startPDFRitual();
-    }
-
-    // User preferences
+    // ── User preferences (no mobile reduction) ──
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = prefersReducedMotion;
-    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => reducedMotion = e.matches);
+    motionQuery.addEventListener('change', (e) => { reducedMotion = e.matches; });
 
     document.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('beforeunload', () => {
@@ -324,56 +261,67 @@
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
 
-    // ── Eye cursor tracking + blink ──
+    // ── Eye cursor tracking, pupil scaling, blink ──
     (function() {
       const svg = document.querySelector('#eye-symbol svg');
       const pupil = document.getElementById('pupil');
       const eyelid = document.getElementById('eyelid');
       if (!svg || !pupil) return;
-      const eyeCX = 50, eyeCY = 45;
-      const maxDist = 8, baseSlitW = 6, baseSlitH = 10;
 
+      const eyeCX = 50, eyeCY = 45, baseSlitWidth = 6, baseSlitHeight = 10;
+      const maxDist = 8;
+
+      // Blink every 3-5 seconds
       function blink() {
         eyelid.setAttribute('display', 'block');
         setTimeout(() => eyelid.setAttribute('display', 'none'), 100);
       }
       setInterval(blink, 3000 + Math.random() * 2000);
 
-      document.addEventListener('mousemove', e => {
+      document.addEventListener('mousemove', (e) => {
         const pt = new DOMPoint(e.clientX, e.clientY);
         const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
-        const dx = cursor.x - eyeCX, dy = cursor.y - eyeCY;
+        const dx = cursor.x - eyeCX;
+        const dy = cursor.y - eyeCY;
         const dist = Math.min(maxDist, Math.sqrt(dx*dx + dy*dy));
         const angle = Math.atan2(dy, dx);
+
+        // New pupil center
         const newCX = eyeCX + Math.cos(angle) * dist;
         const newCY = eyeCY + Math.sin(angle) * dist;
+
+        // Scale based on distance
         const scale = Math.max(0.4, 1 - (dist / maxDist) * 0.6);
-        const w = baseSlitW * scale, h = baseSlitH * scale;
-        const topY = newCY - h/2, bottomY = newCY + h/2;
-        const leftX = newCX - w/2, rightX = newCX + w/2;
+        const w = baseSlitWidth * scale;
+        const h = baseSlitHeight * scale;
+        const topY = newCY - h/2;
+        const bottomY = newCY + h/2;
+        const leftX = newCX - w/2;
+        const rightX = newCX + w/2;
         const tipY = newCY + h/2 + 2*scale;
-        pupil.setAttribute('d', `M ${leftX} ${topY} L ${rightX} ${topY} Q ${newCX} ${tipY} ${rightX} ${bottomY} L ${leftX} ${bottomY} Q ${newCX} ${newCY - h/2 + 2} ${leftX} ${topY} Z`);
+
+        const path = `M ${leftX} ${topY} L ${rightX} ${topY} Q ${newCX} ${tipY} ${rightX} ${bottomY} L ${leftX} ${bottomY} Q ${newCX} ${newCY - h/2 + 2} ${leftX} ${topY} Z`;
+        pupil.setAttribute('d', path);
       });
 
+      // Click on eye opens PDF
       document.getElementById('eye-symbol').addEventListener('click', () => {
         const overlay = document.getElementById('overlay');
         const glow = document.getElementById('glow-wrapper');
-        if (ritualStarted && window.setPdfOpen) {
-          overlay.style.display = 'flex';
-          glow.classList.add('dream-active');
-          window.setPdfOpen(true);
-        }
+        overlay.style.display = 'flex';
+        glow.classList.add('dream-active');
+        if (window.setPdfOpen) window.setPdfOpen(true);
       });
     })();
 
-    // ── Entrainment engine (pending start) ──
-    function startEntrainmentEngine() {
+    // ── Phase‑coherent engine + ring/glow sync + infraslow sparkle ──
+    (function() {
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
       const eyeSVG = document.getElementById('eye-symbol');
       const glowWrapper = document.getElementById('glow-wrapper');
 
-      const REC = 15000, ALIGN = 10000, ACT = 12000, TOTAL = REC + ALIGN + ACT;
+      const RECEPTIVE = 15000, ALIGN = 10000, ACTION = 12000, TOTAL = RECEPTIVE + ALIGN + ACTION;
       let start = performance.now(), pdfOpen = false, phase = 0, global = 'receptive', sub = 'alpha', freq = 10;
 
       const colorSteps = {
@@ -416,15 +364,15 @@
 
       function update(now) {
         const el = (now - start) % TOTAL;
-        if (el < REC) {
+        if (el < RECEPTIVE) {
           global = 'receptive';
           if (el < 5000) { sub = 'alpha'; freq = 10; }
           else if (el < 10000) { sub = 'theta'; freq = 7; }
           else { sub = 'delta'; freq = 3; }
-        } else if (el < REC + ALIGN) { global = 'alignment'; sub = null; }
+        } else if (el < RECEPTIVE + ALIGN) { global = 'alignment'; sub = null; }
         else {
           global = 'action'; sub = null;
-          const actEl = el - REC - ALIGN;
+          const actEl = el - RECEPTIVE - ALIGN;
           freq = actEl < 2000 ? 3 + (actEl / 2000) * 33 : 36;
         }
       }
@@ -443,27 +391,16 @@
         }
       }
 
-      let prevTime;
       function loop(now) {
         requestAnimationFrame(loop);
-        const dt = prevTime ? (now - prevTime) / 1000 : 0;
-        prevTime = now;
-        if (dt > 0) {
-          const step = 0.001;
-          let remaining = dt;
-          while (remaining > 0) {
-            const delta = Math.min(step, remaining);
-            if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
-            else update(now);
-            phase = (phase + 2 * Math.PI * freq * delta) % (2 * Math.PI);
-            remaining -= delta;
-          }
-        } else {
-          if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
-          else update(now);
-        }
+        if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
+        else update(now);
         applyRing();
+        const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
+        loop.prev = now;
+        phase = (phase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
+        // Eye color & flicker
         let eyeColor = '#FFFFFF';
         if (global === 'alignment') eyeColor = '#FFD700';
         else if (global === 'action') eyeColor = '#790B3E';
@@ -480,13 +417,15 @@
         }
         eyeSVG.style.opacity = reducedMotion ? 0 : eyeOpacity;
 
-        const burstDur = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
-        const burstProgress = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
+        // Ring burst
+        const burstDuration = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
+        const burstProgress = ((now - start) % (burstDuration * 1000)) / (burstDuration * 1000);
         const burst = getBurstColor(global, burstProgress);
         ring.style.setProperty('background', burst.bg);
         ring.style.setProperty('box-shadow', burst.shadow);
 
-        if (glowWrapper) {
+        // Glow sync
+        if (glowWrapper && glowWrapper.style) {
           glowWrapper.style.setProperty('background', burst.bg);
           glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
         }
@@ -507,171 +446,180 @@
           overlay.style.opacity = flicker * infra * 0.35;
         }
       }
+      loop.prev = performance.now();
       requestAnimationFrame(loop);
       window.setPdfOpen = v => pdfOpen = v;
       window.getCurrentPhase = () => global;
-    }
+    })();
 
-    // ── Static canvas (pending start) ──
-    function startStaticCanvas() {
+    // ── Static background (original TV noise for Receptive, palettes for others) ──
+    (function() {
       const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
-      const alignPal = ['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
-      const actionPal = ['#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'];
-      const scaleFactor = navigator.hardwareConcurrency < 4 ? 0.5 : 1;
-      let numPal = null, lastPhase = 'receptive', lastTime = 0, fps = 10;
+      const alignmentPalette = [
+        '#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700',
+        '#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500',
+        '#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'
+      ];
+      const actionPalette = [
+        '#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33',
+        '#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33',
+        '#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'
+      ];
+      let numericPalette = null;
+      let lastPhase = 'receptive';
+      let lastTime = 0, fps = 10, interval = 1000 / fps;
 
-      function resize() {
-        canvas.width = Math.floor(innerWidth * scaleFactor);
-        canvas.height = Math.floor(innerHeight * scaleFactor);
-        if (scaleFactor < 1) { canvas.style.imageRendering = 'pixelated'; }
-      }
+      function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
 
       function drawReceptive() {
         const w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
         for (let i = 0; i < d.length; i += 4) {
-          d[i]=Math.random()*256; d[i+1]=Math.random()*256; d[i+2]=Math.random()*256; d[i+3]=255;
+          d[i] = Math.floor(Math.random() * 256);
+          d[i+1] = Math.floor(Math.random() * 256);
+          d[i+2] = Math.floor(Math.random() * 256);
+          d[i+3] = 255;
         }
-        ctx.putImageData(img,0,0);
+        ctx.putImageData(img, 0, 0);
       }
 
       function drawPalette(palette) {
         const w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
         const len = palette.length;
         for (let i = 0; i < d.length; i += 4) {
-          const c = palette[Math.floor(Math.random()*len)];
-          d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255;
+          const c = palette[Math.floor(Math.random() * len)];
+          d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
         }
-        ctx.putImageData(img,0,0);
+        ctx.putImageData(img, 0, 0);
       }
 
       function tick(now) {
         requestAnimationFrame(tick);
-        if (document.hidden) return;
         const currentPhase = window.getCurrentPhase ? window.getCurrentPhase() : 'receptive';
         if (document.body.classList.contains('action')) fps = 36;
         else if (document.body.classList.contains('alignment')) fps = 10;
         else fps = 10;
-        const interval = 1000 / fps;
+        interval = 1000 / fps;
+
         if (currentPhase !== lastPhase) {
           lastPhase = currentPhase;
           if (currentPhase === 'alignment') {
-            numPal = alignPal.map(h => ({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
+            numericPalette = alignmentPalette.map(hex => ({
+              r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16)
+            }));
           } else if (currentPhase === 'action') {
-            numPal = actionPal.map(h => ({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
-          } else { numPal = null; }
+            numericPalette = actionPalette.map(hex => ({
+              r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16)
+            }));
+          } else {
+            numericPalette = null;
+          }
         }
+
         if (now - lastTime >= interval) {
           lastTime = now;
-          if (currentPhase === 'receptive') drawReceptive();
-          else drawPalette(numPal);
+          if (currentPhase === 'receptive') {
+            drawReceptive();
+          } else {
+            drawPalette(numericPalette);
+          }
         }
       }
-      let resizeTimeout;
-      addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(resize, 16);
-      });
+      addEventListener('resize', resize);
       resize();
       requestAnimationFrame(tick);
-    }
+    })();
 
-    // ── PDF ritual (pending) ──
-    function startPDFRitual() {
-      (async function() {
-        function wait(cb) { if (typeof pdfjsLib !== 'undefined') cb(); else setTimeout(()=>wait(cb), 50); }
-        wait(async () => {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          const pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
-          const pages = pdf.numPages;
-          // Manifesting text can be removed now
-          const manifesting = document.querySelector('.manifesting');
-          if (manifesting) manifesting.style.display = 'none';
+    // ── PDF.js ritual ──
+    (async function() {
+      function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
+      wait(async () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
+        const pages = pdf.numPages, load = document.getElementById('loading');
+        setTimeout(() => load.style.display = 'none', 1500);
 
-          const ringEl = document.getElementById('ring');
-          const overlay = document.getElementById('overlay');
-          const glow = document.getElementById('glow-wrapper');
-          const expC = document.getElementById('expanded-canvas');
+        const ringEl = document.getElementById('ring');
+        const overlay = document.getElementById('overlay');
+        const glow = document.getElementById('glow-wrapper');
+        const expC = document.getElementById('expanded-canvas');
 
-          const COPIES = 33, SCALE = 0.35, STAGGER = 167;
-          const pageData = [], all = [];
+        const COPIES = 33, SCALE = 0.35, STAGGER = 167;
+        const pageData = [], all = [];
 
-          function posOnCircle(el, idx, total, w, h) {
-            const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
-            const r = Math.min(innerWidth, innerHeight) * 0.4;
-            el.style.left = (Math.cos(a) * r - w / 2) + 'px';
-            el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        function posOnCircle(el, idx, total, w, h) {
+          const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
+          const r = Math.min(innerWidth, innerHeight) * 0.4;
+          el.style.left = (Math.cos(a) * r - w / 2) + 'px';
+          el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        }
+
+        for (let p = 1; p <= pages; p++) {
+          const page = await pdf.getPage(p);
+          const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
+          const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
+          await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
+          pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
+        }
+
+        let idx = 0, totalCopies = pages * COPIES;
+        for (let p = 1; p <= pages; p++) {
+          const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
+          for (let c = 0; c < COPIES; c++) {
+            const floater = document.createElement('div'); floater.className = 'floating-page';
+            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
+            cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
+            const flipper = document.createElement('div'); flipper.className = 'flipper';
+            flipper.appendChild(cc); floater.appendChild(flipper);
+            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
+            floater.style.left = '-9999px'; floater.style.top = '-9999px';
+            const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
+            floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
+            floater.dataset.page = p; floater.dataset.index = idx;
+
+            let z = 10;
+            if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
+            floater.style.zIndex = z;
+            if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
+            if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
+
+            floater.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const { page, viewport } = pageData[parseInt(floater.dataset.page)];
+              expC.width = viewport.width; expC.height = viewport.height;
+              const ctx = expC.getContext('2d');
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              overlay.style.display = 'flex'; glow.classList.add('dream-active');
+              if (window.setPdfOpen) window.setPdfOpen(true);
+            });
+
+            ringEl.appendChild(floater);
+            all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
+            setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
+            idx++;
           }
+        }
 
-          for (let p = 1; p <= pages; p++) {
-            const page = await pdf.getPage(p);
-            const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
-            const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
-            await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
-            pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
-          }
+        const skip = new Set([10, 21, 32]);
+        const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
+        const sizes = [2, 4, 5]; let gi = 0, pos = 0;
+        function applyColorPass() {
+          eligible.forEach(i => all[i].element.classList.remove('color-pass'));
+          const sz = sizes[gi], grp = [];
+          for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
+          grp.forEach(i => all[i].element.classList.add('color-pass'));
+          pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
+        }
+        setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
-          let idx = 0, totalCopies = pages * COPIES;
-          for (let p = 1; p <= pages; p++) {
-            const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
-            for (let c = 0; c < COPIES; c++) {
-              const floater = document.createElement('div'); floater.className = 'floating-page';
-              const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
-              cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
-              const flipper = document.createElement('div'); flipper.className = 'flipper';
-              flipper.appendChild(cc); floater.appendChild(flipper);
-              floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
-              floater.style.left = '-9999px'; floater.style.top = '-9999px';
-              const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
-              floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
-              floater.dataset.page = p; floater.dataset.index = idx;
+        function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
+        setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
 
-              let z = 10;
-              if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
-              floater.style.zIndex = z;
-              if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
-              if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
-
-              floater.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const { page, viewport } = pageData[parseInt(floater.dataset.page)];
-                expC.width = viewport.width; expC.height = viewport.height;
-                const ctx = expC.getContext('2d');
-                await page.render({ canvasContext: ctx, viewport }).promise;
-                overlay.style.display = 'flex'; glow.classList.add('dream-active');
-                if (window.setPdfOpen) window.setPdfOpen(true);
-              });
-
-              ringEl.appendChild(floater);
-              all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
-              setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
-              // reveal thumbnail gracefully
-              setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
-              idx++;
-            }
-          }
-
-          const skip = new Set([10, 21, 32]);
-          const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
-          const sizes = [2, 4, 5]; let gi = 0, pos = 0;
-          function applyColorPass() {
-            eligible.forEach(i => all[i].element.classList.remove('color-pass'));
-            const sz = sizes[gi], grp = [];
-            for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
-            grp.forEach(i => all[i].element.classList.add('color-pass'));
-            pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
-          }
-          setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
-
-          function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
-          setTimeout(() => { flip(); setInterval(flip, 2000); }, totalCopies * STAGGER + 3000);
-
-          addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
-          overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
-          expC.addEventListener('click', e => e.stopPropagation());
-          document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
-        });
-      })();
-    }
+        addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
+        overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
+        expC.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
+      });
+    })();
   </script>
 </body>
 </html>
