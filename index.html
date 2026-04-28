@@ -32,7 +32,7 @@
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
-      animation: none;
+      animation: none; /* paused until ritual starts */
     }
     #ring.active { animation: ringRotate 2s linear infinite; }
     body.alignment #ring.active { animation: ringRotate 20s linear infinite; }
@@ -47,7 +47,7 @@
       background: #000; box-shadow: 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9);
       opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
-      animation: none;
+      animation: none; /* paused */
     }
     #ring.active::after {
       animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
@@ -174,7 +174,7 @@
       position:relative; z-index:2;
     }
 
-    /* Fullscreen invitation */
+    /* Fullscreen invitation – haiku sequence */
     #fullscreen-invite {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #000;
@@ -194,14 +194,16 @@
     .line2 { color: #FFD700; }
     .line3 { color: #00FF00; }
 
-    /* Eye symbol */
     #eye-symbol {
       position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      width: 160px; height: 160px; z-index:0;
-      cursor:pointer; opacity: 0; pointer-events: none;
-      filter: drop-shadow(0 0 8px currentColor);
+      width:130px; height:130px; z-index:0; transition:color .3s;
+      filter:drop-shadow(0 0 8px currentColor);
+      cursor:pointer;
+      opacity: 0;
+      pointer-events: none;
     }
     #eye-symbol.active { opacity: 1; pointer-events: auto; }
+    #eye-symbol svg circle.ring { fill:none; stroke-width:2; stroke-opacity:0.8; }
   </style>
 </head>
 <body class="receptive">
@@ -217,142 +219,36 @@
 
   <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
 
-  <!-- Eye with phase‑colored glow rings, sparkles, and moveable iris group -->
   <div id="eye-symbol">
-    <svg viewBox="0 0 400 400">
-      <defs>
-        <radialGradient id="scleraGrad" cx="45%" cy="45%" r="60%">
-          <stop offset="0%" stop-color="#FEFEFD" />
-          <stop offset="60%" stop-color="#F2F0EC" />
-          <stop offset="90%" stop-color="#DFDCD5" />
-          <stop offset="100%" stop-color="#C8C2B8" />
-        </radialGradient>
-        <radialGradient id="irisGrad" cx="48%" cy="48%" r="52%">
-          <stop offset="0%" stop-color="#1A1A24" />
-          <stop offset="18%" stop-color="#22222E" />
-          <stop offset="45%" stop-color="#2C2C3A" />
-          <stop offset="70%" stop-color="#1E1E2A" />
-          <stop offset="90%" stop-color="#14141C" />
-          <stop offset="100%" stop-color="#0A0A10" />
-        </radialGradient>
-        <radialGradient id="pupilGrad" cx="45%" cy="45%" r="55%">
-          <stop offset="0%" stop-color="#050508" />
-          <stop offset="70%" stop-color="#000000" />
-          <stop offset="100%" stop-color="#08080C" />
-        </radialGradient>
-        <radialGradient id="highlightGrad" cx="40%" cy="35%" r="50%">
-          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
-          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
-        </radialGradient>
-        <radialGradient id="corneaGlint" cx="60%" cy="30%" r="40%">
-          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3" />
-          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
-        </radialGradient>
-        <radialGradient id="rimShadow" cx="50%" cy="50%" r="50%">
-          <stop offset="85%" stop-color="#00000000" />
-          <stop offset="98%" stop-color="#150e05" stop-opacity="0.6" />
-          <stop offset="100%" stop-color="#0a0601" stop-opacity="0.85" />
-        </radialGradient>
-        <filter id="softBlur" x="-10%" y="-10%" width="120%" height="120%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="1.3" />
-        </filter>
-        <filter id="tinyBlur" x="-5%" y="-5%" width="110%" height="110%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="0.6" />
-        </filter>
-        <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-      </defs>
+    <svg viewBox="0 0 100 100">
+      <circle class="ring" cx="50" cy="50" r="48" />
+      <circle class="ring" cx="50" cy="50" r="42" />
+      <circle class="ring" cx="50" cy="50" r="36" />
+      <circle class="ring" cx="50" cy="50" r="30" />
+      <circle class="ring" cx="50" cy="50" r="24" />
+      <circle class="ring" cx="50" cy="50" r="18" />
+      <circle class="ring" cx="50" cy="50" r="12" />
 
-      <!-- Phase‑colored glow rings (radiant aura around the whole eyeball) -->
-      <circle cx="200" cy="200" r="178" fill="none" stroke-width="5" class="glow-ring" id="glow-outer" filter="url(#glowFilter)" />
-      <circle cx="200" cy="200" r="172" fill="none" stroke-width="3" class="glow-ring" id="glow-mid" />
-      <circle cx="200" cy="200" r="168" fill="none" stroke-width="1.5" class="glow-ring" id="glow-inner" />
-
-      <!-- Sclera (stationary) -->
-      <ellipse cx="200" cy="200" rx="170" ry="165" fill="url(#scleraGrad)" stroke="#B8AFA1" stroke-width="1.5" />
-
-      <!-- Phase‑colored sparkle dots (ornamental, around the outer glow ring) -->
-      <circle cx="56" cy="90" r="3.5" class="sparkle" fill="#FFFFFF" filter="url(#softBlur)" />
-      <circle cx="344" cy="310" r="4" class="sparkle" fill="#FFFFFF" filter="url(#softBlur)" />
-      <circle cx="320" cy="85" r="2.5" class="sparkle" fill="#FFFFFF" filter="url(#softBlur)" />
-      <circle cx="78" cy="315" r="3" class="sparkle" fill="#FFFFFF" filter="url(#softBlur)" />
-
-      <!-- Blood vessels -->
-      <g opacity="0.45" fill="none" stroke="#B99F8A" stroke-width="1.2" filter="url(#tinyBlur)">
-        <path d="M 68 190 Q 90 178, 112 185 Q 130 190, 118 195" stroke-linecap="round" />
-        <path d="M 55 205 Q 80 195, 105 208 Q 125 218, 108 225" stroke-width="1" opacity="0.6" />
-        <path d="M 315 180 Q 295 172, 278 178 Q 265 185, 282 190" />
-        <path d="M 330 220 Q 310 212, 290 218 Q 275 225, 293 232" stroke-width="0.9" />
-        <path d="M 95 245 Q 120 235, 142 248" stroke-width="0.8" opacity="0.5" />
-        <path d="M 310 240 Q 290 230, 268 242" stroke-width="0.9" opacity="0.55" />
-        <path d="M 120 160 Q 145 152, 160 162" stroke-width="0.7" />
-        <path d="M 280 155 Q 260 150, 245 160" stroke-width="0.7" />
+      <g class="eye-line" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M 14 28 Q 35 10 66 10 Q 82 10 86 28 Q 82 22 66 18 Q 35 14 14 28 Z" fill="currentColor" fill-opacity="0.3" />
+        <path d="M 22 44 Q 50 70 78 44 Q 50 26 22 44 Z" />
+        <path d="M 24 42 Q 50 56 76 42" />
+        <path d="M 50 70 L 50 84" />
+        <path d="M 50 84 Q 42 82 43 75" />
+        <path d="M 47 80 Q 46 78 48 78" />
+        <path id="eyelid" d="M 22 44 Q 50 56 78 44" stroke-width="3" display="none" />
       </g>
-
-      <!-- Movable iris group: iris, limbal rings, pupil, highlights, cornea glints -->
-      <g id="iris-group">
-        <!-- Iris base -->
-        <circle cx="200" cy="200" r="68" fill="url(#irisGrad)" stroke="#181820" stroke-width="2" />
-        <!-- Iris texture striations -->
-        <g opacity="0.55" stroke="#5A5A70" stroke-width="1.1">
-          <line x1="200" y1="200" x2="200" y2="136" />
-          <line x1="200" y1="200" x2="256" y2="160" />
-          <line x1="200" y1="200" x2="264" y2="200" />
-          <line x1="200" y1="200" x2="256" y2="240" />
-          <line x1="200" y1="200" x2="200" y2="264" />
-          <line x1="200" y1="200" x2="144" y2="240" />
-          <line x1="200" y1="200" x2="136" y2="200" />
-          <line x1="200" y1="200" x2="144" y2="160" />
-          <line x1="200" y1="200" x2="176" y2="138" />
-          <line x1="200" y1="200" x2="224" y2="138" />
-          <line x1="200" y1="200" x2="248" y2="178" />
-          <line x1="200" y1="200" x2="260" y2="218" />
-          <line x1="200" y1="200" x2="244" y2="250" />
-          <line x1="200" y1="200" x2="156" y2="250" />
-          <line x1="200" y1="200" x2="140" y2="218" />
-          <line x1="200" y1="200" x2="152" y2="178" />
-          <line x1="200" y1="200" x2="188" y2="268" />
-          <line x1="200" y1="200" x2="212" y2="268" />
-          <line x1="200" y1="200" x2="268" y2="190" />
-          <line x1="200" y1="200" x2="268" y2="210" />
-        </g>
-        <!-- Finer iris details -->
-        <g filter="url(#tinyBlur)" opacity="0.5">
-          <circle cx="180" cy="175" r="2.5" fill="#3A3A4A" />
-          <circle cx="220" cy="170" r="2.2" fill="#2E2E3C" />
-          <circle cx="230" cy="200" r="2.8" fill="#353545" />
-          <circle cx="165" cy="215" r="2" fill="#3F3F52" />
-          <circle cx="198" cy="155" r="2.2" fill="#4A4A60" />
-          <circle cx="245" cy="225" r="2" fill="#282834" />
-          <circle cx="155" cy="190" r="1.8" fill="#404054" />
-        </g>
-        <!-- Limbal ring -->
-        <circle cx="200" cy="200" r="71" fill="none" stroke="#2A2A32" stroke-width="3" opacity="0.65" filter="url(#tinyBlur)" />
-        <circle cx="200" cy="200" r="68" fill="none" stroke="#1E1E28" stroke-width="1.5" opacity="0.5" />
-        <!-- Pupil -->
-        <circle id="pupil" cx="200" cy="200" r="24" fill="url(#pupilGrad)" />
-        <circle cx="200" cy="200" r="20" fill="none" stroke="#000000" stroke-width="0.6" opacity="0.4" />
-        <!-- Specular highlights and cornea glints -->
-        <ellipse cx="172" cy="172" rx="14" ry="11" fill="url(#highlightGrad)" filter="url(#softBlur)" />
-        <ellipse cx="173" cy="173" rx="7" ry="5" fill="#FFFFFF" opacity="0.92" />
-        <path d="M 235 165 Q 258 185, 245 215" stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.35" stroke-linecap="round" filter="url(#tinyBlur)" />
-        <ellipse cx="215" cy="185" rx="40" ry="28" fill="url(#corneaGlint)" />
-      </g>
-
-      <!-- Shadow and eyelid creases (stationary) -->
-      <circle cx="200" cy="200" r="166" fill="none" stroke="url(#rimShadow)" stroke-width="7" opacity="0.4" />
-      <path d="M 70 160 Q 200 105, 330 160" fill="none" stroke="#6C5E4C" stroke-width="3" opacity="0.3" stroke-linecap="round" filter="url(#tinyBlur)" />
-      <path d="M 85 340 Q 200 385, 315 340" fill="none" stroke="#5F5242" stroke-width="2.5" opacity="0.25" stroke-linecap="round" />
+      <path id="pupil" d="M 47 41 L 47 49 Q 50 54 53 49 L 53 41 Q 50 38 47 41 Z" fill="currentColor" />
     </svg>
   </div>
 
   <script>
     window.PDFJS_LOCAL = true;
+    // ── Haiku animation & fullscreen gate ──
     const invite = document.getElementById('fullscreen-invite');
     const lines = document.querySelectorAll('.invite-line');
     let currentLine = 0;
+
     function showNextLine() {
       if (currentLine < lines.length) {
         lines[currentLine].style.opacity = '1';
@@ -363,17 +259,28 @@
         invite.addEventListener('click', requestFullscreenGate);
       }
     }
+
     function requestFullscreenGate() {
       invite.removeEventListener('click', requestFullscreenGate);
       if (document.fullscreenEnabled) {
         document.documentElement.requestFullscreen().then(() => {
           invite.style.display = 'none';
           startRitual();
-        }).catch(() => { invite.style.display = 'none'; startRitual(); });
-      } else { invite.style.display = 'none'; startRitual(); }
+        }).catch(() => {
+          // fallback: start ritual anyway if fullscreen denied
+          invite.style.display = 'none';
+          startRitual();
+        });
+      } else {
+        invite.style.display = 'none';
+        startRitual();
+      }
     }
+
+    // Start showing haiku after a tiny delay
     setTimeout(showNextLine, 600);
   </script>
+
   <script src="/pdfjs/build/pdf.min.js" defer></script>
   <script>
     if (typeof pdfjsLib === 'undefined') {
@@ -381,82 +288,93 @@
       window.PDFJS_LOCAL = false;
     }
   </script>
+
   <script>
+    // ── Entrainment + ritual engine (paused until fullscreen) ──
     let ritualStarted = false;
     function startRitual() {
       if (ritualStarted) return;
       ritualStarted = true;
+
+      // Activate ring animation
       document.getElementById('ring').classList.add('active');
+      // Activate static canvas opacity
       document.getElementById('bg-canvas').classList.add('active');
+      // Show eye symbol
       document.getElementById('eye-symbol').classList.add('active');
+
+      // Start entrainment loop
       startEntrainmentEngine();
+
+      // Start static canvas ticker
       startStaticCanvas();
+
+      // Start PDF ritual (thumbnail generation)
       startPDFRitual();
     }
 
+    // User preferences
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let reducedMotion = prefersReducedMotion;
     window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => reducedMotion = e.matches);
+
     document.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('beforeunload', () => {
       document.body.style.background = '#ff0000';
       setTimeout(() => { document.body.style.background = '#000'; }, 167);
     });
 
-    // ── Eye tracking (iris, pupil, limbal ring, highlights move as a group) ──
+    // ── Eye cursor tracking + blink ──
     (function() {
       const svg = document.querySelector('#eye-symbol svg');
-      const irisGroup = document.getElementById('iris-group');
-      const eyeSymbol = document.getElementById('eye-symbol');
-      if (!svg || !irisGroup || !eyeSymbol) return;
+      const pupil = document.getElementById('pupil');
+      const eyelid = document.getElementById('eyelid');
+      if (!svg || !pupil) return;
+      const eyeCX = 50, eyeCY = 45;
+      const maxDist = 8, baseSlitW = 6, baseSlitH = 10;
 
-      const eyeCX = 200, eyeCY = 200, irisRadius = 68;
-      const maxDisplacement = 170 - irisRadius - 5; // keep at least 5px inside sclera
+      function blink() {
+        eyelid.setAttribute('display', 'block');
+        setTimeout(() => eyelid.setAttribute('display', 'none'), 100);
+      }
+      setInterval(blink, 3000 + Math.random() * 2000);
 
       document.addEventListener('mousemove', e => {
-        if (!ritualStarted) return;
         const pt = new DOMPoint(e.clientX, e.clientY);
         const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
         const dx = cursor.x - eyeCX, dy = cursor.y - eyeCY;
-        const dist = Math.min(maxDisplacement, Math.sqrt(dx*dx + dy*dy));
+        const dist = Math.min(maxDist, Math.sqrt(dx*dx + dy*dy));
         const angle = Math.atan2(dy, dx);
-        const tx = Math.cos(angle) * dist;
-        const ty = Math.sin(angle) * dist;
-        irisGroup.setAttribute('transform', `translate(${tx}, ${ty})`);
+        const newCX = eyeCX + Math.cos(angle) * dist;
+        const newCY = eyeCY + Math.sin(angle) * dist;
+        const scale = Math.max(0.4, 1 - (dist / maxDist) * 0.6);
+        const w = baseSlitW * scale, h = baseSlitH * scale;
+        const topY = newCY - h/2, bottomY = newCY + h/2;
+        const leftX = newCX - w/2, rightX = newCX + w/2;
+        const tipY = newCY + h/2 + 2*scale;
+        pupil.setAttribute('d', `M ${leftX} ${topY} L ${rightX} ${topY} Q ${newCX} ${tipY} ${rightX} ${bottomY} L ${leftX} ${bottomY} Q ${newCX} ${newCY - h/2 + 2} ${leftX} ${topY} Z`);
       });
 
-      // Open PDF on eye click
-      eyeSymbol.addEventListener('click', () => {
-        if (!ritualStarted || !window.setPdfOpen) return;
+      document.getElementById('eye-symbol').addEventListener('click', () => {
         const overlay = document.getElementById('overlay');
         const glow = document.getElementById('glow-wrapper');
-        overlay.style.display = 'flex';
-        glow.classList.add('dream-active');
-        window.setPdfOpen(true);
+        if (ritualStarted && window.setPdfOpen) {
+          overlay.style.display = 'flex';
+          glow.classList.add('dream-active');
+          window.setPdfOpen(true);
+        }
       });
     })();
 
-    // ── Entrainment engine ──
+    // ── Entrainment engine (pending start) ──
     function startEntrainmentEngine() {
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
+      const eyeSVG = document.getElementById('eye-symbol');
       const glowWrapper = document.getElementById('glow-wrapper');
-      const eyeSymbol = document.getElementById('eye-symbol');
 
       const REC = 15000, ALIGN = 10000, ACT = 12000, TOTAL = REC + ALIGN + ACT;
       let start = performance.now(), pdfOpen = false, phase = 0, global = 'receptive', sub = 'alpha', freq = 10;
-
-      const phaseColors = {
-        receptive: '#FFFFFF',
-        alignment: '#FFD700',
-        action: '#790B3E'
-      };
-
-      function updateEyeColors(phase) {
-        const color = phaseColors[phase] || '#FFFFFF';
-        document.querySelectorAll('.glow-ring').forEach(el => el.setAttribute('stroke', color));
-        document.querySelectorAll('.sparkle').forEach(el => el.setAttribute('fill', color));
-      }
 
       const colorSteps = {
         receptive: [
@@ -546,12 +464,21 @@
         }
         applyRing();
 
-        // Eye glow & sparkle colors update
-        updateEyeColors(global);
+        let eyeColor = '#FFFFFF';
+        if (global === 'alignment') eyeColor = '#FFD700';
+        else if (global === 'action') eyeColor = '#790B3E';
+        eyeSVG.style.color = eyeColor;
 
-        // Infraslow eye flicker
-        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
-        eyeSymbol.style.opacity = reducedMotion ? 0 : infra;
+        let eyeOpacity = 1;
+        if (global === 'receptive') {
+          if (sub === 'delta') eyeOpacity = 0.5 + 0.5 * Math.sin(phase);
+          else eyeOpacity = Math.sin(phase) >= 0 ? 1 : 0;
+        } else if (global === 'alignment') {
+          eyeOpacity = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
+        } else {
+          eyeOpacity = Math.sin(phase) >= 0 ? 1 : 0;
+        }
+        eyeSVG.style.opacity = reducedMotion ? 0 : eyeOpacity;
 
         const burstDur = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
         const burstProgress = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
@@ -563,6 +490,8 @@
           glowWrapper.style.setProperty('background', burst.bg);
           glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
         }
+
+        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
         glowWrapper.style.setProperty('--sparkle-opacity', infra);
 
         if (reducedMotion) { overlay.style.opacity = 0; return; }
@@ -583,7 +512,7 @@
       window.getCurrentPhase = () => global;
     }
 
-    // ── Static canvas ──
+    // ── Static canvas (pending start) ──
     function startStaticCanvas() {
       const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
       const alignPal = ['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
@@ -638,12 +567,15 @@
         }
       }
       let resizeTimeout;
-      addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resize, 16); });
+      addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resize, 16);
+      });
       resize();
       requestAnimationFrame(tick);
     }
 
-    // ── PDF ritual ──
+    // ── PDF ritual (pending) ──
     function startPDFRitual() {
       (async function() {
         function wait(cb) { if (typeof pdfjsLib !== 'undefined') cb(); else setTimeout(()=>wait(cb), 50); }
@@ -651,18 +583,25 @@
           pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ? '/pdfjs/build/pdf.worker.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           const pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
           const pages = pdf.numPages;
+          // Manifesting text can be removed now
+          const manifesting = document.querySelector('.manifesting');
+          if (manifesting) manifesting.style.display = 'none';
+
           const ringEl = document.getElementById('ring');
           const overlay = document.getElementById('overlay');
           const glow = document.getElementById('glow-wrapper');
           const expC = document.getElementById('expanded-canvas');
+
           const COPIES = 33, SCALE = 0.35, STAGGER = 167;
           const pageData = [], all = [];
+
           function posOnCircle(el, idx, total, w, h) {
             const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
             const r = Math.min(innerWidth, innerHeight) * 0.4;
             el.style.left = (Math.cos(a) * r - w / 2) + 'px';
             el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
           }
+
           for (let p = 1; p <= pages; p++) {
             const page = await pdf.getPage(p);
             const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
@@ -670,6 +609,7 @@
             await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
             pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
           }
+
           let idx = 0, totalCopies = pages * COPIES;
           for (let p = 1; p <= pages; p++) {
             const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
@@ -704,6 +644,7 @@
               ringEl.appendChild(floater);
               all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
               setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
+              // reveal thumbnail gracefully
               setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
               idx++;
             }
