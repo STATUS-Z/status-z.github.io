@@ -890,106 +890,110 @@
           });
         }
 
-            // ── Eye tracking (restored) ──
-    (function() {
-      const svgRoot = document.querySelector('#eye-symbol svg');
-      const eyeballGroup = document.getElementById('eyeballGroup');
-      const clipPathShape = document.getElementById('clipPathShape');
-      const upperLid = document.getElementById('upperLidGroup');
-      const lowerLid = document.getElementById('lowerLidGroup');
-      if (!eyeballGroup || !svgRoot) return;
+       // ── Eye tracking ──
+    (function(){
+      const svgRoot=document.querySelector('#eye-symbol svg');
+      const eyeballGroup=document.getElementById('eyeballGroup');
+      const clipPathShape=document.getElementById('clipPathShape');
+      const upperLid=document.getElementById('upperLidGroup');
+      const lowerLid=document.getElementById('lowerLidGroup');
+      if(!eyeballGroup||!svgRoot) return;
 
-      const MAX_TX = 95, MAX_UP = 55, MAX_DN = 85;
-      let cx = 0, cy = 0, vx = 0, vy = 0, tx = 0, ty = 0, ltx = 0, lty = 0;
-      const GAIN = 6.5, DAMP = 0.96, MAXV = 45.0;
-      let saccActive = false, ssX = 0, ssY = 0, seX = 0, seY = 0, sprog = 0;
-      const SACC_DUR = 28, SACC_THR = 12.0;
-      const UP_LID_UP = -18, LOW_LID_DN = 28, SQUINT = 6;
+      const MAX_TX=95, MAX_UP=55, MAX_DN=85;
+      let cx=0,cy=0, vx=0,vy=0, tx=0,ty=0, ltx=0,lty=0;
+      const GAIN=6.5, DAMP=0.96, MAXV=45.0;
+      let saccActive=false, ssX=0,ssY=0, seX=0,seY=0, sprog=0;
+      const SACC_DUR=28, SACC_THR=12.0;
+      const UP_LID_UP=-18, LOW_LID_DN=28, SQUINT=6;
 
-      // Expose eye state globally (for possible attentional feedback)
-      window.eyeState = { velocityMag: 0, saccading: false };
-
-      function updEyelids(px, py) {
-        let ny = py / (py >= 0 ? MAX_DN : MAX_UP); ny = Math.min(1, Math.max(-1, ny));
-        let nx = px / MAX_TX;
-        let uy = 0;
-        if (ny < 0) uy = UP_LID_UP * (-ny); else if (ny > 0) uy = SQUINT * ny;
-        let hs = px * 0.04; upperLid.setAttribute('transform', `translate(${hs}, ${uy})`);
-        let ly = 0; if (ny > 0) ly = LOW_LID_DN * ny;
-        lowerLid.setAttribute('transform', `translate(${hs}, ${ly})`);
-        let uY = 35, lY = 367;
-        if (ny < 0) { let f = -ny; uY = 35 - f * 15; lY = 367 - f * 8; }
-        else if (ny > 0) { let f = ny; uY = 35 + f * 4; lY = 367 + f * 25; }
-        uY = Math.min(50, Math.max(20, uY)); lY = Math.min(400, Math.max(340, lY));
-        let sx = px * 0.06; let lx = 85 + sx, rx = 315 + sx;
-        let umx = 195 + sx * 0.5, lmx = 205 + sx * 0.5;
-        let d = `M ${lx},200 Q ${umx},${uY} ${rx},200 Q ${lmx},${lY} ${lx},200 Z`;
-        clipPathShape.setAttribute('d', d);
+      function updEyelids(px,py){
+        let ny=py/(py>=0?MAX_DN:MAX_UP); ny=Math.min(1,Math.max(-1,ny));
+        let nx=px/MAX_TX;
+        let uy=0;
+        if(ny<0) uy=UP_LID_UP*(-ny); else if(ny>0) uy=SQUINT*ny;
+        let hs=px*0.04; upperLid.setAttribute('transform',`translate(${hs},${uy})`);
+        let ly=0; if(ny>0) ly=LOW_LID_DN*ny;
+        lowerLid.setAttribute('transform',`translate(${hs},${ly})`);
+        let uY=35, lY=367;
+        if(ny<0){ let f=-ny; uY=35-f*15; lY=367-f*8; }
+        else if(ny>0){ let f=ny; uY=35+f*4; lY=367+f*25; }
+        uY=Math.min(50,Math.max(20,uY)); lY=Math.min(400,Math.max(340,lY));
+        let sx=px*0.06; let lx=85+sx, rx=315+sx;
+        let umx=195+sx*0.5, lmx=205+sx*0.5;
+        let d=`M ${lx},200 Q ${umx},${uY} ${rx},200 Q ${lmx},${lY} ${lx},200 Z`;
+        clipPathShape.setAttribute('d',d);
       }
 
-      function constrainTarget(x, y) {
-        let cx = Math.min(MAX_TX, Math.max(-MAX_TX, x));
-        let maxY = y >= 0 ? MAX_DN : MAX_UP, cy = Math.min(maxY, Math.max(-maxY, y));
-        let nx = cx / MAX_TX, ny = cy / (cy >= 0 ? MAX_DN : MAX_UP);
-        let dist = Math.sqrt(nx * nx + ny * ny);
-        if (dist > 1) { let sc = 1 / dist; cx = (nx * sc) * MAX_TX; cy = (ny * sc) * (cy >= 0 ? MAX_DN : MAX_UP); }
-        return { x: cx, y: cy };
+      function constrainTarget(x,y){
+        let cx=Math.min(MAX_TX,Math.max(-MAX_TX,x));
+        let maxY=y>=0?MAX_DN:MAX_UP, cy=Math.min(maxY,Math.max(-maxY,y));
+        let nx=cx/MAX_TX, ny=cy/(cy>=0?MAX_DN:MAX_UP);
+        let dist=Math.sqrt(nx*nx+ny*ny);
+        if(dist>1){ let sc=1/dist; cx=(nx*sc)*MAX_TX; cy=(ny*sc)*(cy>=0?MAX_DN:MAX_UP); }
+        return {x:cx,y:cy};
       }
 
-      function getTarget(cx, cy) {
-        let pt = new DOMPoint(cx, cy); let ctm = svgRoot.getScreenCTM();
-        if (!ctm) return { x: 0, y: 0 };
-        let cur = pt.matrixTransform(ctm.inverse());
-        return constrainTarget(cur.x - 200, cur.y - 200);
+      function getTarget(cx,cy){
+        let pt=new DOMPoint(cx,cy); let ctm=svgRoot.getScreenCTM();
+        if(!ctm) return {x:0,y:0};
+        let cur=pt.matrixTransform(ctm.inverse());
+        return constrainTarget(cur.x-200,cur.y-200);
       }
 
-      function startSacc(toX, toY) { saccActive = true; ssX = cx; ssY = cy; seX = toX; seY = toY; sprog = 0; vx = vy = 0; }
+      function startSacc(toX,toY){ saccActive=true; ssX=cx; ssY=cy; seX=toX; seY=toY; sprog=0; vx=vy=0; }
 
-      function updEye(ms) {
-        let ds = Math.min(0.033, ms / 1000);
-        if (saccActive) {
-          sprog += ms / SACC_DUR; if (sprog >= 1) { cx = seX; cy = seY; saccActive = false; }
-          else { let t = sprog, e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; cx = ssX + (seX - ssX) * e; cy = ssY + (seY - ssY) * e; }
-          eyeballGroup.setAttribute('transform', `translate(${cx}, ${cy})`);
-          updEyelids(cx, cy);
-          window.eyeState.velocityMag = Math.hypot(seX - ssX, seY - ssY) / SACC_DUR * 20; window.eyeState.saccading = true;
+      function updEye(ms){
+        let ds=Math.min(0.033,ms/1000);
+        if(saccActive){
+          sprog+=ms/SACC_DUR; if(sprog>=1){ cx=seX; cy=seY; saccActive=false; }
+          else{ let t=sprog, e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; cx=ssX+(seX-ssX)*e; cy=ssY+(seY-ssY)*e; }
+          eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
+          updEyelids(cx,cy);
+          window.eyeState.velocityMag=Math.hypot(seX-ssX,seY-ssY)/SACC_DUR*20; window.eyeState.saccading=true;
           return;
         }
-        let dtPred = Math.min(0.1, ds);
-        let tvx = (tx - ltx) / dtPred, tvy = (ty - lty) / dtPred;
-        tvx = Math.min(80, Math.max(-80, tvx)); tvy = Math.min(80, Math.max(-80, tvy));
-        let ptx = tx + tvx * 0.033, pty = ty + tvy * 0.033;
-        let pc = constrainTarget(ptx, pty); ptx = pc.x; pty = pc.y;
-        let ex = ptx - cx, ey = pty - cy;
-        if (Math.hypot(ex, ey) > SACC_THR && ms > 10) { startSacc(ptx, pty); return; }
-        let fx = ex * GAIN * ds, fy = ey * GAIN * ds;
-        vx += fx; vy += fy; vx *= DAMP; vy *= DAMP;
-        let sp = Math.hypot(vx, vy); if (sp > MAXV) { vx = vx / sp * MAXV; vy = vy / sp * MAXV; }
-        let nx = cx + vx * ds, ny = cy + vy * ds;
-        let fpos = constrainTarget(nx, ny); cx = fpos.x; cy = fpos.y;
-        eyeballGroup.setAttribute('transform', `translate(${cx}, ${cy})`);
-        ltx = tx; lty = ty; window.eyeState.velocityMag = sp; window.eyeState.saccading = false;
-        updEyelids(cx, cy);
+        let dtPred=Math.min(0.1,ds);
+        let tvx=(tx-ltx)/dtPred, tvy=(ty-lty)/dtPred;
+        tvx=Math.min(80,Math.max(-80,tvx)); tvy=Math.min(80,Math.max(-80,tvy));
+        let ptx=tx+tvx*0.033, pty=ty+tvy*0.033;
+        let pc=constrainTarget(ptx,pty); ptx=pc.x; pty=pc.y;
+        let ex=ptx-cx, ey=pty-cy;
+        if(Math.hypot(ex,ey)>SACC_THR&&ms>10){ startSacc(ptx,pty); return; }
+        let fx=ex*GAIN*ds, fy=ey*GAIN*ds;
+        vx+=fx; vy+=fy; vx*=DAMP; vy*=DAMP;
+        let sp=Math.hypot(vx,vy); if(sp>MAXV){ vx=vx/sp*MAXV; vy=vy/sp*MAXV; }
+        let nx=cx+vx*ds, ny=cy+vy*ds;
+        let fpos=constrainTarget(nx,ny); cx=fpos.x; cy=fpos.y;
+        eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
+        ltx=tx; lty=ty; window.eyeState.velocityMag=sp; window.eyeState.saccading=false;
+        updEyelids(cx,cy);
       }
 
-      function onMove(cx, cy) { let t = getTarget(cx, cy); tx = t.x; ty = t.y; }
-      function reset() {
-        cx = cy = vx = vy = tx = ty = ltx = lty = 0; saccActive = false;
-        eyeballGroup.setAttribute('transform', 'translate(0,0)');
-        updEyelids(0, 0); upperLid.setAttribute('transform', 'translate(0,0)'); lowerLid.setAttribute('transform', 'translate(0,0)');
-        window.eyeState.velocityMag = 0; window.eyeState.saccading = false;
+      function onMove(cx,cy){ let t=getTarget(cx,cy); tx=t.x; ty=t.y; }
+      function reset(){
+        cx=cy=vx=vy=tx=ty=ltx=lty=0; saccActive=false;
+        eyeballGroup.setAttribute('transform','translate(0,0)');
+        updEyelids(0,0); upperLid.setAttribute('transform','translate(0,0)'); lowerLid.setAttribute('transform','translate(0,0)');
+        window.eyeState.velocityMag=0; window.eyeState.saccading=false;
       }
 
-      let lft = 0;
-      function anim(now) { requestAnimationFrame(anim); let dt = Math.min(50, now - lft); if (dt > 2) updEye(dt); lft = now; }
+      let lft=0;
+      function anim(now){ requestAnimationFrame(anim); let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now; }
 
-      window.addEventListener('mousemove', e => { if (window.ritualStarted) onMove(e.clientX, e.clientY); });
-      window.addEventListener('mouseleave', reset);
-      window.addEventListener('touchmove', e => { if (window.ritualStarted && e.touches.length) { onMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
-      window.addEventListener('touchend', reset);
-      window.addEventListener('touchstart', e => { if (window.ritualStarted && e.touches.length) onMove(e.touches[0].clientX, e.touches[0].clientY); });
+      window.addEventListener('mousemove',e=>{ if(ritualStarted) onMove(e.clientX,e.clientY); });
+      window.addEventListener('mouseleave',reset);
+      window.addEventListener('touchmove',e=>{ if(ritualStarted&&e.touches.length){ onMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); } },{passive:false});
+      window.addEventListener('touchend',reset);
+      window.addEventListener('touchstart',e=>{ if(ritualStarted&&e.touches.length) onMove(e.touches[0].clientX,e.touches[0].clientY); });
 
-      reset(); lft = performance.now(); anim(lft);
+      document.getElementById('eye-symbol').addEventListener('click', () => {
+        if (!ritualStarted || !window.setPdfOpen) return;
+        document.getElementById('overlay').style.display='flex';
+        document.getElementById('glow-wrapper').classList.add('dream-active');
+        window.setPdfOpen(true);
+      });
+
+      reset(); lft=performance.now(); anim(lft);
     })();
 
         addEventListener('resize', () => allFloaters.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
