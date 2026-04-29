@@ -440,20 +440,15 @@
   </script>
 
   <!-- ═══════════════════════════════════════════════════════════════
-       ESSENTIAL: Eye tracking – saccades, smooth pursuit, mirrored eyelids
-       The eye symbol's eyeball follows the cursor with realistic physics.
-       Fast movements trigger ballistic saccades (≈26 ms duration);
-       slow movements are tracked with damped pursuit (gain 7.0, damping 0.97).
-       The upper and lower eyelids respond to vertical gaze with perfectly
-       mirrored displacement – looking up raises the upper lid and lowers
-       the lower lid by the same amount, creating a natural, wide‑eyed
-       expression.  Horizontal gaze shifts both lids slightly sideways.
-       The tracking runs continuously from page load, but the eye is
-       invisible (opacity:0, pointer‑events:none) until the .active class
-       is added when the user clicks "Acknowledge."  The eyeball, iris,
-       highlight, and corneal glint all move together inside a single
-       translated <g> element.  The clip path (eyelid aperture) and eyelid
-       shapes are rebuilt each frame from the current gaze position.
+       ESSENTIAL: Eye tracking – saccades, smooth pursuit, mirrored eyelids,
+       and automatic re‑center when cursor is idle.
+       The eyeball follows the cursor with realistic physics. Fast movements
+       trigger ballistic saccades; slow movements are tracked with damped
+       pursuit.  When the cursor stops moving for 400 ms, the target resets to
+       center (0,0), causing the eye to smoothly return to its neutral position.
+       The upper and lower eyelids respond to vertical gaze with mirrored
+       displacement.  The tracking runs continuously from page load, but the
+       eye is invisible until the .active class is added after "Acknowledge."
        ═══════════════════════════════════════════════════════════════ -->
   <script>
     (function() {
@@ -474,6 +469,7 @@
       let velocityX = 0, velocityY = 0;
       let targetX = 0, targetY = 0;
       let lastTargetX = 0, lastTargetY = 0;
+      let idleTimer = null;
 
       const PURSUIT_GAIN = 7.0, PURSUIT_DAMP = 0.97, MAX_VELOCITY = 50.0;
       let saccadeActive = false;
@@ -553,8 +549,17 @@
         updateEyelids(currentX, currentY);
       }
 
-      function onMove(cx, cy) { const r = getRawTarget(cx, cy); targetX = r.x; targetY = r.y; }
+      function onMove(cx, cy) {
+        clearTimeout(idleTimer);
+        const r = getRawTarget(cx, cy);
+        targetX = r.x; targetY = r.y;
+        idleTimer = setTimeout(() => {
+          targetX = 0; targetY = 0;
+        }, 400);
+      }
+
       function resetEye() {
+        clearTimeout(idleTimer);
         currentX = 0; currentY = 0; velocityX = 0; velocityY = 0;
         targetX = 0; targetY = 0; lastTargetX = 0; lastTargetY = 0; saccadeActive = false;
         eyeballGroup.setAttribute('transform', 'translate(0,0)');
@@ -662,12 +667,6 @@
         }
         window.currentStaticPhase = globalPhase;
 
-        // ══════════════════════════════════════════════════════════
-        // ESSENTIAL: Update eye colours every frame
-        // All glow rings (outer and inner), sparkles, and the iris
-        // reflection use the current phase's sacred colour.
-        // Receptive → White, Alignment → Gold, Action → Red‑magenta.
-        // ══════════════════════════════════════════════════════════
         const c = phaseColors[globalPhase] || '#FFFFFF';
         eyeSymbol.style.color = c;
         document.querySelectorAll('.glow-ring, .inner-glow-ring').forEach(el => el.setAttribute('stroke', c));
