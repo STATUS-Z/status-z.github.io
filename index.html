@@ -1,31 +1,9 @@
 <!DOCTYPE html>
-<!-- ╔══════════════════════════════════════════════════════════════════════════════╗
-║                    FunDarkResume — Technical Specification & Deployment Guide       ║
-║  Version 3.0.2 – PDF‑reliable, worker‑path‑fixed edition                           ║
-╚══════════════════════════════════════════════════════════════════════════════════╝ -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>FunDarkResume</title>
-
-  <!-- Security & Policy Meta Tags -->
-  <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' blob:;
-    style-src 'self' 'unsafe-inline';
-    img-src 'self' data:;
-    connect-src 'self' https://cdnjs.cloudflare.com;
-    worker-src 'self' blob:;
-    font-src 'self';
-    media-src 'none';
-    object-src 'none';
-    frame-ancestors 'none';
-    base-uri 'self';
-    form-action 'none';
-  ">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <!-- Preload critical PDF.js assets -->
   <link rel="preload" href="/pdfjs/build/pdf.min.js" as="script">
@@ -33,155 +11,131 @@
   <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
 
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; height:100%; overflow:hidden; background:#000; }
-    body { perspective:1200px; font-family:system-ui, sans-serif; position:fixed; top:0; left:0; }
-    :focus { outline:2px solid #FFD700; outline-offset:2px; }
-
-    .sr-only {
-      position:absolute; width:1px; height:1px; padding:0; margin:-1px;
-      overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
-    }
-
-    #compatibility-warning {
-      display:none; position:fixed; top:0; left:0; width:100%;
-      background:#ffcc00; color:#000; padding:10px 20px; text-align:center;
-      z-index:100000; font-weight:bold; font-size:1rem;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
+    :focus { outline: 2px solid #FFD700; outline-offset: 2px; }
 
     #bg-canvas {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      z-index:-2; display:block; pointer-events:none;
-      will-change:transform,opacity; opacity:0; transition:opacity 0.8s;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -2; display: block; pointer-events: none;
+      will-change: transform, opacity; opacity: 0;
+      transition: opacity 0.8s;
     }
-    #bg-canvas.active { opacity:0.25; }
+    #bg-canvas.active { opacity: 0.25; }
 
     #entrainment-overlay {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      z-index:-1; pointer-events:none;
-      background:white; opacity:0;
-      will-change:opacity; mix-blend-mode:overlay; contain:strict;
-    }
-    @supports not (mix-blend-mode: overlay) {
-      #entrainment-overlay { opacity:0.15; background:rgba(255,255,255,0.15); }
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1; pointer-events: none;
+      background: white; opacity: 0;
+      will-change: opacity; mix-blend-mode: overlay;
+      contain: strict;
     }
 
-    #cloud { position:relative; width:100vw; height:100vh; overflow:visible; }
+    #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
 
     #ring {
-      position:absolute; top:50%; left:50%; width:0; height:0;
-      transform-origin:center center; isolation:isolate; will-change:transform;
-      animation:none;
+      position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+      transform-origin: center center; isolation: isolate; will-change: transform;
+      animation: none;
     }
-    #ring.active { animation:ringRotate 2s linear infinite; }
-    body.alignment #ring.active { animation:ringRotate 20s linear infinite; }
-    body.action #ring.active { animation:ringRotate 0.5s linear infinite; }
+    #ring.active { animation: ringRotate 2s linear infinite; }
+    body.alignment #ring.active { animation: ringRotate 20s linear infinite; }
+    body.action #ring.active { animation: ringRotate 0.5s linear infinite; }
 
-    @keyframes ringRotate { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    @keyframes ringRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
     #ring::after {
-      content:''; position:fixed; top:50%; left:50%;
-      width:20px; height:20px; border-radius:50%;
-      background:var(--burst-bg, #000);
-      box-shadow:var(--burst-shadow, 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9));
-      opacity:0; pointer-events:none; z-index:1;
-      transform:translate(-50%,-50%) scale(0.1); animation:none;
-      will-change:transform,opacity;
+      content: '';
+      position: fixed; top: 50%; left: 50%;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--burst-bg, #000);
+      box-shadow: var(--burst-shadow, 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9));
+      opacity: 0; pointer-events: none; z-index: 1;
+      transform: translate(-50%, -50%) scale(0.1);
+      animation: none;
     }
     #ring.active::after {
-      animation:ringBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
+      animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite;
     }
 
     @keyframes ringBurstEnvelope {
-      0%,75.37% { opacity:0; transform:translate(-50%,-50%) scale(0.1); }
-      75.37% { opacity:1; transform:translate(-50%,-50%) scale(150); }
-      100% { opacity:0; transform:translate(-50%,-50%) scale(200); }
+      0%, 75.37% { opacity: 0; transform: translate(-50%, -50%) scale(0.1); }
+      75.37% { opacity: 1; transform: translate(-50%, -50%) scale(150); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(200); }
     }
 
     .floating-page {
-      position:absolute; cursor:pointer; will-change:transform;
-      background:transparent; transform-style:preserve-3d;
-      backface-visibility:hidden; border-radius:4px;
-      opacity:0; transition:opacity 0.5s; outline:none;
-      contain:layout style paint;
+      position: absolute; cursor: pointer; will-change: transform;
+      background: transparent; transform-style: preserve-3d;
+      backface-visibility: hidden; border-radius: 4px;
+      opacity: 0; transition: opacity 0.5s;
+      outline: none;
     }
-    .floating-page:focus { outline:2px solid #FFD700; outline-offset:4px; }
-    .floating-page.canvas-loaded { opacity:1; }
+    .floating-page:focus { outline: 2px solid #FFD700; outline-offset: 4px; }
+    .floating-page.canvas-loaded { opacity: 1; }
 
     .floating-page canvas {
-      display:block; width:100%; height:100%; border-radius:4px;
-      background:#000; transform-origin:center center; image-rendering:crisp-edges;
-      box-shadow:0 20px 40px rgba(0,0,0,0.95); will-change:transform,box-shadow;
+      display: block; width: 100%; height: 100%; border-radius: 4px;
+      background: #000; transform-origin: center center; image-rendering: crisp-edges;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform, box-shadow;
     }
 
     body.receptive .floating-page canvas {
-      animation:slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
     }
     body.alignment .floating-page canvas {
-      animation:slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
     }
     body.action .floating-page canvas {
-      animation:slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
+      animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
     body.receptive .floating-page.spotlight canvas {
-      animation:fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
+      animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
     body.alignment .floating-page.spotlight canvas {
-      animation:fastSpin 33s linear infinite, goldFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
+      animation: fastSpin 33s linear infinite, goldFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
     }
     body.action .floating-page.spotlight canvas {
-      animation:fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
+      animation: fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
     }
 
     body.receptive .floating-page.color-pass canvas {
-      animation:slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
+      animation: slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
     body.alignment .floating-page.color-pass canvas {
-      animation:slowSpin 33s linear infinite, goldPassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
+      animation: slowSpin 33s linear infinite, goldPassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
     }
     body.action .floating-page.color-pass canvas {
-      animation:slowSpin 33s linear infinite, greenPassGlow 0.5s ease-in-out infinite, thumbStrobe 0.0278s step-start infinite;
+      animation: slowSpin 33s linear infinite, greenPassGlow 0.5s ease-in-out infinite, thumbStrobe 0.0278s step-start infinite;
     }
 
-    body.reduced-intensity .floating-page canvas {
-      animation:slowSpin 33s linear infinite !important;
-      box-shadow:0 20px 40px rgba(0,0,0,0.95) !important;
-    }
-    body.reduced-intensity .floating-page.spotlight canvas {
-      animation:fastSpin 33s linear infinite !important;
-      box-shadow:0 20px 40px rgba(0,0,0,0.95) !important;
-    }
-    body.reduced-intensity .floating-page.color-pass canvas {
-      animation:slowSpin 33s linear infinite !important;
-      box-shadow:0 20px 40px rgba(0,0,0,0.95) !important;
-    }
+    .flipper { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s ease-in-out; }
+    .flipped .flipper { transform: rotateY(180deg); }
 
-    .flipper { width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.6s ease-in-out; }
-    .flipped .flipper { transform:rotateY(180deg); }
-
-    @keyframes slowSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-    @keyframes fastSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
     @keyframes squarePulse {
-      0%,49.9% { box-shadow:0 20px 40px rgba(0,0,0,1),0 0 80px #fff,0 0 150px rgba(255,255,255,0.8); }
-      50%,99.9% { box-shadow:0 20px 40px rgba(0,0,0,1),0 0 80px #000,0 0 150px rgba(0,0,0,0.95); }
-      100% { box-shadow:0 20px 40px rgba(0,0,0,1),0 0 80px #fff,0 0 150px rgba(255,255,255,0.8); }
+      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
+      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95); }
+      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
     }
-    @keyframes whiteFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,0.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FEFEFE,0 0 225px rgba(254,254,254,0.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,0.95)} }
-    @keyframes goldFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,0.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FFC000,0 0 225px rgba(255,192,0,0.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,0.95)} }
-    @keyframes greenFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,0.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #0E0,0 0 225px rgba(0,238,0,0.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,0.95)} }
+    @keyframes whiteFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FEFEFE,0 0 225px rgba(254,254,254,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} }
+    @keyframes goldFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FFC000,0 0 225px rgba(255,192,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} }
+    @keyframes greenFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #0E0,0 0 225px rgba(0,238,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} }
 
     @keyframes thumbStrobe { 0%,49.9%{opacity:1} 50%,99.9%{opacity:.75} 100%{opacity:1} }
     @keyframes thumbStrobeTwo { 0%,49.9%{opacity:.5} 50%,99.9%{opacity:.75} 100%{opacity:.5} }
 
-    @keyframes whitePassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,255,255,0.5),0 0 200px rgba(255,255,255,0.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,255,255,0.7),0 0 300px rgba(255,255,255,0.5)} }
-    @keyframes goldPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,215,0,0.5),0 0 200px rgba(255,215,0,0.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,215,0,0.7),0 0 300px rgba(255,215,0,0.5)} }
-    @keyframes greenPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(0,255,0,0.5),0 0 200px rgba(0,255,0,0.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(0,255,0,0.7),0 0 300px rgba(0,255,0,0.5)} }
+    @keyframes whitePassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,255,255,.5),0 0 200px rgba(255,255,255,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,255,255,.7),0 0 300px rgba(255,255,255,.5)} }
+    @keyframes goldPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,215,0,.5),0 0 200px rgba(255,215,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,215,0,.7),0 0 300px rgba(255,215,0,.5)} }
+    @keyframes greenPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(0,255,0,.5),0 0 200px rgba(0,255,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(0,255,0,.7),0 0 300px rgba(0,255,0,.5)} }
 
     #overlay {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.85); backdrop-filter:blur(8px);
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,.85); backdrop-filter: blur(8px);
       z-index:1000; display:none; justify-content:center; align-items:center;
       cursor:zoom-out; overflow:visible; pointer-events:auto;
     }
@@ -195,119 +149,99 @@
     }
     #glow-wrapper.dream-active::after {
       opacity:var(--sparkle-opacity,0);
-      box-shadow:0 0 4000px rgba(255,255,255,0.95),0 0 2400px #fff,0 0 6000px rgba(255,255,255,0.8);
+      box-shadow:0 0 4000px rgba(255,255,255,.95),0 0 2400px #fff,0 0 6000px rgba(255,255,255,.8);
     }
 
     #glow-wrapper::before {
       content:''; position:absolute; top:50%; left:50%; width:100%; height:100%;
-      background:var(--burst-bg, transparent);
-      box-shadow:var(--burst-shadow, none);
+      background: var(--burst-bg, transparent);
+      box-shadow: var(--burst-shadow, none);
       pointer-events:none; z-index:-1; transform:translate(-50%,-50%);
       will-change:box-shadow,background,opacity; opacity:0; transition:opacity .2s;
     }
     #glow-wrapper.dream-active::before {
-      opacity:1; animation:glowBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
+      opacity:1;
+      animation:glowBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
     }
 
     @keyframes glowBurstEnvelope { 0%,75.37%{opacity:0} 75.37%{opacity:1} 100%{opacity:0} }
 
     #overlay canvas {
       max-width:95vw; max-height:95vh; border-radius:6px;
-      cursor:default; background:#000; box-shadow:none; position:relative; z-index:2;
+      cursor:default; background:#000; box-shadow:none;
+      position:relative; z-index:2;
     }
     #close-overlay-btn {
-      position:absolute; top:10px; right:10px; z-index:5;
-      background:#000; color:#fff; border:1px solid #fff;
-      border-radius:4px; padding:6px 12px; cursor:pointer; display:none;
+      position: absolute; top: 10px; right: 10px; z-index: 5;
+      background: #000; color: #fff; border: 1px solid #fff;
+      border-radius: 4px; padding: 6px 12px;
+      cursor: pointer; display: none;
     }
-    #overlay[style*="display: flex"] #close-overlay-btn { display:block; }
+    #overlay[style*="display: flex"] #close-overlay-btn { display: block; }
 
+    /* Fullscreen Invitation */
     #fullscreen-invite {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      background:radial-gradient(circle at 30% 20%, #1a0d16, #000000);
-      z-index:5000; display:flex; flex-direction:column;
-      justify-content:center; align-items:center; cursor:default; text-align:center; user-select:none;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at 30% 20%, #1a0d16, #000000);
+      z-index: 5000; display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      cursor: default; text-align: center;
+      user-select: none;
     }
     #atomic-canvas {
-      position:absolute;
-      width:min(80vw, 80vh); height:min(80vw, 80vh);
-      pointer-events:none; z-index:1; background:transparent;
-      will-change:transform;
+      position: absolute;
+      width: min(80vw, 80vh);
+      height: min(80vw, 80vh);
+      pointer-events: none;
+      z-index: 1;
+      background: transparent;
     }
     .haiku-center {
-      position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      color:#fff; font-size:2.2rem; letter-spacing:1px; background:transparent; padding:1.5rem 2rem; border-radius:20px;
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #fff; font-size: 2.2rem; letter-spacing: 1px;
+      background: transparent; padding: 1.5rem 2rem; border-radius: 20px;
     }
-    .invite-line { opacity:0; transition:opacity 1.2s ease; margin:8px 0; }
-    .line1 { color:#FFFFFF; --glow-color:rgba(255,255,255,0.9); animation:breatheGlow 3s ease-in-out infinite; }
-    .line2 { color:#FFD700; --glow-color:rgba(255,215,0,0.9); animation:breatheGlow 3s ease-in-out infinite 0.5s; }
-    .line3 { color:#00FF00; --glow-color:rgba(0,255,0,0.9); animation:breatheGlow 3s ease-in-out infinite 1s; }
+    .invite-line {
+      opacity: 0; transition: opacity 1.2s ease; margin: 8px 0;
+    }
+    .line1 { color: #FFFFFF; --glow-color: rgba(255,255,255,0.9); animation: breatheGlow 3s ease-in-out infinite; }
+    .line2 { color: #FFD700; --glow-color: rgba(255,215,0,0.9); animation: breatheGlow 3s ease-in-out infinite 0.5s; }
+    .line3 { color: #00FF00; --glow-color: rgba(0,255,0,0.9); animation: breatheGlow 3s ease-in-out infinite 1s; }
 
     @keyframes breatheGlow {
-      0%,100% { text-shadow:0 0 8px var(--glow-color),0 0 16px var(--glow-color),0 0 32px var(--glow-color); }
-      50% { text-shadow:0 0 16px var(--glow-color),0 0 32px var(--glow-color),0 0 64px var(--glow-color); }
+      0%, 100% { text-shadow: 0 0 8px var(--glow-color), 0 0 16px var(--glow-color), 0 0 32px var(--glow-color); }
+      50% { text-shadow: 0 0 16px var(--glow-color), 0 0 32px var(--glow-color), 0 0 64px var(--glow-color); }
     }
 
     #consent-btn {
-      position:relative; z-index:3; margin-top:24px; padding:12px 24px;
-      background:#790B3E; color:#fff; border:none; border-radius:6px; font-size:1rem;
-      cursor:pointer; display:none; letter-spacing:0.5px; transition:opacity 0.3s, background 0.3s;
+      position: relative; z-index: 3; margin-top: 24px; padding: 12px 24px;
+      background: #790B3E; color: #fff; border: none; border-radius: 6px;
+      font-size: 1rem; cursor: pointer; display: none; letter-spacing: 0.5px; transition: opacity 0.3s;
     }
-    #consent-btn:disabled { opacity:0.5; cursor:not-allowed; background:#5c0a2e; }
-    #consent-btn:focus { outline:2px solid #FFD700; outline-offset:2px; }
+    #consent-btn:hover { opacity: 0.9; }
+    #consent-btn:focus { outline: 2px solid #FFD700; outline-offset: 2px; }
 
+    /* Eye Symbol */
     #eye-symbol {
       position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:160px; height:160px; z-index:0; cursor:pointer; opacity:0; pointer-events:none;
-      filter:drop-shadow(0 0 25px currentColor); transition:filter 0.3s;
+      width: 160px; height: 160px; z-index:0;
+      cursor:pointer; opacity: 0; pointer-events: none;
+      filter: drop-shadow(0 0 25px currentColor);
+      transition: filter 0.3s;
     }
-    #eye-symbol.active { opacity:1; pointer-events:auto; }
-    #eye-symbol svg { display:block; width:100%; height:100%; }
-    #eye-symbol:focus { outline:2px solid #FFF; }
+    #eye-symbol.active { opacity: 1; pointer-events: auto; }
+    #eye-symbol svg { display: block; width: 100%; height: 100%; }
+    #eye-symbol:focus { outline: 2px solid #FFF; }
 
-    .glow-ring { transform-origin:center; animation:spinGlow 10s linear infinite; }
-    @keyframes spinGlow { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-
-    #pause-overlay {
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      background:rgba(0,0,0,0.9); color:#fff; padding:20px 40px; border-radius:10px;
-      font-size:2rem; z-index:10000; display:none; pointer-events:none;
+    .glow-ring {
+      transform-origin: center;
+      animation: spinGlow 10s linear infinite;
     }
-
-    #volume-control {
-      position:fixed; bottom:20px; right:20px;
-      background:rgba(0,0,0,0.8); color:#fff; padding:8px 12px; border-radius:6px;
-      z-index:9999; display:none; font-size:0.9rem; border:1px solid #555;
-    }
-    #volume-control input[type="range"] { width:80px; margin-left:6px; vertical-align:middle; }
-
-    body.reduced-intensity #entrainment-overlay {
-      opacity:calc(var(--entrainment-opacity) * 0.5) !important;
-    }
+    @keyframes spinGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="receptive">
-  <div id="compatibility-warning">
-    ⚠ Your browser lacks features required for this experience. Please update to a modern browser (Chrome, Firefox, Edge, Safari).
-  </div>
-
-  <script>
-    (function() {
-      var missing = [];
-      if (!(window.AudioContext || window.webkitAudioContext)) missing.push('AudioContext');
-      if (!window.requestAnimationFrame) missing.push('requestAnimationFrame');
-      if (!window.CanvasRenderingContext2D) missing.push('Canvas2D');
-      if (!window.Float32Array) missing.push('Float32Array');
-      if (!document.body.classList) missing.push('classList');
-      if (missing.length > 0) {
-        document.getElementById('compatibility-warning').style.display = 'block';
-      }
-    })();
-  </script>
-
-  <div id="phase-announcer" class="sr-only" aria-live="polite"></div>
-  <div id="phase-description" class="sr-only"></div>
-
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
   <div id="entrainment-overlay" aria-hidden="true"></div>
   <div id="cloud"><div id="ring"></div></div>
@@ -323,7 +257,7 @@
       <div class="invite-line line2" aria-hidden="true">please enjoy</div>
       <div class="invite-line line3" aria-hidden="true">welcome</div>
     </div>
-    <button id="consent-btn" disabled>I understand – begin</button>
+    <button id="consent-btn">I understand – begin</button>
   </div>
 
   <div id="overlay" role="dialog" aria-modal="true" aria-label="Expanded resume view">
@@ -426,158 +360,8 @@
     </svg>
   </div>
 
-  <div id="pause-overlay">⏸ Paused</div>
-
-  <div id="volume-control">
-    <label for="vol-slider">Volume</label>
-    <input type="range" id="vol-slider" min="0" max="1" step="0.01" value="1">
-  </div>
-
-  <!-- Analytics & Observability (optional, unchanged) -->
   <script>
-    window.ANALYTICS_ENDPOINT = '';
-    window.CRASH_REPORT_ENDPOINT = '';
-    window.analyticsConsent = false;
-    function sendPageView() {
-      if (!window.ANALYTICS_ENDPOINT) return;
-      fetch(window.ANALYTICS_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'pageview',url:location.href,referrer:document.referrer||''}), keepalive:true }).catch(()=>{});
-    }
-    window.onerror = function(msg, src, line, col, err) {
-      if (!window.CRASH_REPORT_ENDPOINT || !window.analyticsConsent) { console.error('Crash report (not sent):', {msg,src,line,col}); return; }
-      fetch(window.CRASH_REPORT_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:String(msg),source:String(src),lineno:line,colno:col||0,timestamp:Date.now(),url:location.href,userAgent:navigator.userAgent}), keepalive:true }).catch(()=>{});
-    };
-  </script>
-
-  <!-- Consent & Ritual Start -->
-  <script>
-    (function() {
-      if (sessionStorage.getItem('fd_consent') === 'granted') {
-        document.getElementById('fullscreen-invite').style.display = 'none';
-        window.analyticsConsent = true;
-        startRitual();
-        sendPageView();
-        return;
-      }
-      const lines = document.querySelectorAll('.invite-line');
-      const consentBtn = document.getElementById('consent-btn');
-      let cur = 0;
-      function nextLine() {
-        if (cur < lines.length) {
-          lines[cur].style.opacity = '1'; cur++;
-          setTimeout(nextLine, 1200);
-        } else {
-          consentBtn.style.display = 'inline-block';
-          setTimeout(() => { consentBtn.disabled = false; }, 3000);
-          consentBtn.addEventListener('click', onConsentClick);
-        }
-      }
-      function onConsentClick() {
-        consentBtn.removeEventListener('click', onConsentClick);
-        sessionStorage.setItem('fd_consent', 'granted');
-        window.analyticsConsent = true;
-        sendPageView();
-        if (document.fullscreenEnabled) {
-          document.documentElement.requestFullscreen().then(() => {
-            document.getElementById('fullscreen-invite').style.display = 'none';
-            startRitual();
-          }).catch(() => { document.getElementById('fullscreen-invite').style.display = 'none'; startRitual(); });
-        } else { document.getElementById('fullscreen-invite').style.display = 'none'; startRitual(); }
-      }
-      setTimeout(nextLine, 600);
-    })();
-  </script>
-
-  <!-- PDF.js loader with source tracking (fixes worker path) -->
-  <script>
-    window.PDFJS_LOCAL = true;   // default assume local
-    (function(){
-      const LOCAL = '/pdfjs/build/pdf.min.js';
-      const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      const CDN_INTEGRITY = 'sha384-...'; // replace with real SRI
-
-      function loadScript(src, cb, isCDN) {
-        const e = document.createElement('script');
-        e.src = src;
-        if (isCDN) e.integrity = CDN_INTEGRITY;
-        e.onload = () => cb(!isCDN);      // true if local, false if CDN
-        e.onerror = () => {
-          if (!isCDN) {
-            loadScript(CDN, cb, true);     // fallback to CDN
-          } else {
-            console.warn('PDF.js load failed from all sources.');
-            cb(false);                     // signal failure
-          }
-        };
-        document.head.appendChild(e);
-      }
-
-      // Timeout / error feedback
-      let tries = 0;
-      const timer = setInterval(() => {
-        if (typeof pdfjsLib !== 'undefined') {
-          clearInterval(timer);
-          return;
-        }
-        if (++tries > 200) {
-          clearInterval(timer);
-          console.error('PDF.js timeout');
-          showPdfError('PDF.js library could not be loaded.');
-        }
-      }, 50);
-
-      loadScript(LOCAL, (isLocal) => {
-        window.PDFJS_LOCAL = isLocal;
-      }, false);
-    })();
-  </script>
-
-  <!-- Service Worker (offline resilience) -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        const CACHE_NAME = 'fdr-v1-${Date.now()}';
-        const PRECACHE_URLS = [ '/', '/pdfjs/build/pdf.min.js', '/pdfjs/build/pdf.worker.min.js', '/pdf/resume.pdf' ];
-        self.addEventListener('install', event => {
-          event.waitUntil(
-            caches.open(CACHE_NAME).then(cache => {
-              return cache.addAll(PRECACHE_URLS).catch(err => console.warn('[SW] Precache failed', err));
-            }).then(() => self.skipWaiting())
-          );
-        });
-        self.addEventListener('activate', event => {
-          event.waitUntil(
-            caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
-            .then(() => self.clients.claim())
-          );
-        });
-        self.addEventListener('fetch', event => {
-          if (event.request.url.startsWith(self.location.origin)) {
-            event.respondWith(
-              caches.match(event.request).then(cached => {
-                const fetchPromise = fetch(event.request).then(networkResponse => {
-                  if (networkResponse && networkResponse.status === 200) {
-                    const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
-                  }
-                  return networkResponse;
-                }).catch(() => cached);
-                return cached || fetchPromise;
-              })
-            );
-          }
-        });
-      `;
-      const blob = new Blob([swCode], { type:'application/javascript' });
-      const swUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl, { scope:'/' })
-        .then(reg => console.log('[SW] Registered – offline ready'))
-        .catch(err => console.warn('[SW] Registration failed:', err));
-    }
-  </script>
-
-  <!-- ═══════════════ MAIN APPLICATION LOGIC ═══════════════ -->
-  <script>
-    // ── Atomic Whirl Canvas (unchanged) ──
+    // ── Atomic Whirl Canvas ──
     (function() {
       const canvas = document.getElementById('atomic-canvas');
       if (!canvas) return;
@@ -633,173 +417,104 @@
       }
       requestAnimationFrame(anim);
     })();
+  </script>
 
-    // ═══════════ GLOBAL LIFECYCLE ═══════════
+  <script>
+    // ── Haiku + consent flow ──
+    const invite = document.getElementById('fullscreen-invite');
+    const lines = document.querySelectorAll('.invite-line');
+    const consentBtn = document.getElementById('consent-btn');
+    let cur = 0;
+    function nextLine(){
+      if(cur < lines.length){
+        lines[cur].style.opacity = '1'; cur++;
+        setTimeout(nextLine, 1200);
+      } else {
+        consentBtn.style.display = 'inline-block';
+        consentBtn.addEventListener('click', requestFS);
+      }
+    }
+    function requestFS(){
+      consentBtn.removeEventListener('click', requestFS);
+      if(document.fullscreenEnabled){
+        document.documentElement.requestFullscreen().then(()=>{
+          invite.style.display='none'; startRitual();
+        }).catch(()=>{ invite.style.display='none'; startRitual(); });
+      } else { invite.style.display='none'; startRitual(); }
+    }
+    setTimeout(nextLine, 600);
+  </script>
+
+  <script>
+    (function(){
+      const LOCAL = '/pdfjs/build/pdf.min.js';
+      const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      function loadScript(src,cb){
+        const e=document.createElement('script'); e.src=src; e.onload=cb;
+        e.onerror=()=>{ if(src===LOCAL) loadScript(CDN,cb); else console.warn('PDF.js load failed.'); };
+        document.head.appendChild(e);
+      }
+      let tries=0;
+      const timer=setInterval(()=>{
+        if(typeof pdfjsLib!=='undefined'){ clearInterval(timer); return; }
+        if(++tries>200){ clearInterval(timer); console.error('PDF.js timeout'); }
+      },50);
+      loadScript(LOCAL,()=>{});
+    })();
+  </script>
+
+  <script>
     let ritualStarted = false;
-    let paused = false;
-    let reducedIntensity = false;
-    let intensityFactor = 1;
-    let pauseStart = 0;
-    let totalPausedMs = 0;
     window.eyeState = { velocityMag:0, saccading:false };
-    const rAFIDs = [];
-    const intervals = [];
-    let announcer = document.getElementById('phase-announcer');
-    let descDiv = document.getElementById('phase-description');
+    let audioCtx=null, leftOsc=null, rightOsc=null, leftGain=null, rightGain=null;
 
-    // Reduced intensity (Ctrl+Shift+R)
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.shiftKey && e.code === 'KeyR') {
-        e.preventDefault();
-        reducedIntensity = !reducedIntensity;
-        sessionStorage.setItem('fd_reduced', reducedIntensity.toString());
-        document.body.classList.toggle('reduced-intensity', reducedIntensity);
-        intensityFactor = reducedIntensity ? 0.5 : 1;
-      }
-    });
-    if (sessionStorage.getItem('fd_reduced') === 'true') {
-      reducedIntensity = true; intensityFactor = 0.5;
-      document.body.classList.add('reduced-intensity');
-    }
-
-    // Pause / Resume (Escape)
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const overlay = document.getElementById('overlay');
-        if (overlay.style.display === 'flex') {
-          overlay.style.display = 'none';
-          document.getElementById('glow-wrapper').classList.remove('dream-active');
-          if (window.setPdfOpen) window.setPdfOpen(false);
-          e.preventDefault();
-          return;
-        }
-        if (ritualStarted) { togglePause(); e.preventDefault(); }
-      }
-    });
-
-    function togglePause() {
-      paused = !paused;
-      if (paused) {
-        pauseStart = performance.now();
-        document.getElementById('pause-overlay').style.display = 'block';
-        if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
-      } else {
-        totalPausedMs += performance.now() - pauseStart;
-        document.getElementById('pause-overlay').style.display = 'none';
-        if (audioCtx) audioCtx.resume();
-      }
-    }
-
-    // Volume control (Ctrl+Shift+V)
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
-        e.preventDefault();
-        const vc = document.getElementById('volume-control');
-        vc.style.display = vc.style.display === 'block' ? 'none' : 'block';
-      }
-    });
-
-    // ═══════════ AUDIO SUBSYSTEM (unchanged) ═══════════
-    let audioCtx = null;
-    let leftOsc, rightOsc, leftGain, rightGain, masterGain, infraslowGain, userGain, channelMerger;
-    let alignmentAMActive = false, actionPACActive = false;
-    let alignmentCurve = null, actionCurve = null;
-
-    function showAudioError(msg) {
-      if (document.getElementById('audio-error')) return;
-      const err = document.createElement('div');
-      err.id = 'audio-error';
-      err.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#ff5555;padding:10px 20px;border:1px solid #ff5555;z-index:9999;border-radius:4px;font-weight:bold;';
-      err.textContent = msg; document.body.appendChild(err);
-      err.addEventListener('click', () => err.remove());
-    }
-
-    function buildCurves() {
-      if (!audioCtx) return;
-      const sr = audioCtx.sampleRate;
-      const alignDur = 10;
-      const alignSamples = Math.round(alignDur * sr);
-      alignmentCurve = new Float32Array(alignSamples);
-      for (let i = 0; i < alignSamples; i++) {
-        const t = i / sr;
-        alignmentCurve[i] = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.5 * t);
-      }
-      const actionDur = 12;
-      const actionSamples = Math.round(actionDur * sr);
-      actionCurve = new Float32Array(actionSamples);
-      for (let i = 0; i < actionSamples; i++) {
-        const t = i / sr;
-        const env = 0.5 + 0.5 * Math.sin(2 * Math.PI * 18 * t);
-        const carrier = Math.sin(2 * Math.PI * 36 * t);
-        let mod = env * carrier;
-        mod = 0.5 + 0.5 * mod;
-        actionCurve[i] = mod;
-      }
-    }
-
-    function initAudio() {
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume().catch(err => { console.warn('AudioContext resume failed', err); showAudioError('Audio start blocked.'); });
-        }
-        audioCtx.onstatechange = () => { if (audioCtx.state === 'interrupted' || audioCtx.state === 'closed') console.warn('Audio state:', audioCtx.state); };
-        leftOsc = audioCtx.createOscillator(); leftOsc.type = 'sine';
-        rightOsc = audioCtx.createOscillator(); rightOsc.type = 'sine';
-        leftGain = audioCtx.createGain(); leftGain.gain.value = 0.12;
-        rightGain = audioCtx.createGain(); rightGain.gain.value = 0.12;
-        masterGain = audioCtx.createGain();
-        infraslowGain = audioCtx.createGain();
-        userGain = audioCtx.createGain();
-        channelMerger = audioCtx.createChannelMerger(2);
-        leftOsc.connect(leftGain).connect(channelMerger, 0, 0);
-        rightOsc.connect(rightGain).connect(channelMerger, 0, 1);
-        channelMerger.connect(masterGain);
-        masterGain.connect(infraslowGain);
-        infraslowGain.connect(userGain);
-        userGain.connect(audioCtx.destination);
+    function initAudio(){
+      try{
+        audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+        leftOsc=audioCtx.createOscillator(); rightOsc=audioCtx.createOscillator();
+        leftOsc.type='sine'; rightOsc.type='sine';
+        leftGain=audioCtx.createGain(); rightGain=audioCtx.createGain();
+        leftGain.gain.value=0.08; rightGain.gain.value=0.08;
+        const lp=audioCtx.createStereoPanner(); lp.pan.value=-1;
+        const rp=audioCtx.createStereoPanner(); rp.pan.value=1;
+        leftOsc.connect(leftGain).connect(lp).connect(audioCtx.destination);
+        rightOsc.connect(rightGain).connect(rp).connect(audioCtx.destination);
         leftOsc.start(); rightOsc.start();
-        buildCurves();
-        document.getElementById('vol-slider').addEventListener('input', () => { userGain.gain.setValueAtTime(parseFloat(volSlider.value), audioCtx.currentTime); });
-      } catch (e) { console.warn('Audio not available', e); showAudioError('Web Audio not supported.'); audioCtx = null; }
+      }catch(e){ console.warn('Audio unavailable'); audioCtx=null; }
     }
 
-    function updateAudioFreq(targetBeatFreq, phase) {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime + 0.05;
-      const baseFreq = 500;
-      leftOsc.frequency.cancelScheduledValues(now);
-      rightOsc.frequency.cancelScheduledValues(now);
-      if (phase === 'alignment') { leftOsc.frequency.setTargetAtTime(baseFreq, now, 0.02); rightOsc.frequency.setTargetAtTime(baseFreq, now, 0.02); }
-      else if (phase === 'action') { leftOsc.frequency.setTargetAtTime(baseFreq, now, 0.02); rightOsc.frequency.setTargetAtTime(baseFreq, now, 0.02); }
-      else { leftOsc.frequency.setTargetAtTime(baseFreq + targetBeatFreq/2, now, 0.02); rightOsc.frequency.setTargetAtTime(baseFreq - targetBeatFreq/2, now, 0.02); }
-      masterGain.gain.cancelScheduledValues(now);
-      const curVal = masterGain.gain.value;
-      if (phase === 'alignment') {
-        if (!alignmentAMActive && alignmentCurve) { alignmentAMActive = true; masterGain.gain.setValueAtTime(curVal, now); masterGain.gain.setTargetAtTime(alignmentCurve[0], now, 0.01); masterGain.gain.setValueCurveAtTime(alignmentCurve, now + 0.01, 10); }
-      } else {
-        if (alignmentAMActive) { alignmentAMActive = false; masterGain.gain.setValueAtTime(curVal, now); masterGain.gain.setTargetAtTime(1, now, 0.01); }
-        if (actionPACActive) { actionPACActive = false; masterGain.gain.setValueAtTime(curVal, now); masterGain.gain.setTargetAtTime(1, now, 0.01); }
-        if (phase === 'action') {
-          if (!actionPACActive && actionCurve) { actionPACActive = true; const cv2 = masterGain.gain.value; masterGain.gain.setValueAtTime(cv2, now); masterGain.gain.setTargetAtTime(actionCurve[0], now, 0.01); masterGain.gain.setValueCurveAtTime(actionCurve, now + 0.01, 12); }
-        }
+    function updateAudioFreq(freq){
+      if(!audioCtx) return;
+      const b=200, t=audioCtx.currentTime+0.05;
+      leftOsc.frequency.setTargetAtTime(b+freq/2,t,0.02);
+      rightOsc.frequency.setTargetAtTime(b-freq/2,t,0.02);
+    }
+
+    function startRitual(){
+      if(ritualStarted) return;
+      ritualStarted=true;
+      const redMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const useBlur=!redMot && navigator.hardwareConcurrency>=4;
+      if(!useBlur){
+        const ov=document.getElementById('overlay');
+        ov.style.backdropFilter='none'; ov.style.background='rgba(0,0,0,0.92)';
       }
-      leftGain.gain.setTargetAtTime(0.12, now, 0.02);
-      rightGain.gain.setTargetAtTime(0.12, now, 0.02);
-    }
-
-    function startRitual() {
-      if (ritualStarted) return;
-      ritualStarted = true; initAudio();
-      const redMot = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!redMot && navigator.hardwareConcurrency < 4) { const ov = document.getElementById('overlay'); ov.style.backdropFilter = 'none'; ov.style.background = 'rgba(0,0,0,0.92)'; }
       document.getElementById('ring').classList.add('active');
       document.getElementById('bg-canvas').classList.add('active');
       document.getElementById('eye-symbol').classList.add('active');
-      startEntrainmentEngine(); startStaticCanvas(); startPDFRitual();
+      initAudio();
+      startEntrainmentEngine();
+      startStaticCanvas();
+      startPDFRitual();
     }
 
-    // ── Eye Tracking (unchanged) ──
+    const prefRedMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let reducedMotion=prefRedMot;
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>reducedMotion=e.matches);
+    document.addEventListener('contextmenu',e=>e.preventDefault());
+    window.addEventListener('beforeunload',()=>{ document.body.style.background='#000'; });
+
+    // ── Eye tracking (corrected + keyboard a11y) ──
     (function(){
       const svgRoot=document.querySelector('#eye-symbol svg');
       const eyeballGroup=document.getElementById('eyeballGroup');
@@ -807,6 +522,7 @@
       const upperLid=document.getElementById('upperLidGroup');
       const lowerLid=document.getElementById('lowerLidGroup');
       if(!eyeballGroup||!svgRoot) return;
+
       const MAX_TX=95, MAX_UP=55, MAX_DN=85;
       let cx=0,cy=0, vx=0,vy=0, tx=0,ty=0, ltx=0,lty=0;
       const GAIN=6.5, DAMP=0.96, MAXV=45.0;
@@ -815,270 +531,482 @@
       const UP_LID_UP=-18, LOW_LID_DN=28, SQUINT=6;
 
       function updEyelids(px,py){
-        let ny=py/(py>=0?MAX_DN:MAX_UP); ny=Math.min(1,Math.max(-1,ny)); let nx=px/MAX_TX; let uy=0;
+        let ny=py/(py>=0?MAX_DN:MAX_UP); ny=Math.min(1,Math.max(-1,ny));
+        let nx=px/MAX_TX;
+        let uy=0;
         if(ny<0) uy=UP_LID_UP*(-ny); else if(ny>0) uy=SQUINT*ny;
         let hs=px*0.04; upperLid.setAttribute('transform',`translate(${hs},${uy})`);
-        let ly=0; if(ny>0) ly=LOW_LID_DN*ny; lowerLid.setAttribute('transform',`translate(${hs},${ly})`);
+        let ly=0; if(ny>0) ly=LOW_LID_DN*ny;
+        lowerLid.setAttribute('transform',`translate(${hs},${ly})`);
         let uY=35, lY=367;
-        if(ny<0){ let f=-ny; uY=35-f*15; lY=367-f*8; } else if(ny>0){ let f=ny; uY=35+f*4; lY=367+f*25; }
+        if(ny<0){ let f=-ny; uY=35-f*15; lY=367-f*8; }
+        else if(ny>0){ let f=ny; uY=35+f*4; lY=367+f*25; }
         uY=Math.min(50,Math.max(20,uY)); lY=Math.min(400,Math.max(340,lY));
-        let sx=px*0.06; let lx=85+sx, rx=315+sx; let umx=195+sx*0.5, lmx=205+sx*0.5;
-        clipPathShape.setAttribute('d',`M ${lx},200 Q ${umx},${uY} ${rx},200 Q ${lmx},${lY} ${lx},200 Z`);
+        let sx=px*0.06; let lx=85+sx, rx=315+sx;
+        let umx=195+sx*0.5, lmx=205+sx*0.5;
+        let d=`M ${lx},200 Q ${umx},${uY} ${rx},200 Q ${lmx},${lY} ${lx},200 Z`;
+        clipPathShape.setAttribute('d',d);
       }
+
       function constrainTarget(x,y){
-        let cx=Math.min(MAX_TX,Math.max(-MAX_TX,x)), maxY=y>=0?MAX_DN:MAX_UP, cy=Math.min(maxY,Math.max(-maxY,y));
-        let nx=cx/MAX_TX, ny=cy/(cy>=0?MAX_DN:MAX_UP); let dist=Math.sqrt(nx*nx+ny*ny);
+        let cx=Math.min(MAX_TX,Math.max(-MAX_TX,x));
+        let maxY=y>=0?MAX_DN:MAX_UP, cy=Math.min(maxY,Math.max(-maxY,y));
+        let nx=cx/MAX_TX, ny=cy/(cy>=0?MAX_DN:MAX_UP);
+        let dist=Math.sqrt(nx*nx+ny*ny);
         if(dist>1){ let sc=1/dist; cx=(nx*sc)*MAX_TX; cy=(ny*sc)*(cy>=0?MAX_DN:MAX_UP); }
         return {x:cx,y:cy};
       }
-      function getTarget(cx,cy){ let pt=new DOMPoint(cx,cy); let ctm=svgRoot.getScreenCTM(); if(!ctm) return {x:0,y:0}; let cur=pt.matrixTransform(ctm.inverse()); return constrainTarget(cur.x-200,cur.y-200); }
+
+      function getTarget(cx,cy){
+        let pt=new DOMPoint(cx,cy); let ctm=svgRoot.getScreenCTM();
+        if(!ctm) return {x:0,y:0};
+        let cur=pt.matrixTransform(ctm.inverse());
+        return constrainTarget(cur.x-200,cur.y-200);
+      }
+
       function startSacc(toX,toY){ saccActive=true; ssX=cx; ssY=cy; seX=toX; seY=toY; sprog=0; vx=vy=0; }
+
       function updEye(ms){
         let ds=Math.min(0.033,ms/1000);
         if(saccActive){
           sprog+=ms/SACC_DUR; if(sprog>=1){ cx=seX; cy=seY; saccActive=false; }
           else{ let t=sprog, e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; cx=ssX+(seX-ssX)*e; cy=ssY+(seY-ssY)*e; }
-          eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`); updEyelids(cx,cy);
+          eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
+          updEyelids(cx,cy);
           window.eyeState.velocityMag=Math.hypot(seX-ssX,seY-ssY)/SACC_DUR*20; window.eyeState.saccading=true;
           return;
         }
-        let dtPred=Math.min(0.1,ds); let tvx=(tx-ltx)/dtPred, tvy=(ty-lty)/dtPred;
+        let dtPred=Math.min(0.1,ds);
+        let tvx=(tx-ltx)/dtPred, tvy=(ty-lty)/dtPred;
         tvx=Math.min(80,Math.max(-80,tvx)); tvy=Math.min(80,Math.max(-80,tvy));
-        let ptx=tx+tvx*0.033, pty=ty+tvy*0.033; let pc=constrainTarget(ptx,pty); ptx=pc.x; pty=pc.y;
+        let ptx=tx+tvx*0.033, pty=ty+tvy*0.033;
+        let pc=constrainTarget(ptx,pty); ptx=pc.x; pty=pc.y;
         let ex=ptx-cx, ey=pty-cy;
         if(Math.hypot(ex,ey)>SACC_THR&&ms>10){ startSacc(ptx,pty); return; }
-        let fx=ex*GAIN*ds, fy=ey*GAIN*ds; vx+=fx; vy+=fy; vx*=DAMP; vy*=DAMP;
+        let fx=ex*GAIN*ds, fy=ey*GAIN*ds;
+        vx+=fx; vy+=fy; vx*=DAMP; vy*=DAMP;
         let sp=Math.hypot(vx,vy); if(sp>MAXV){ vx=vx/sp*MAXV; vy=vy/sp*MAXV; }
-        let nx=cx+vx*ds, ny=cy+vy*ds; let fpos=constrainTarget(nx,ny); cx=fpos.x; cy=fpos.y;
+        let nx=cx+vx*ds, ny=cy+vy*ds;
+        let fpos=constrainTarget(nx,ny); cx=fpos.x; cy=fpos.y;
         eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
         ltx=tx; lty=ty; window.eyeState.velocityMag=sp; window.eyeState.saccading=false;
         updEyelids(cx,cy);
       }
+
       function onMove(cx,cy){ let t=getTarget(cx,cy); tx=t.x; ty=t.y; }
-      function reset(){ cx=cy=vx=vy=tx=ty=ltx=lty=0; saccActive=false; eyeballGroup.setAttribute('transform','translate(0,0)'); updEyelids(0,0); upperLid.setAttribute('transform','translate(0,0)'); lowerLid.setAttribute('transform','translate(0,0)'); window.eyeState.velocityMag=0; window.eyeState.saccading=false; }
+      function reset(){
+        cx=cy=vx=vy=tx=ty=ltx=lty=0; saccActive=false;
+        eyeballGroup.setAttribute('transform','translate(0,0)');
+        updEyelids(0,0); upperLid.setAttribute('transform','translate(0,0)'); lowerLid.setAttribute('transform','translate(0,0)');
+        window.eyeState.velocityMag=0; window.eyeState.saccading=false;
+      }
+
       let lft=0;
-      function anim(now){ rAFIDs.push(requestAnimationFrame(anim)); if(paused) return; let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now; }
+      function anim(now){ requestAnimationFrame(anim); let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now; }
+
       window.addEventListener('mousemove',e=>{ if(ritualStarted) onMove(e.clientX,e.clientY); });
       window.addEventListener('mouseleave',reset);
       window.addEventListener('touchmove',e=>{ if(ritualStarted&&e.touches.length){ onMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); } },{passive:false});
       window.addEventListener('touchend',reset);
       window.addEventListener('touchstart',e=>{ if(ritualStarted&&e.touches.length) onMove(e.touches[0].clientX,e.touches[0].clientY); });
+
       const eyeEl=document.getElementById('eye-symbol');
       eyeEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); openPdfOverlay(); } });
       eyeEl.addEventListener('click',()=>{ if(ritualStarted) openPdfOverlay(); });
-      function openPdfOverlay(){ if(!ritualStarted||!window.setPdfOpen) return; document.getElementById('overlay').style.display='flex'; document.getElementById('glow-wrapper').classList.add('dream-active'); window.setPdfOpen(true); }
-      reset(); lft=performance.now(); rAFIDs.push(requestAnimationFrame(anim));
+
+      function openPdfOverlay(){
+        if(!ritualStarted||!window.setPdfOpen) return;
+        document.getElementById('overlay').style.display='flex';
+        document.getElementById('glow-wrapper').classList.add('dream-active');
+        window.setPdfOpen(true);
+      }
+
+      reset(); lft=performance.now(); anim(lft);
     })();
 
-    // ═══ Phase Scheduler (unchanged) ═══
+    // ═══════════ Phase Scheduler (37 s master timer) ═══════════
     class PhaseScheduler {
-      constructor() { this.startTime = performance.now(); this.REC = 15000; this.ALIGN = 10000; this.ACT = 12000; this.TOTAL = this.REC + this.ALIGN + this.ACT; this.state = { phase:'receptive', sub:'alpha', freq:10 }; this._lastGlobal = 'receptive'; this.phaseTransitionTime = 0; }
-      _elapsed(t) { const effectiveNow = t - totalPausedMs; let e = (effectiveNow - this.startTime) % this.TOTAL; if (e < 0) e += this.TOTAL; return e; }
+      constructor() {
+        this.startTime = performance.now();
+        this.REC = 15000; this.ALIGN = 10000; this.ACT = 12000;
+        this.TOTAL = this.REC + this.ALIGN + this.ACT;
+        this.state = { phase:'receptive', sub:'alpha', freq:10 };
+        this._lastGlobal = 'receptive';
+        this.phaseTransitionTime = 0;
+      }
+
+      // Safe modulo helper – always returns a non‑negative elapsed ms
+      _elapsed(t) {
+        let e = (t - this.startTime) % this.TOTAL;
+        if (e < 0) e += this.TOTAL;
+        return e;
+      }
+
       update(now) {
-        const elapsed = this._elapsed(now); let phase, sub, freq;
-        if (elapsed < this.REC) { phase = 'receptive';
-          if (elapsed < 5000) { sub = 'alpha'; freq = 10; } else if (elapsed < 10000) { sub = 'theta'; freq = 6; } else { sub = 'delta'; freq = 2; }
-        } else if (elapsed < this.REC + this.ALIGN) { phase = 'alignment'; sub = null; freq = 0.5; }
-        else { phase = 'action'; sub = null; freq = 36; }
-        if (phase !== this.state.phase) { this.phaseTransitionTime = now; this._lastGlobal = phase;
-          if (announcer) { let announcement = phase; if (sub) announcement += ' – ' + sub; announcer.textContent = announcement; }
-          if (descDiv) { const descriptions = { receptive_alpha:'Entering relaxed alertness – alpha rhythm (10 Hz).', receptive_theta:'Deepening creative insight – theta rhythm (6 Hz).', receptive_delta:'Surrendering to stillness – delta rhythm (2 Hz).', alignment:'Neural reset – slow 0.5 Hz pulse aligning brain coherence.', action:'Focused action – simultaneous beta (18 Hz) and gamma (36 Hz) binding perception.' }; let key = phase; if (sub) key = phase + '_' + sub; descDiv.textContent = descriptions[key] || ''; }
+        const elapsed = this._elapsed(now);
+        let phase, sub, freq;
+        if (elapsed < this.REC) {
+          phase = 'receptive';
+          if      (elapsed < 5000)  { sub = 'alpha'; freq = 10; }
+          else if (elapsed < 10000) { sub = 'theta'; freq = 7; }
+          else                      { sub = 'delta'; freq = 3; }
+        } else if (elapsed < this.REC + this.ALIGN) {
+          phase = 'alignment'; sub = null; freq = 0.05;
+        } else {
+          phase = 'action'; sub = null;
+          const ae = elapsed - this.REC - this.ALIGN;
+          const t = ae / 2000;
+          const ef = t <= 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+          freq = ae < 2000 ? 3 + (36 - 3) * ef : 36;
+        }
+        if (phase !== this.state.phase) {
+          this.phaseTransitionTime = now;
+          this._lastGlobal = phase;
         }
         this.state = { phase, sub, freq };
       }
-      forceAction() { this.state = { phase:'action', sub:null, freq:36 }; }
-      integratePhase(prevTime, now) { let cur = prevTime, dp = 0; while (cur < now) { const segEnd = Math.min(now, cur + 100); const e = this._elapsed(cur); let freq; if (e < this.REC) { if (e < 5000) freq = 10; else if (e < 10000) freq = 6; else freq = 2; } else if (e < this.REC + this.ALIGN) { freq = 0.5; } else { freq = 36; } dp += 2 * Math.PI * freq * (segEnd - cur) / 1000; cur = segEnd; } return dp; }
+
+      forceAction() {
+        this.state = { phase:'action', sub:null, freq:36 };
+      }
+
+      // Robust phase integration – uses the safe elapsed helper for each segment
+      integratePhase(prevTime, now) {
+        let cur = prevTime;
+        let dp = 0;
+        while (cur < now) {
+          const segEnd = Math.min(now, cur + 100);
+          // get frequency for this segment without side‑effecting the main state
+          const e = this._elapsed(cur);
+          let freq;
+          if (e < this.REC) {
+            if      (e < 5000)  freq = 10;
+            else if (e < 10000) freq = 7;
+            else                freq = 3;
+          } else if (e < this.REC + this.ALIGN) {
+            freq = 0.05;
+          } else {
+            const ae = e - this.REC - this.ALIGN;
+            if (ae < 2000) {
+              const t = ae / 2000;
+              const ef = t <= 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+              freq = 3 + (36 - 3) * ef;
+            } else {
+              freq = 36;
+            }
+          }
+          dp += 2 * Math.PI * freq * (segEnd - cur) / 1000;
+          cur = segEnd;
+        }
+        return dp;
+      }
     }
 
-    // ── Entrainment Engine (unchanged) ──
+    // ── Entrainment engine using PhaseScheduler ──
     function startEntrainmentEngine(){
-      const overlay = document.getElementById('entrainment-overlay'), ring = document.getElementById('ring'), glow = document.getElementById('glow-wrapper'), eyeSym = document.getElementById('eye-symbol');
+      const overlay = document.getElementById('entrainment-overlay');
+      const ring = document.getElementById('ring');
+      const glow = document.getElementById('glow-wrapper');
+      const eyeSym = document.getElementById('eye-symbol');
+
       const scheduler = new PhaseScheduler();
-      let pdfOpen = false, carrierPhase = 0, betaPhase = 0, strobePhase = 0, infraPhase = 0, hrvOff = 0, ptt = 0, smoothVel = 0, prevTime;
+      let pdfOpen = false;
+      let carrierPhase = 0;
+      let strobePhase = 0;
+      let infraPhase = 0, hrvOff = 0;
+      let ptt = 0;
+      let smoothVel = 0;
+      let prevTime;
+
       const phaseColors = { receptive:'#FFFFFF', alignment:'#FFD700', action:'#790B3E' };
-      function updEyeColors(ph){ const c = phaseColors[ph] || '#FFFFFF'; document.querySelectorAll('.glow-ring').forEach(e=>e.setAttribute('stroke',c)); document.querySelectorAll('.sparkle').forEach(e=>e.setAttribute('fill',c)); eyeSym.style.color = c; }
-      const colorSteps = { receptive:[{u:0.7537,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},{u:0.79475,bg:'#FFFFFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},{u:0.8358,bg:'#FEFEFE',s:'0 0 150px #FEFEFE,0 0 300px rgba(254,254,254,.9)'},{u:0.87685,bg:'#FAFAFA',s:'0 0 150px #FAFAFA,0 0 300px rgba(250,250,250,.9)'},{u:0.9179,bg:'#FFFFFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.95)'},{u:0.95895,bg:'#FFFFFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'},{u:1.0,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}], alignment:[{u:0.7537,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},{u:0.79475,bg:'#FFEA00',s:'0 0 150px #FFEA00,0 0 300px rgba(255,234,0,.9)'},{u:0.8358,bg:'#FFD700',s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},{u:0.87685,bg:'#FFC000',s:'0 0 150px #FFC000,0 0 300px rgba(255,192,0,.9)'},{u:0.9179,bg:'#FFF200',s:'0 0 150px #FFF200,0 0 300px rgba(255,242,0,.95)'},{u:0.95895,bg:'#FFD700',s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)'},{u:1.0,bg:'#FFFFFF',s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)'}], action:[{u:0.7537,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'},{u:0.79475,bg:'#00FF00',s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},{u:0.8358,bg:'#33FF33',s:'0 0 150px #33FF33,0 0 300px rgba(51,255,51,.9)'},{u:0.87685,bg:'#00EE00',s:'0 0 150px #0E0,0 0 300px rgba(0,238,0,.9)'},{u:0.9179,bg:'#66FF66',s:'0 0 150px #66FF66,0 0 300px rgba(102,255,102,.95)'},{u:0.95895,bg:'#00FF00',s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)'},{u:1.0,bg:'#000',s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)'}] };
-      function getBurst(ph,prog){ const st = colorSteps[ph] || colorSteps.receptive; for (let i=0;i<st.length;i++) if (prog<=st[i].u) return {bg:st[i].bg, s:st[i].s}; return st[st.length-1]; }
-      function applyRing(phaseName){ document.body.className = phaseName; if (reducedIntensity) document.body.classList.add('reduced-intensity'); else document.body.classList.remove('reduced-intensity'); if (phaseName==='receptive') { ring.style.setProperty('--env-dur','2s'); glow.style.setProperty('--env-dur','2s'); } else if (phaseName==='alignment') { ring.style.setProperty('--env-dur','5s'); glow.style.setProperty('--env-dur','5s'); } else { ring.style.setProperty('--env-dur','0.5s'); glow.style.setProperty('--env-dur','0.5s'); } }
+      function updEyeColors(ph){
+        const c = phaseColors[ph] || '#FFFFFF';
+        document.querySelectorAll('.glow-ring').forEach(e=>e.setAttribute('stroke',c));
+        document.querySelectorAll('.sparkle').forEach(e=>e.setAttribute('fill',c));
+        eyeSym.style.color = c;
+      }
+
+      const colorSteps = {
+        receptive: [
+          { u:0.7537,  bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' },
+          { u:0.79475, bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)' },
+          { u:0.8358,  bg:'#FEFEFE',  s:'0 0 150px #FEFEFE,0 0 300px rgba(254,254,254,.9)' },
+          { u:0.87685, bg:'#FAFAFA',  s:'0 0 150px #FAFAFA,0 0 300px rgba(250,250,250,.9)' },
+          { u:0.9179,  bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.95)' },
+          { u:0.95895, bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)' },
+          { u:1.0,     bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' }
+        ],
+        alignment: [
+          { u:0.7537,  bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' },
+          { u:0.79475, bg:'#FFEA00',  s:'0 0 150px #FFEA00,0 0 300px rgba(255,234,0,.9)' },
+          { u:0.8358,  bg:'#FFD700',  s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)' },
+          { u:0.87685, bg:'#FFC000',  s:'0 0 150px #FFC000,0 0 300px rgba(255,192,0,.9)' },
+          { u:0.9179,  bg:'#FFF200',  s:'0 0 150px #FFF200,0 0 300px rgba(255,242,0,.95)' },
+          { u:0.95895, bg:'#FFD700',  s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)' },
+          { u:1.0,     bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)' }
+        ],
+        action: [
+          { u:0.7537,  bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' },
+          { u:0.79475, bg:'#00FF00',  s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)' },
+          { u:0.8358,  bg:'#33FF33',  s:'0 0 150px #33FF33,0 0 300px rgba(51,255,51,.9)' },
+          { u:0.87685, bg:'#00EE00',  s:'0 0 150px #0E0,0 0 300px rgba(0,238,0,.9)' },
+          { u:0.9179,  bg:'#66FF66',  s:'0 0 150px #66FF66,0 0 300px rgba(102,255,102,.95)' },
+          { u:0.95895, bg:'#00FF00',  s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)' },
+          { u:1.0,     bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' }
+        ]
+      };
+
+      function getBurst(ph,prog){
+        const st = colorSteps[ph] || colorSteps.receptive;
+        for (let i=0;i<st.length;i++) if (prog<=st[i].u) return {bg:st[i].bg, s:st[i].s};
+        return st[st.length-1];
+      }
+
+      function applyRing(phaseName){
+        document.body.className = phaseName;
+        if (phaseName==='receptive') { ring.style.setProperty('--env-dur','2s'); glow.style.setProperty('--env-dur','2s'); }
+        else if (phaseName==='alignment') { ring.style.setProperty('--env-dur','5s'); glow.style.setProperty('--env-dur','5s'); }
+        else { ring.style.setProperty('--env-dur','0.5s'); glow.style.setProperty('--env-dur','0.5s'); }
+      }
+
       function loop(now){
-        rAFIDs.push(requestAnimationFrame(loop)); if(paused) return;
-        let dt = prevTime ? (now - prevTime) / 1000 : 0; dt = Math.max(0, dt); prevTime = now;
-        if (!pdfOpen) { if (dt > 1) { const dp = scheduler.integratePhase(prevTime - dt*1000, now); carrierPhase = (carrierPhase + dp) % (2*Math.PI); } else { const step = 0.001; let rem = dt; while (rem > 0) { const d = Math.min(step, rem); scheduler.update(now); carrierPhase = (carrierPhase + 2*Math.PI * scheduler.state.freq * d) % (2*Math.PI); rem -= d; } } }
-        else { scheduler.forceAction(); if (dt > 0) carrierPhase = (carrierPhase + 2*Math.PI * 36 * dt) % (2*Math.PI); }
+        requestAnimationFrame(loop);
+        let dt = prevTime ? (now - prevTime) / 1000 : 0;
+        dt = Math.max(0, dt);                     // guard against negative dt
+        prevTime = now;
+
+        if (!pdfOpen) {
+          if (dt > 1) {
+            const dp = scheduler.integratePhase(prevTime - dt*1000, now);
+            carrierPhase = (carrierPhase + dp) % (2*Math.PI);
+          } else {
+            const step = 0.001;
+            let rem = dt;
+            while (rem > 0) {
+              const d = Math.min(step, rem);
+              scheduler.update(now);
+              carrierPhase = (carrierPhase + 2*Math.PI * scheduler.state.freq * d) % (2*Math.PI);
+              rem -= d;
+            }
+          }
+        } else {
+          scheduler.forceAction();
+          if (dt > 0) carrierPhase = (carrierPhase + 2*Math.PI * 36 * dt) % (2*Math.PI);
+        }
+
         const { phase, sub, freq } = scheduler.state;
-        if (phase === 'action') { if (dt > 0) betaPhase = (betaPhase + 2*Math.PI * 18 * dt) % (2*Math.PI); } else { betaPhase = 0; }
-        if (scheduler.phaseTransitionTime) { ptt = scheduler.phaseTransitionTime; scheduler.phaseTransitionTime = 0; }
-        applyRing(phase); updEyeColors(phase);
-        if (reducedMotion) { overlay.style.opacity = 0; eyeSym.style.opacity = 0; const bd = phase==='receptive'?2:(phase==='alignment'?5:0.5); const bp = ((now - scheduler.startTime) % (bd*1000)) / (bd*1000); const b = getBurst(phase,bp); ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s); if (glow) { glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); } return; }
-        eyeSym.style.opacity = 1; updateAudioFreq(freq, phase);
-        if (dt > 0) { hrvOff += (Math.random()-0.5)*0.0002*dt; hrvOff = Math.max(-0.015,Math.min(0.015,hrvOff)); const infraF = 0.05 + hrvOff; infraPhase += 2*Math.PI*infraF*dt; if (infraPhase > 2*Math.PI) infraPhase -= 2*Math.PI; }
+        if (scheduler.phaseTransitionTime) {
+          ptt = scheduler.phaseTransitionTime;
+          scheduler.phaseTransitionTime = 0;
+        }
+
+        applyRing(phase);
+        updEyeColors(phase);
+
+        if (reducedMotion) {
+          overlay.style.opacity = 0; eyeSym.style.opacity = 0;
+          const bd = phase==='receptive'?2:(phase==='alignment'?5:0.5);
+          const bp = ((now - scheduler.startTime) % (bd*1000)) / (bd*1000);
+          const b = getBurst(phase,bp);
+          ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s);
+          if (glow) { glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
+          return;
+        }
+
+        eyeSym.style.opacity = 1;
+        updateAudioFreq(freq);
+
+        if (dt > 0) {
+          hrvOff += (Math.random()-0.5)*0.0002*dt;
+          hrvOff = Math.max(-0.015,Math.min(0.015,hrvOff));
+          const infraF = 0.05 + hrvOff;
+          infraPhase += 2*Math.PI*infraF*dt;
+          if (infraPhase > 2*Math.PI) infraPhase -= 2*Math.PI;
+        }
         const infra = 0.5 + 0.5*Math.sin(infraPhase);
-        if (infraslowGain) { infraslowGain.gain.setValueAtTime(infra, audioCtx.currentTime + 0.05); }
-        const bd = phase==='receptive'?2:(phase==='alignment'?5:0.5); const bp = ((now - scheduler.startTime) % (bd*1000)) / (bd*1000); const b = getBurst(phase,bp);
+
+        const bd = phase==='receptive'?2:(phase==='alignment'?5:0.5);
+        const bp = ((now - scheduler.startTime) % (bd*1000)) / (bd*1000);
+        const b = getBurst(phase,bp);
         ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s);
         if (glow) { glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
         glow.style.setProperty('--sparkle-opacity',infra);
+
+        // Ring strobe
         const strobeFreq = (phase==='action')?36:(phase==='alignment'?0.5:2);
         if (dt > 0) strobePhase = (strobePhase + 2*Math.PI*strobeFreq*dt) % (2*Math.PI);
-        ring.style.visibility = Math.sin(strobePhase)>=0 ? 'visible':'hidden'; if (glow) glow.style.visibility = ring.style.visibility;
+        ring.style.visibility = Math.sin(strobePhase)>=0 ? 'visible':'hidden';
+        if (glow) glow.style.visibility = ring.style.visibility;
+
+        // luminance overlay
         let flick = 1;
-        if (phase === 'receptive') { if (sub === 'delta') flick = 0.5 + 0.5*Math.sin(carrierPhase); else flick = Math.sin(carrierPhase) >= 0 ? 1 : 0; }
-        else if (phase === 'alignment') { flick = 0.5 + 0.5*Math.sin(carrierPhase); }
-        else { const gammaSquare = Math.sin(carrierPhase) >= 0 ? 1 : 0; const betaMod = 0.5 + 0.5*Math.sin(betaPhase); flick = gammaSquare * betaMod; }
+        if (phase === 'receptive') {
+          if (sub === 'delta') flick = 0.5 + 0.5*Math.sin(carrierPhase);
+          else flick = Math.sin(carrierPhase) >= 0 ? 1 : 0;
+        } else if (phase === 'alignment') {
+          flick = 1;
+        } else {
+          flick = Math.sin(carrierPhase) >= 0 ? 1 : 0;
+        }
+
         let op = 0;
-        if (phase === 'receptive') op = flick * infra * 0.35; else if (phase === 'alignment') op = flick * infra * 0.25; else op = flick * infra * 0.35;
-        op *= intensityFactor;
-        if (window.eyeState) { smoothVel = smoothVel*0.9 + window.eyeState.velocityMag*0.1; const ag = 1 + Math.min(0.5, smoothVel*0.02); op = Math.min(1, op*ag); }
-        if (ptt) { const ts = (now - ptt) / 1000; if (ts < 0.15) op *= Math.sin((ts/0.15)*Math.PI); else if (ts < 0.25) {} else ptt = 0; }
+        if (phase === 'receptive') op = flick * infra * 0.35;
+        else if (phase === 'alignment') op = infra * 0.25;
+        else op = flick * infra * 0.35;
+
+        if (window.eyeState) {
+          smoothVel = smoothVel*0.9 + window.eyeState.velocityMag*0.1;
+          const ag = 1 + Math.min(0.5, smoothVel*0.02);
+          op = Math.min(1, op*ag);
+        }
+
+        if (ptt) {
+          const ts = (now - ptt) / 1000;
+          if (ts < 0.15) op *= Math.sin((ts/0.15)*Math.PI);
+          else if (ts < 0.25) {}
+          else ptt = 0;
+        }
+
         overlay.style.opacity = op;
       }
-      rAFIDs.push(requestAnimationFrame(loop)); window.setPdfOpen = v => pdfOpen = v; window.getCurrentPhase = () => scheduler.state.phase;
+
+      requestAnimationFrame(loop);
+      window.setPdfOpen = v => pdfOpen = v;
+      window.getCurrentPhase = () => scheduler.state.phase;
     }
 
-    // ── Static Canvas (unchanged) ──
+    // ── Static canvas (unchanged) ──
     function startStaticCanvas(){
       const c=document.getElementById('bg-canvas'), ctx=c.getContext('2d');
       const aP=['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
       const gP=['#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'];
       const sf=navigator.hardwareConcurrency<4?0.5:1;
-      let pal=null, lastP='receptive', lt=0, fps=10, imgBuf=null;
-      function resize(){ c.width=Math.floor(innerWidth*sf); c.height=Math.floor(innerHeight*sf); if(sf<1) c.style.imageRendering='pixelated'; imgBuf = ctx.createImageData(c.width, c.height); }
-      function drawR(){ const d=imgBuf.data; for(let i=0;i<d.length;i+=4){ d[i]=Math.random()*256; d[i+1]=Math.random()*256; d[i+2]=Math.random()*256; d[i+3]=255; } ctx.putImageData(imgBuf,0,0); }
-      function drawP(pl){ const d=imgBuf.data; const len=pl.length; for(let i=0;i<d.length;i+=4){ const c=pl[Math.floor(Math.random()*len)]; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; } ctx.putImageData(imgBuf,0,0); }
-      function tick(now){ rAFIDs.push(requestAnimationFrame(tick)); if(paused) return; const cp=window.getCurrentPhase?window.getCurrentPhase():'receptive'; if(document.body.classList.contains('action')) fps=36; else if(document.body.classList.contains('alignment')) fps=10; else fps=10; const iv=1000/fps; if(cp!==lastP){ lastP=cp; if(cp==='alignment'){ pal=aP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)})); } else if(cp==='action'){ pal=gP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)})); } else { pal=null; } } if(now-lt>=iv){ lt=now; if(cp==='receptive') drawR(); else drawP(pal); } }
-      let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(resize,16); }); resize(); rAFIDs.push(requestAnimationFrame(tick));
+      let pal=null, lastP='receptive', lt=0, fps=10;
+      function resize(){ c.width=Math.floor(innerWidth*sf); c.height=Math.floor(innerHeight*sf); if(sf<1) c.style.imageRendering='pixelated'; }
+      function drawR(){ const w=c.width,h=c.height, img=ctx.createImageData(w,h), d=img.data; for(let i=0;i<d.length;i+=4){ d[i]=Math.random()*256; d[i+1]=Math.random()*256; d[i+2]=Math.random()*256; d[i+3]=255; } ctx.putImageData(img,0,0); }
+      function drawP(pl){ const w=c.width,h=c.height, img=ctx.createImageData(w,h), d=img.data; const len=pl.length; for(let i=0;i<d.length;i+=4){ const c=pl[Math.floor(Math.random()*len)]; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; } ctx.putImageData(img,0,0); }
+      function tick(now){ requestAnimationFrame(tick); if(document.hidden) return; const cp=window.getCurrentPhase?window.getCurrentPhase():'receptive';
+        if(document.body.classList.contains('action')) fps=36; else if(document.body.classList.contains('alignment')) fps=10; else fps=10;
+        const iv=1000/fps; if(cp!==lastP){ lastP=cp; if(cp==='alignment') pal=aP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
+          else if(cp==='action') pal=gP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)})); else pal=null; }
+        if(now-lt>=iv){ lt=now; if(cp==='receptive') drawR(); else drawP(pal); } }
+      let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(resize,16); }); resize(); requestAnimationFrame(tick);
     }
 
-    // ═══════════ PDF RITUAL (fixed worker path) ═══════════
-    function startPDFRitual() {
-      function waitForPdfLib() {
-        if (typeof pdfjsLib !== 'undefined') {
-          // Set worker source based on how the main library was loaded
-          pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ?
-            '/pdfjs/build/pdf.worker.min.js' :
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          loadAndBuildPDF();
-        } else {
-          setTimeout(waitForPdfLib, 50);
+    // ── PDF ritual (unchanged) ──
+    function startPDFRitual(){
+      (async function(){
+        const MW=10000, sw=performance.now();
+        function waitForLib(resolve){
+          if(typeof pdfjsLib!=='undefined') return resolve();
+          if(performance.now()-sw>MW){ showPdfError('PDF library could not be loaded.'); return; }
+          setTimeout(()=>waitForLib(resolve),50);
         }
-      }
-      waitForPdfLib();
+        await new Promise(waitForLib);
+        if(typeof pdfjsLib==='undefined') return;
 
-      async function loadAndBuildPDF() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc=window.PDFJS_LOCAL?'/pdfjs/build/pdf.worker.min.js':'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         let pdf;
-        try {
-          pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
-        } catch (e) {
-          console.error('Failed to load PDF:', e);
-          showPdfError('Resume file not found.');
-          return;
+        try{ pdf=await pdfjsLib.getDocument('/pdf/resume.pdf').promise; }
+        catch(e){ showPdfError('Resume file not found.'); return; }
+
+        const pages=pdf.numPages;
+        const ringEl=document.getElementById('ring');
+        const overlay=document.getElementById('overlay');
+        const glow=document.getElementById('glow-wrapper');
+        const expC=document.getElementById('expanded-canvas');
+        const COPIES=33, SCALE=0.35, STAGGER=167;
+        const pageData=[], all=[];
+        function posOnCircle(el,idx,tot,w,h){
+          const a=idx/tot*2*Math.PI-Math.PI/2-(tot-1)/tot*2*Math.PI;
+          const r=Math.min(innerWidth,innerHeight)*0.4;
+          el.style.left=(Math.cos(a)*r-w/2)+'px'; el.style.top=(Math.sin(a)*r-h/2)+'px';
         }
 
-        const pages = pdf.numPages;
-        const ringEl = document.getElementById('ring');
-        const overlay = document.getElementById('overlay');
-        const glow = document.getElementById('glow-wrapper');
-        const expC = document.getElementById('expanded-canvas');
-
-        const COPIES = 33, SCALE = 0.35, STAGGER = 167;
-        const pageData = [], all = [];
-
-        for (let p = 1; p <= pages; p++) {
-          const page = await pdf.getPage(p);
-          const vp = page.getViewport({ scale: SCALE });
-          const origVp = page.getViewport({ scale: 2.0 });
-          const tc = document.createElement('canvas');
-          tc.width = vp.width; tc.height = vp.height;
-          await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
-          pageData[p] = { page, viewport: origVp, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
+        for(let p=1;p<=pages;p++){
+          const page=await pdf.getPage(p); const vp=page.getViewport({scale:SCALE}), orig=page.getViewport({scale:2.0});
+          const tc=document.createElement('canvas'); tc.width=vp.width; tc.height=vp.height;
+          await page.render({canvasContext:tc.getContext('2d'), viewport:vp}).promise;
+          pageData[p]={page, viewport:orig, thumbCanvas:tc, thumbWidth:vp.width, thumbHeight:vp.height};
         }
 
-        let idx = 0, totalCopies = pages * COPIES;
-        for (let p = 1; p <= pages; p++) {
-          const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
-          for (let c = 0; c < COPIES; c++) {
-            const floater = document.createElement('div'); floater.className = 'floating-page';
-            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
-            cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
-            const flipper = document.createElement('div'); flipper.className = 'flipper';
+        const totalCopies=pages*COPIES;
+        const spotlightIndices = [10, 21, 32]; // #11, #22, #33 (0‑based)
+        const skipSet = new Set(spotlightIndices);
+        let idx=0;
+        for(let p=1;p<=pages;p++){
+          const {thumbCanvas,thumbWidth,thumbHeight}=pageData[p];
+          for(let c=0;c<COPIES;c++){
+            const floater=document.createElement('div'); floater.className='floating-page';
+            const cc=document.createElement('canvas'); cc.width=thumbWidth; cc.height=thumbHeight;
+            cc.getContext('2d').drawImage(thumbCanvas,0,0);
+            const flipper=document.createElement('div'); flipper.className='flipper';
             flipper.appendChild(cc); floater.appendChild(flipper);
-            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
-            floater.style.left = '-9999px'; floater.style.top = '-9999px';
-            const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
-            floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
-            floater.dataset.page = p; floater.dataset.index = idx;
+            floater.style.width=thumbWidth+'px'; floater.style.height=thumbHeight+'px';
+            floater.style.left='-9999px'; floater.style.top='-9999px';
+            const rx=(Math.random()-0.5)*8, ry=(Math.random()-0.5)*8, rz=(Math.random()-0.5)*6;
+            floater.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random()*30}px)`;
+            floater.dataset.page=p; floater.dataset.index=idx;
+            floater.setAttribute('tabindex','0'); floater.setAttribute('role','button');
+            floater.setAttribute('aria-label',`Resume page ${p}`);
+            let z=10;
+            if(idx<11) z=20+idx; else if(idx<22) z=30+(idx-11); else z=40+(idx-22);
+            floater.style.zIndex=z;
+            if(spotlightIndices.includes(idx)){ floater.classList.add('spotlight'); floater.style.zIndex=200; }
 
-            let z = 10;
-            if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
-            floater.style.zIndex = z;
-            if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
-            if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
-
-            floater.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const { page, viewport } = pageData[parseInt(floater.dataset.page)];
-              expC.width = viewport.width; expC.height = viewport.height;
-              const ctx = expC.getContext('2d');
-              await page.render({ canvasContext: ctx, viewport }).promise;
-              overlay.style.display = 'flex';
-              glow.classList.add('dream-active');
-              if (window.setPdfOpen) window.setPdfOpen(true);
-            });
+            floater.addEventListener('click',async(e)=>{ e.stopPropagation(); openPage(parseInt(floater.dataset.page)); });
+            floater.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); openPage(parseInt(floater.dataset.page)); } });
 
             ringEl.appendChild(floater);
-            all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
-            setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
-            setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
+            all.push({element:floater, flipper, index:idx, width:thumbWidth, height:thumbHeight});
+            setTimeout((el,i,w,h)=>posOnCircle(el,i,totalCopies,w,h), idx*STAGGER, floater, idx, thumbWidth, thumbHeight);
+            setTimeout(()=>floater.classList.add('canvas-loaded'), idx*STAGGER+200);
             idx++;
           }
-          pageData[p].thumbCanvas = null;
+          pageData[p].thumbCanvas=null;
         }
 
-        function posOnCircle(el, idx, total, w, h) {
-          const a = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
-          const r = Math.min(innerWidth, innerHeight) * 0.4;
-          el.style.left = (Math.cos(a) * r - w / 2) + 'px';
-          el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
+        async function openPage(pageNum){
+          const {page, viewport}=pageData[pageNum];
+          expC.width=viewport.width; expC.height=viewport.height;
+          const ctx=expC.getContext('2d');
+          await page.render({canvasContext:ctx, viewport}).promise;
+          overlay.style.display='flex'; glow.classList.add('dream-active');
+          if(window.setPdfOpen) window.setPdfOpen(true);
         }
 
-        const skip = new Set([10, 21, 32]);
-        const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
-        const sizes = [2, 4, 5]; let gi = 0, pos = 0;
-        function applyColorPass() {
-          eligible.forEach(i => all[i].element.classList.remove('color-pass'));
-          const sz = sizes[gi], grp = [];
-          for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
-          grp.forEach(i => all[i].element.classList.add('color-pass'));
-          pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
+        const eligible=all.map((_,i)=>i).filter(i=>!skipSet.has(i));
+        const sizes=[2,4,5]; let gi=0, pos=0;
+        function applyColorPass(){
+          eligible.forEach(i=>all[i].element.classList.remove('color-pass'));
+          const sz=sizes[gi], grp=[]; for(let i=0;i<sz;i++) grp.push(eligible[(pos+i)%eligible.length]);
+          grp.forEach(i=>all[i].element.classList.add('color-pass'));
+          pos=(pos+sz)%eligible.length; gi=(gi+1)%sizes.length;
         }
+        setTimeout(()=>{ applyColorPass(); setInterval(applyColorPass,8000); }, totalCopies*STAGGER+2000);
+        function flip(){ all.forEach(item=>item.element.classList.toggle('flipped')); }
+        setTimeout(()=>{ flip(); setInterval(flip,2000); }, totalCopies*STAGGER+3000);
 
-        const colorInterval = setInterval(() => { if (!paused) applyColorPass(); }, 8000);
-        intervals.push(colorInterval);   // track for cleanup
+        addEventListener('resize',()=>all.forEach(({element, index, width, height})=>posOnCircle(element, index, totalCopies, width, height)));
 
-        function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
-        const flipInterval = setInterval(() => { if (!paused) flip(); }, 2000);
-        intervals.push(flipInterval);
-
-        addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
-
-        overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
-        expC.addEventListener('click', e => e.stopPropagation());
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
-      }
+        const closeBtn=document.getElementById('close-overlay-btn');
+        closeBtn.addEventListener('click',closeOverlay);
+        overlay.addEventListener('click',(e)=>{ if(e.target===overlay) closeOverlay(); });
+        function closeOverlay(){ overlay.style.display='none'; glow.classList.remove('dream-active'); if(window.setPdfOpen) window.setPdfOpen(false); }
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeOverlay(); });
+      })();
     }
 
-    function showPdfError(msg) {
+    function showPdfError(msg){
       const old = document.querySelector('.pdf-error');
-      if (old) old.remove();
-      const err = document.createElement('div');
-      err.className = 'pdf-error';
-      err.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#ff5555;padding:10px 20px;border:1px solid #ff5555;z-index:9999;border-radius:4px;font-weight:bold;';
-      err.textContent = msg; document.body.appendChild(err);
-      err.addEventListener('click', () => err.remove());
+      if(old) old.remove();
+      const err=document.createElement('div');
+      err.className='pdf-error';
+      err.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#ff5555;padding:10px 20px;border:1px solid #ff5555;z-index:9999;border-radius:4px;font-weight:bold;';
+      err.textContent=msg;
+      document.body.appendChild(err);
+      err.addEventListener('click',()=>err.remove());
     }
-
-    // ── Housekeeping (unchanged) ──
-    window.addEventListener('beforeunload', () => { rAFIDs.forEach(id => cancelAnimationFrame(id)); rAFIDs.length = 0; intervals.forEach(id => clearInterval(id)); intervals.length = 0; if (audioCtx && audioCtx.state !== 'closed') audioCtx.close().catch(() => {}); });
   </script>
 </body>
 </html>
