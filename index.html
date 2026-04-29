@@ -241,7 +241,7 @@
     <button id="consent-btn">Acknowledge</button>
   </div>
 
-  <!-- ═══════ Eye Symbol (restored, with extra inner glow-ring) ═══════ -->
+  <!-- ═══════ Eye Symbol (with extra inner glow‑ring) ═══════ -->
   <div id="eye-symbol">
     <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -272,19 +272,16 @@
           <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        <!-- Additional inner glow filter for the iris ring -->
         <filter id="irisGlow" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
 
-      <!-- Outer glow rings (phase‑coloured, thick) -->
       <circle cx="200" cy="200" r="178" fill="none" stroke-width="16" class="glow-ring" filter="url(#glowFilter)"/>
       <circle cx="200" cy="200" r="172" fill="none" stroke-width="10" class="glow-ring"/>
       <circle cx="200" cy="200" r="168" fill="none" stroke-width="6" class="glow-ring"/>
 
-      <!-- NEW: inner glow‑ring around the iris, also phase‑coloured -->
       <circle cx="200" cy="200" r="52" fill="none" stroke-width="4" class="inner-glow-ring" filter="url(#irisGlow)"/>
 
       <clipPath id="eyelidClip"><path id="clipPathShape" d="M 85,200 Q 195,35 315,200 Q 205,365 85,200 Z"/></clipPath>
@@ -338,7 +335,6 @@
         <path id="lowerLidStroke" d="M 85,200 Q 205,367 315,200" fill="none" stroke="#1C1C22" stroke-width="4" opacity="0.85"/>
       </g>
 
-      <!-- Sparkles (phase‑coloured) -->
       <circle cx="48" cy="78" r="4" class="sparkle" fill="#FFDDA8" opacity="0.9" filter="url(#softBlur)"/>
       <circle cx="352" cy="322" r="5" class="sparkle" fill="#FFDDCC" opacity="0.9" filter="url(#softBlur)"/>
       <circle cx="332" cy="68" r="4" class="sparkle" fill="#FFDDBB" opacity="0.9" filter="url(#softBlur)"/>
@@ -406,7 +402,6 @@
 
       animationId = requestAnimationFrame(anim);
 
-      // Expose stop function
       window.stopAtomicWhirl = function() {
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
       };
@@ -431,7 +426,6 @@
     }
   function requestFullscreenGate() {
   consentBtn.removeEventListener('click', requestFullscreenGate);
-  // Stop atomic whirl to save resources
   if (window.stopAtomicWhirl) window.stopAtomicWhirl();
   if (document.fullscreenEnabled) {
     document.documentElement.requestFullscreen().then(() => {
@@ -440,10 +434,148 @@
   } else {
     invite.style.display = 'none';
   }
-  // Activate the eye now that the invitation is dismissed
   document.getElementById('eye-symbol').classList.add('active');
 }
     setTimeout(showNextLine, 600);
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Eye tracking – saccades, smooth pursuit, mirrored eyelids
+       The eye symbol's eyeball follows the cursor with realistic physics.
+       Fast movements trigger ballistic saccades (≈26 ms duration);
+       slow movements are tracked with damped pursuit (gain 7.0, damping 0.97).
+       The upper and lower eyelids respond to vertical gaze with perfectly
+       mirrored displacement – looking up raises the upper lid and lowers
+       the lower lid by the same amount, creating a natural, wide‑eyed
+       expression.  Horizontal gaze shifts both lids slightly sideways.
+       The tracking runs continuously from page load, but the eye is
+       invisible (opacity:0, pointer‑events:none) until the .active class
+       is added when the user clicks "Acknowledge."  The eyeball, iris,
+       highlight, and corneal glint all move together inside a single
+       translated <g> element.  The clip path (eyelid aperture) and eyelid
+       shapes are rebuilt each frame from the current gaze position.
+       ═══════════════════════════════════════════════════════════════ -->
+  <script>
+    (function() {
+      const svgRoot = document.querySelector('#eye-symbol svg');
+      const eyeballGroup = document.getElementById('eyeballGroup');
+      const clipPathShape = document.getElementById('clipPathShape');
+      const upperLidGroup = document.getElementById('upperLidGroup');
+      const lowerLidGroup = document.getElementById('lowerLidGroup');
+      const upperLidShape = document.getElementById('upperLidShape');
+      const upperLidStroke = document.getElementById('upperLidStroke');
+      const lowerLidShape = document.getElementById('lowerLidShape');
+      const lowerLidStroke = document.getElementById('lowerLidStroke');
+      if (!eyeballGroup || !svgRoot) return;
+
+      const MAX_HORIZ = 92, MAX_VERT_UP = 58, MAX_VERT_DOWN = 50;
+      const BASE_UPPER_Y = 34, BASE_LOWER_Y = 366, MAX_LID_DISPLACEMENT = 20;
+      let currentX = 0, currentY = 0;
+      let velocityX = 0, velocityY = 0;
+      let targetX = 0, targetY = 0;
+      let lastTargetX = 0, lastTargetY = 0;
+
+      const PURSUIT_GAIN = 7.0, PURSUIT_DAMP = 0.97, MAX_VELOCITY = 50.0;
+      let saccadeActive = false;
+      let saccadeStartX = 0, saccadeStartY = 0, saccadeEndX = 0, saccadeEndY = 0;
+      let saccadeProgress = 0;
+      const SACCADE_DURATION_MS = 26, SACCADE_THRESHOLD = 13.0;
+
+      function constrainTarget(x, y) {
+        let cx = Math.min(MAX_HORIZ, Math.max(-MAX_HORIZ, x));
+        let maxY = y >= 0 ? MAX_VERT_DOWN : MAX_VERT_UP;
+        let cy = Math.min(maxY, Math.max(-maxY, y));
+        const normX = cx / MAX_HORIZ, normY = cy / maxY;
+        let dist = Math.sqrt(normX*normX + normY*normY);
+        if (dist > 1.0) { cx /= dist; cy /= dist; if (cy >= 0) cy = Math.min(MAX_VERT_DOWN, cy); else cy = Math.max(-MAX_VERT_UP, cy); }
+        return { x: cx, y: cy };
+      }
+
+      function getRawTarget(cx, cy) {
+        const pt = new DOMPoint(cx, cy);
+        const ctm = svgRoot.getScreenCTM();
+        if (!ctm) return { x: 0, y: 0 };
+        const cur = pt.matrixTransform(ctm.inverse());
+        return constrainTarget(cur.x - 200, cur.y - 200);
+      }
+
+      function startSaccade(toX, toY) { saccadeActive = true; saccadeStartX = currentX; saccadeStartY = currentY; saccadeEndX = toX; saccadeEndY = toY; saccadeProgress = 0; velocityX = 0; velocityY = 0; }
+
+      function updateEyelids(gazeX, gazeY) {
+        let normY = gazeY / (gazeY >= 0 ? MAX_VERT_DOWN : MAX_VERT_UP); normY = Math.min(1, Math.max(-1, normY));
+        const normX = gazeX / MAX_HORIZ, gazeStrength = Math.min(1, Math.hypot(normX, normY));
+        let upFactor = Math.max(0, -normY) + Math.abs(normX) * 0.3; upFactor = Math.min(1, upFactor);
+        let upperDisp = upFactor * MAX_LID_DISPLACEMENT * gazeStrength;
+        let upperY = BASE_UPPER_Y - upperDisp; upperY = Math.min(BASE_UPPER_Y, Math.max(BASE_UPPER_Y - MAX_LID_DISPLACEMENT, upperY));
+        let lowerDisp = upperDisp, lowerY = BASE_LOWER_Y + lowerDisp; lowerY = Math.max(BASE_LOWER_Y, Math.min(BASE_LOWER_Y + MAX_LID_DISPLACEMENT, lowerY));
+        const shiftX = gazeX * 0.05, lx = 85 + shiftX, rx = 315 + shiftX;
+        const ucx = 195 + shiftX * 0.5, lcx = 205 + shiftX * 0.5;
+        const upperPath = `M ${lx},200 Q ${ucx},${upperY} ${rx},200 Q ${ucx},${upperY + 60} ${lx},200 Z`;
+        const upperStroke = `M ${lx},200 Q ${ucx},${upperY} ${rx},200`;
+        const lowerPath = `M ${lx},200 Q ${lcx},${lowerY} ${rx},200 Q ${lcx},${lowerY - 58} ${lx},200 Z`;
+        const lowerStroke = `M ${lx},200 Q ${lcx},${lowerY} ${rx},200`;
+        const clipPathStr = `M ${lx},200 Q ${ucx},${upperY} ${rx},200 Q ${lcx},${lowerY} ${lx},200 Z`;
+        upperLidShape.setAttribute('d', upperPath); upperLidStroke.setAttribute('d', upperStroke);
+        lowerLidShape.setAttribute('d', lowerPath); lowerLidStroke.setAttribute('d', lowerStroke);
+        clipPathShape.setAttribute('d', clipPathStr);
+        const upperVertShift = -Math.max(0, -normY) * 2, lowerVertShift = Math.max(0, normY) * 2;
+        upperLidGroup.setAttribute('transform', `translate(${shiftX * 0.5}, ${upperVertShift})`);
+        lowerLidGroup.setAttribute('transform', `translate(${shiftX * 0.5}, ${lowerVertShift})`);
+      }
+
+      function updateEyePosition(ms) {
+        const ds = Math.min(0.033, ms / 1000);
+        if (saccadeActive) {
+          saccadeProgress += ms / SACCADE_DURATION_MS;
+          if (saccadeProgress >= 1) { currentX = saccadeEndX; currentY = saccadeEndY; saccadeActive = false; }
+          else { const t = saccadeProgress, e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; currentX = saccadeStartX + (saccadeEndX - saccadeStartX)*e; currentY = saccadeStartY + (saccadeEndY - saccadeStartY)*e; }
+          eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
+          updateEyelids(currentX, currentY);
+          lastTargetX = targetX; lastTargetY = targetY;
+          return;
+        }
+        const dtPred = Math.min(0.1, ds);
+        let tvx = (targetX - lastTargetX)/dtPred, tvy = (targetY - lastTargetY)/dtPred;
+        tvx = Math.min(80, Math.max(-80, tvx)); tvy = Math.min(80, Math.max(-80, tvy));
+        const PREDICTION_MS = 0.030;
+        let ptx = targetX + tvx*PREDICTION_MS, pty = targetY + tvy*PREDICTION_MS;
+        const pc = constrainTarget(ptx, pty); ptx = pc.x; pty = pc.y;
+        const ex = ptx - currentX, ey = pty - currentY;
+        if (Math.hypot(ex, ey) > SACCADE_THRESHOLD && ms > 10) { startSaccade(ptx, pty); lastTargetX = targetX; lastTargetY = targetY; return; }
+        velocityX += ex * PURSUIT_GAIN * ds; velocityY += ey * PURSUIT_GAIN * ds;
+        velocityX *= PURSUIT_DAMP; velocityY *= PURSUIT_DAMP;
+        let sp = Math.hypot(velocityX, velocityY);
+        if (sp > MAX_VELOCITY) { velocityX = velocityX/sp*MAX_VELOCITY; velocityY = velocityY/sp*MAX_VELOCITY; }
+        let nx = currentX + velocityX*ds, ny = currentY + velocityY*ds;
+        const fpos = constrainTarget(nx, ny); currentX = fpos.x; currentY = fpos.y;
+        eyeballGroup.setAttribute('transform', `translate(${currentX}, ${currentY})`);
+        lastTargetX = targetX; lastTargetY = targetY;
+        updateEyelids(currentX, currentY);
+      }
+
+      function onMove(cx, cy) { const r = getRawTarget(cx, cy); targetX = r.x; targetY = r.y; }
+      function resetEye() {
+        currentX = 0; currentY = 0; velocityX = 0; velocityY = 0;
+        targetX = 0; targetY = 0; lastTargetX = 0; lastTargetY = 0; saccadeActive = false;
+        eyeballGroup.setAttribute('transform', 'translate(0,0)');
+        updateEyelids(0, 0);
+        upperLidGroup.setAttribute('transform', 'translate(0,0)');
+        lowerLidGroup.setAttribute('transform', 'translate(0,0)');
+      }
+
+      let lft = 0;
+      function anim(now) { requestAnimationFrame(anim); const dt = Math.min(50, now - lft); if (dt > 2) updateEyePosition(dt); lft = now; }
+
+      window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+      window.addEventListener('mouseleave', resetEye);
+      window.addEventListener('touchmove', e => { if (e.touches.length) { onMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
+      window.addEventListener('touchend', resetEye);
+      window.addEventListener('touchstart', e => { if (e.touches.length) onMove(e.touches[0].clientX, e.touches[0].clientY); });
+
+      resetEye();
+      lft = performance.now();
+      anim(lft);
+    })();
   </script>
 
   <script>
@@ -475,10 +607,8 @@
       let carrierPhase = 0, betaPhase = 0;
       let globalPhase = 'receptive', subPhase = 'alpha', freq = 10;
 
-      // Phase colours for all dynamic elements (white → gold → red‑magenta)
       const phaseColors = { receptive: '#FFFFFF', alignment: '#FFD700', action: '#790B3E' };
 
-      // Colour burst tables (ring & PDF glow)
       const colorSteps = {
         receptive: [
           { upTo: 0.7537, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
@@ -539,7 +669,7 @@
         // Receptive → White, Alignment → Gold, Action → Red‑magenta.
         // ══════════════════════════════════════════════════════════
         const c = phaseColors[globalPhase] || '#FFFFFF';
-        eyeSymbol.style.color = c;                     // iris reflection (currentColor)
+        eyeSymbol.style.color = c;
         document.querySelectorAll('.glow-ring, .inner-glow-ring').forEach(el => el.setAttribute('stroke', c));
         document.querySelectorAll('.sparkle').forEach(el => el.setAttribute('fill', c));
       }
@@ -568,14 +698,13 @@
 
         updatePhase(now);
         applyRingEnvelope();
-        ring.classList.add('active');   // ensure burst animation runs
+        ring.classList.add('active');
 
         const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
         loop.prev = now;
 
         carrierPhase = (carrierPhase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // Ring & PDF glow colour synchronisation
         const burstDur = globalPhase === 'receptive' ? 2 : (globalPhase === 'alignment' ? 5 : 0.5);
         const burstProg = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
         const c = getBurst(globalPhase, burstProg);
@@ -584,7 +713,6 @@
         glowWrapper.style.setProperty('--burst-bg', c.bg);
         glowWrapper.style.setProperty('--burst-shadow', '0 0 4000px ' + c.bg + ', 0 0 6000px ' + c.bg);
 
-        // Thumbnail animations
         const spinSpeed = -2 * Math.PI * 0.05;
         const carrierVal = (globalPhase === 'alignment')
           ? (Math.floor(now / 1000) % 2 === 0 ? 1 : 0)
@@ -625,7 +753,6 @@
           canv.style.opacity = carrierVal >= 0.5 ? 1 : 0.75;
         }
 
-        // Paper‑flip ritual (0.5 Hz)
         const flipPeriod = 2000;
         const flipPhase = ((now - start) % flipPeriod) / flipPeriod;
         const shouldFlip = flipPhase < 0.5;
@@ -638,7 +765,6 @@
           flipState = false;
         }
 
-        // Luminance overlay (photic entrainment)
         const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
         let opacity = 0;
         if (globalPhase === 'receptive') {
@@ -663,7 +789,7 @@
         const emergenceMs = totalCopies * staggerDelay + 500;
         setTimeout(() => {
           document.getElementById('loading').style.display = 'none';
-          start = performance.now();   // ritual begins now
+          start = performance.now();
         }, emergenceMs);
       };
 
@@ -840,11 +966,11 @@
               // ═══════════════════════════════════════════════════════
               // ESSENTIAL: PDF aura synchronisation
               // The PDF aura (glow‑wrapper pseudo‑elements) immediately
-              // matches the ring’s colour burst because both sample the
+              // matches the ring's colour burst because both sample the
               // same getBurst() table and share the same envelope duration.
-              // The opened PDF’s aura is never out‑of‑sync with the ritual.
-              // The master clock keeps running; the aura’s colour, timing,
-              // and intensity are identical to the ring’s at the moment
+              // The opened PDF's aura is never out‑of‑sync with the ritual.
+              // The master clock keeps running; the aura's colour, timing,
+              // and intensity are identical to the ring's at the moment
               // the PDF is opened.  The PDF canvas itself is never
               // flickered – only the aura carries the entrainment signal.
               // Closing the PDF simply removes the dream‑active class,
@@ -880,7 +1006,6 @@
         if (eyeEl) {
           eyeEl.addEventListener('click', async () => {
             if (!allFloaters.length) return;
-            // Open the first page (or any page) – can be customised later
             const { page, viewport } = pageData[1];
             expC.width = viewport.width; expC.height = viewport.height;
             const ctx = expC.getContext('2d');
