@@ -237,7 +237,7 @@
       <div class="invite-line line2">please enjoy</div>
       <div class="invite-line line3">welcome</div>
     </div>
-    <button id="consent-btn">Acknowledged.</button>
+    <button id="consent-btn">Acknowledge</button>
   </div>
 
   <!-- ═══════ Eye Symbol (restored, with extra inner glow-ring) ═══════ -->
@@ -428,18 +428,20 @@
         consentBtn.addEventListener('click', requestFullscreenGate);
       }
     }
-    function requestFullscreenGate() {
-      consentBtn.removeEventListener('click', requestFullscreenGate);
-      // Stop atomic whirl to save resources
-      if (window.stopAtomicWhirl) window.stopAtomicWhirl();
-      if (document.fullscreenEnabled) {
-        document.documentElement.requestFullscreen().then(() => {
-          invite.style.display = 'none';
-        }).catch(() => { invite.style.display = 'none'; });
-      } else {
-        invite.style.display = 'none';
-      }
-    }
+  function requestFullscreenGate() {
+  consentBtn.removeEventListener('click', requestFullscreenGate);
+  // Stop atomic whirl to save resources
+  if (window.stopAtomicWhirl) window.stopAtomicWhirl();
+  if (document.fullscreenEnabled) {
+    document.documentElement.requestFullscreen().then(() => {
+      invite.style.display = 'none';
+    }).catch(() => { invite.style.display = 'none'; });
+  } else {
+    invite.style.display = 'none';
+  }
+  // Activate the eye now that the invitation is dismissed
+  document.getElementById('eye-symbol').classList.add('active');
+}
     setTimeout(showNextLine, 600);
   </script>
 
@@ -885,12 +887,6 @@
             overlay.style.display = 'flex';
             glow.classList.add('dream-active');
           });
-          // Eye is made active when the ritual starts
-          const originalInit = window.initThumbnails;
-          window.initThumbnails = function(floaterList, spotIdx, totalCopies, staggerDelay) {
-            originalInit(floaterList, spotIdx, totalCopies, staggerDelay);
-            eyeEl.classList.add('active');   // make eye clickable once ritual is ready
-          };
         }
 
         addEventListener('resize', () => allFloaters.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
