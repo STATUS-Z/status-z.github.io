@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FunDarkResume</title>
   <style>
+    /* ── Base reset and dark background ── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
@@ -20,8 +21,13 @@
        ESSENTIAL: Luminance entrainment overlay
        A full‑screen white layer with mix‑blend‑mode: overlay.
        Its opacity is modulated frame‑by‑frame by the master clock
-       to deliver the photic entrainment signal at the exact frequency
-       required for each phase.  This is the primary brainwave carrier.
+       at the precise frequency required for each phase:
+         Receptive: Alpha 10 Hz / Theta 6 Hz / Delta 2 Hz
+         Alignment: exclusive 0.5 Hz square‑wave
+         Action: simultaneous 18 Hz Beta + 36 Hz Gamma (PAC)
+       A continuous 0.05 Hz infraslow sine wave modulates overall
+       brightness as a global temporal scaffold.
+       This overlay is the primary photic entrainment carrier.
        ═══════════════════════════════════════════════════════════════ */
     #entrainment-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -37,7 +43,11 @@
        The ring spins clockwise at 0.05 Hz (one full revolution per
        20 s).  This ultra‑slow orbit provides a stable, hypnotic
        spatial anchor that remains constant across all three phases,
-       grounding the visual field in deep infraslow rhythm.
+       grounding the visual field in deep infraslow rhythm.  The
+       slow, steady motion contrasts with the fast entrainment
+       flicker of the luminance overlay, creating a layered
+       temporal architecture: infraslow orbit + phase‑specific
+       photic drive.
        ═══════════════════════════════════════════════════════════════ */
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
@@ -55,9 +65,13 @@
        The ::after pseudo‑element serves as a luminous core that
        pulses in exact synchrony with the master clock.  CSS
        keyframes control the envelope (scale/opacity) and strobe
-       timing via custom properties set by JavaScript.  The actual
-       background and box‑shadow colours are written inline every
-       frame, guaranteeing they match the current phase's sacred colour.
+       timing via custom properties (--env‑dur, --strobe‑dur)
+       set by JavaScript.  The actual background and box‑shadow
+       colours are written inline every frame, guaranteeing they
+       match the current phase's sacred colour:
+         Receptive → White (purity, openness)
+         Alignment → Gold (illumination, inner focus)
+         Action → Green (growth, manifestation)
        ═══════════════════════════════════════════════════════════════ */
     #ring::after {
       content: '';
@@ -67,6 +81,7 @@
       opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
       will-change: transform, opacity, box-shadow, background;
+      /* envelope & strobe durations set via inline CSS variables by applyRingEnvelope() */
     }
 
     /* ── Thumbnail container ── */
@@ -80,10 +95,13 @@
        ESSENTIAL: Thumbnail canvas
        The canvas holds the static PDF image and does NOT animate
        via CSS.  All movement (counter‑clockwise spin at 0.05 Hz),
-       glow pulse, spotlight flicker, colour‑pass wave, and opacity
-       strobe are applied directly by the master clock in JavaScript.
-       This ensures every thumbnail stays perfectly locked to the
-       current phase and carrier frequency.
+       glow pulse (phase‑coloured on / black off), spotlight flicker
+       (#11 & #22), colour‑pass wave, and opacity strobe are applied
+       directly by the master clock in JavaScript.  This ensures
+       every thumbnail stays perfectly locked to the current phase
+       and carrier frequency without any CSS animation drift.
+       The canvas itself remains a pristine, un‑flickering image
+       so the resume content is always readable.
        ═══════════════════════════════════════════════════════════════ */
     .floating-page canvas {
       display: block; width: 100%; height: 100%; border-radius: 4px;
@@ -95,10 +113,14 @@
     /* ═══════════════════════════════════════════════════════════════
        ESSENTIAL: Paper‑flip container
        The .flipper div wraps each canvas and is toggled between
-       .flipped / not‑flipped at every half‑cycle of the carrier
-       waveform.  The flip itself is a collective Delta‑grounding
-       reset – a brief, rhythmic punctuation that reinforces the
-       infraslow pulse.
+       .flipped / not‑flipped at a constant 0.5 Hz (every 2 s).
+       This is a dedicated infraslow anchor – a gentle, rhythmic
+       punctuation that the viewer can consciously track.
+       Unlike the luminance overlay which carries the fast
+       entrainment frequencies, the paper flip provides a slow,
+       physical‑feeling reset pulse that works across all phases.
+       At 0.5 Hz it is exactly one full flip cycle every 2 s,
+       creating a calming, heartbeat‑like rhythm.
        ═══════════════════════════════════════════════════════════════ */
     .flipper {
       width: 100%; height: 100%; transform-style: preserve-3d;
@@ -109,8 +131,12 @@
     /* ═══════════════════════════════════════════════════════════════
        ESSENTIAL: PDF overlay
        A dark translucent overlay that appears when a thumbnail is
-       clicked.  It centres the enlarged PDF and provides a blurred
-       backdrop so the glow layers behind the PDF read clearly.
+       clicked.  It centres the enlarged PDF, provides a blurred
+       backdrop (backdrop‑filter: blur) so the glow layers behind
+       the PDF read clearly, and uses cursor: zoom‑out to indicate
+       that clicking dismisses the view.  The overlay itself does
+       not carry any entrainment signal – it merely frames the
+       static PDF canvas and the synchronised glow layers.
        ═══════════════════════════════════════════════════════════════ */
     #overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -122,17 +148,29 @@
     /* ═══════════════════════════════════════════════════════════════
        ESSENTIAL: Glow wrapper
        The wrapper holds two pseudo‑elements that create the aura
-       behind the enlarged PDF:
-         ::before – slow colour burst, mirroring the ring's ::after
-                    exactly (same colour table, same burst progress).
-         ::after  – rapid white sparkle whose frequency matches the
-                    dominant brainwave of the current phase.
-       Both are toggled by the .dream‑active class when the PDF opens.
+       behind the enlarged PDF.  They are activated by the
+       .dream‑active class when the PDF is opened.
+
+       ::before – colour burst layer (z‑index: -1)
+         Mirrors the ring::after exactly.  Uses the same colour
+         burst table (getBurst) at the same burst‑progress point,
+         guaranteeing one unified visual entity regardless of
+         when the PDF is opened.  The envelope (opacity fade)
+         matches the ring's burst envelope via --env‑dur.
+
+       ::after – white sparkle layer (z‑index: -2)
+         A rapid, pure‑white shimmer whose frequency matches the
+         dominant brainwave of the current phase.  It sits behind
+         the colour layer so the sacred colours always shine through.
+
+       Both layers are purely decorative – the enlarged PDF canvas
+       itself is never animated or modified.
        ═══════════════════════════════════════════════════════════════ */
     #glow-wrapper {
       position: relative; display: inline-block; max-width: 95vw; max-height: 95vh;
     }
 
+    /* White sparkle – phase‑matched frequency, sits behind colour */
     #glow-wrapper::after {
       content: ''; position: absolute; top: 50%; left: 50%;
       width: 100%; height: 100%; background: transparent; pointer-events: none;
@@ -140,6 +178,7 @@
       will-change: box-shadow, opacity; opacity: 0; transition: opacity 0.2s;
     }
 
+    /* Colour burst – directly synchronised with ring::after */
     #glow-wrapper::before {
       content: ''; position: absolute; top: 50%; left: 50%;
       width: 100%; height: 100%; background: transparent; pointer-events: none;
@@ -152,8 +191,11 @@
        ESSENTIAL: Enlarged PDF canvas
        Completely static – no CSS animation, no JavaScript animation
        touches it.  All visual effects are on the pseudo‑elements
-       behind it, keeping the resume itself sharp, readable, and
-       free of any flicker or motion.
+       behind it (::before colour + ::after sparkle).  This keeps
+       the resume itself sharp, readable, and free of any flicker
+       or motion that would distract from the content.  The viewer
+       reads the resume while the aura around it breathes with the
+       ritual's rhythm.
        ═══════════════════════════════════════════════════════════════ */
     #overlay canvas {
       max-width: 95vw; max-height: 95vh; border-radius: 6px;
@@ -163,10 +205,12 @@
 
     /* ═══════════════════════════════════════════════════════════════
        ESSENTIAL: Manifesting… loading overlay
-       Visible while the PDF is being downloaded and thumbnails are
-       being rendered.  It disappears only when the full ritual ring
-       is ready, ensuring the receptive phase begins with the
-       complete visual field present.
+       Visible while the PDF is being downloaded and all 22 thumbnails
+       are being rendered and positioned on the ring.  It disappears
+       only when the full ritual ring is ready, plus a 500 ms grace
+       period so the viewer can absorb the complete visual field.
+       This guarantees the receptive phase (Alpha 10 Hz) begins with
+       the entire ring present, not cutting the phase short.
        ═══════════════════════════════════════════════════════════════ */
     #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
   </style>
@@ -195,20 +239,33 @@
     // ESSENTIAL: Master clock & 3‑phase brainwave entrainment architecture
     // ═══════════════════════════════════════════════════════════════
     // The complete 37‑second cycle is driven by a single
-    // requestAnimationFrame loop that starts only AFTER all thumbnails
-    // have been created and positioned.  This guarantees the receptive
-    // phase begins with the full ritual ring visible.
+    // requestAnimationFrame loop that starts only AFTER all 22
+    // thumbnails have been created and positioned on the ring.
+    // This guarantees the receptive phase begins with the full
+    // ritual ring visible, not mid‑loading.
     //
-    // Phase 1 – Receptive (0‑15 s) : 5 s Alpha (10 Hz) → 5 s Theta (6 Hz) → 5 s Delta (2 Hz)
-    // Phase 2 – Alignment (15‑25 s) : exclusive 0.5 Hz square‑wave flicker
-    // Phase 3 – Action (25‑37 s) : simultaneous 18 Hz Beta + 36 Hz Gamma (Beta modulates Gamma)
+    // Phase 1 – Receptive (0‑15 s):
+    //   0‑5 s  : Alpha 10 Hz   – relaxed alertness, DMN engagement
+    //   5‑10 s : Theta 6 Hz    – creative insight, hippocampal dialogue
+    //   10‑15 s: Delta 2 Hz    – neural repair, slow‑wave synchronisation
     //
-    // A continuous 0.05 Hz infraslow sine wave modulates brightness across all phases.
+    // Phase 2 – Alignment (15‑25 s):
+    //   Exclusive 0.5 Hz square‑wave flicker (no fast frequencies).
+    //   Purpose: neural reset, cortical excitability synchronisation.
     //
-    // All visual effects – ring burst, thumbnail spin/pulse/spotlight/colour‑pass,
-    // paper flips, luminance overlay, and PDF glow – are updated every frame from
-    // the master clock's current phase and carrier frequency.
-    // Only the thumbnail canvases and the enlarged PDF canvas are static images.
+    // Phase 3 – Action (25‑37 s):
+    //   Simultaneous 18 Hz Beta + 36 Hz Gamma from the first
+    //   millisecond.  Beta phase modulates Gamma amplitude via
+    //   phase‑amplitude coupling (2:1 harmonic).  No ramp.
+    //
+    // Continuous: 0.05 Hz infraslow sine wave modulates brightness
+    // across all phases as a global temporal scaffold.
+    //
+    // All visual effects – ring burst, thumbnail spin/pulse/spotlight/
+    // colour‑pass, luminance overlay, and PDF glow – are updated
+    // every frame from the master clock's current phase and carrier
+    // frequency.  Only the thumbnail canvases and the enlarged PDF
+    // canvas are static images.
     // ═══════════════════════════════════════════════════════════════
     (function() {
       const overlay = document.getElementById('entrainment-overlay');
@@ -220,8 +277,9 @@
       const CYCLE = RECEPTIVE + ALIGNMENT + ACTION;
 
       /* The master clock start time is set to null initially.
-         It will be assigned by initThumbnails() once the full ring is ready.
-         Until then, all phase‑dependent updates are skipped. */
+         It will be assigned by initThumbnails() once the full ring
+         is ready.  Until then, all phase‑dependent updates are
+         skipped so no partial receptive phase runs. */
       let start = null;
       let carrierPhase = 0, betaPhase = 0;
       let globalPhase = 'receptive', subPhase = 'alpha', freq = 10;
@@ -229,11 +287,13 @@
       /* ═══════════════════════════════════════════════════════════
          ESSENTIAL: Colour burst lookup tables
          These tables define the exact colour progression for the
-         ring burst (ring::after) and the PDF glow (glow‑wrapper::before)
-         during each phase.  Both elements sample the same table at
-         the same burst‑progress point, creating a single unified
-         visual entity that stays synchronised regardless of when
-         the PDF is opened or closed.
+         ring burst (ring::after) and the PDF glow
+         (glow‑wrapper::before) during each phase.  Both elements
+         sample the same table at the same burst‑progress point,
+         creating a single unified visual entity.  This means
+         whenever the PDF is opened – whether in Receptive,
+         Alignment, or Action – its aura exactly matches the
+         ring's current colour, intensity, and timing.
          ═══════════════════════════════════════════════════════════ */
       const colorSteps = {
         receptive: [
@@ -265,6 +325,14 @@
         ]
       };
 
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: getBurst()
+         Given the current phase and a progress value (0‑1 within
+         the burst window), returns the {bg, shadow} that both
+         the ring::after and glow‑wrapper::before should display.
+         This is the single source of truth for colour – both
+         elements call it with the same arguments every frame.
+         ═══════════════════════════════════════════════════════════ */
       function getBurst(phase, prog) {
         const steps = colorSteps[phase] || colorSteps.receptive;
         for (let i = 0; i < steps.length; i++) if (prog <= steps[i].upTo) return steps[i];
@@ -273,13 +341,14 @@
 
       /* ═══════════════════════════════════════════════════════════
          ESSENTIAL: Phase updater
-         Called every frame once the ritual has started.
+         Called every frame once the ritual has started (start !== null).
          Computes elapsed time modulo 37 s and sets globalPhase,
-         subPhase, and the dominant carrier frequency.
-         Also exposes the current phase globally for the static canvas.
+         subPhase, and the dominant carrier frequency.  Also
+         exposes the current phase globally via window.currentStaticPhase
+         so the background static canvas can synchronise its palette.
          ═══════════════════════════════════════════════════════════ */
       function updatePhase(now) {
-        if (!start) return;   // ritual not yet started
+        if (!start) return;   // ritual not yet started – skip
         const elapsed = (now - start) % CYCLE;
         if (elapsed < RECEPTIVE) {
           globalPhase = 'receptive';
@@ -288,19 +357,21 @@
           else                     { subPhase = 'delta'; freq = 2; }
         } else if (elapsed < RECEPTIVE + ALIGNMENT) {
           globalPhase = 'alignment'; subPhase = null;
-          freq = 0.5;
+          freq = 0.5;   // exclusive 0.5 Hz during Alignment
         } else {
           globalPhase = 'action'; subPhase = null;
-          freq = 36;   // simultaneous Beta+Gamma from first millisecond
+          freq = 36;    // simultaneous Beta+Gamma from first millisecond
         }
         window.currentStaticPhase = globalPhase;
       }
 
       /* ═══════════════════════════════════════════════════════════
          ESSENTIAL: Ring & glow envelope setter
-         Applies phase‑dependent CSS custom properties that control
-         the envelope (scale/opacity) and strobe timing of the
-         ring::after and glow‑wrapper::before pseudo‑elements.
+         Applies phase‑dependent CSS custom properties (--env‑dur,
+         --strobe‑dur) that control the keyframe animations on
+         ring::after and glow‑wrapper::before.  These determine
+         how fast the burst envelope fades in/out and how fast
+         the inner strobe toggles visibility.
          ═══════════════════════════════════════════════════════════ */
       function applyRingEnvelope() {
         document.body.className = globalPhase;
@@ -319,14 +390,22 @@
       let allFloaters = [];
       let spotlights = [];
       let spinAngles = [];
+      let flipState = false;
 
       /* ═══════════════════════════════════════════════════════════
          ESSENTIAL: Main animation loop
          Called once per frame via requestAnimationFrame.
-         If the ritual has not yet started, it simply requests the
-         next frame and returns.  Once start is set, it updates the
-         master clock and writes every visual parameter directly
-         to the DOM.  The PDF canvas itself is never touched.
+         If the ritual has not yet started (start === null), it
+         simply requests the next frame and returns – no visual
+         updates occur.  Once start is set, it updates the master
+         clock and writes every visual parameter directly to the
+         DOM.  The PDF canvas itself is never touched.
+
+         The loop runs independently of whether the PDF overlay
+         is open or closed.  The glow layers (::before, ::after)
+         are driven by the same colour burst computation as the
+         ring, so they always match regardless of when the PDF
+         is opened or closed.
          ═══════════════════════════════════════════════════════════ */
       function loop(now) {
         requestAnimationFrame(loop);
@@ -339,13 +418,17 @@
         const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
         loop.prev = now;
 
+        // Advance the main carrier phase (continuous across all frequencies)
         carrierPhase = (carrierPhase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
         /* ═════════════════════════════════════════════════════
            ESSENTIAL: Ring & PDF glow colour synchronisation
-           Both elements sample the same colour burst table at
-           the same progress point.  This guarantees they appear
-           as one unified entity regardless of when the PDF opens.
+           Both the ring::after and glow‑wrapper::before sample
+           the same colour burst table via getBurst() at the
+           same burst‑progress point.  They also share the same
+           envelope duration (--env‑dur).  This guarantees they
+           appear as one unified visual entity – a single sacred
+           pulse that the ring and the PDF aura share.
            ═════════════════════════════════════════════════════ */
         const burstDur = globalPhase === 'receptive' ? 2 : (globalPhase === 'alignment' ? 5 : 0.5);
         const burstProg = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
@@ -357,33 +440,44 @@
 
         /* ═════════════════════════════════════════════════════
            ESSENTIAL: Thumbnail counter‑clockwise spin
-           Each thumbnail rotates at 0.05 Hz (one rev per 20 s)
-           opposite to the ring's clockwise rotation, creating
-           a subtle visual counterpoint that enhances depth.
+           Each thumbnail rotates at 0.05 Hz (one revolution
+           per 20 s) in the opposite direction to the ring's
+           clockwise rotation.  This creates a subtle visual
+           counterpoint that enhances the perception of depth
+           and makes the ring feel alive with independent
+           motion.  The spin speed is constant across all
+           phases – only the glow/flicker changes.
            ═════════════════════════════════════════════════════ */
-        const spinSpeed = -2 * Math.PI * 0.05;
+        const spinSpeed = -2 * Math.PI * 0.05;   // negative = counter‑clockwise
 
         /* ═════════════════════════════════════════════════════
            ESSENTIAL: Carrier value computation
            A normalised 0‑1 signal derived from the current
-           carrier frequency.  It encodes the correct waveform –
-           square wave for Alpha/Theta/Alignment/Gamma,
-           sinusoidal for Delta.  This single value drives every
-           rhythmic visual element.
+           carrier frequency (carrierPhase).  It encodes the
+           correct waveform for each phase:
+           - Square wave for Alpha, Theta, Alignment, Gamma
+           - Sinusoidal dimming for Delta (2 Hz)
+           This single value drives every rhythmic visual
+           element: thumbnail pulse, spotlight flicker,
+           colour‑pass glow, luminance overlay.
            ═════════════════════════════════════════════════════ */
         const carrierVal = (globalPhase === 'alignment')
-          ? (Math.floor(now / 1000) % 2 === 0 ? 1 : 0)
+          ? (Math.floor(now / 1000) % 2 === 0 ? 1 : 0)            // 0.5 Hz square
           : (subPhase === 'delta')
-            ? (0.5 + 0.5 * Math.sin(carrierPhase))
-            : (Math.sin(carrierPhase) >= 0 ? 1 : 0);
+            ? (0.5 + 0.5 * Math.sin(carrierPhase))                // 2 Hz sine
+            : (Math.sin(carrierPhase) >= 0 ? 1 : 0);              // square for Alpha/Theta/Gamma
 
         /* ═════════════════════════════════════════════════════
            ESSENTIAL: Phase‑sacred colour selection
-           White  = Receptive (purity, openness)
-           Gold   = Alignment (illumination, focus)
-           Green  = Action (growth, manifestation)
-           These colours are used for the thumbnail pulse,
-           spotlight flicker, and colour‑pass glow.
+           Each phase has a dominant sacred colour that is
+           applied to the thumbnail pulse, spotlight flicker,
+           and colour‑pass glow:
+             Receptive → White  (purity, openness, clarity)
+             Alignment → Gold   (illumination, inner focus)
+             Action    → Green  (growth, manifestation, vitality)
+           These colours carry deep cross‑cultural spiritual
+           resonance and reinforce the neuroaesthetic intent
+           of each phase.
            ═════════════════════════════════════════════════════ */
         let spotColor = '#FFFFFF', pulseColor = '#FFFFFF';
         if (globalPhase === 'alignment') { spotColor = '#FFD700'; pulseColor = '#FFD700'; }
@@ -394,6 +488,7 @@
           const canv = fl.element.querySelector('canvas');
           if (!canv) continue;
 
+          // Apply counter‑clockwise spin
           spinAngles[i] = (spinAngles[i] || 0) + spinSpeed * dt;
           canv.style.transform = `rotate(${spinAngles[i] % (2 * Math.PI)}rad)`;
 
@@ -401,10 +496,12 @@
 
           /* ═════════════════════════════════════════════════
              ESSENTIAL: Base pulse – phase colour on, black off
-             The "on" state glows with the current phase's
-             sacred colour; the "off" state remains black.
-             This ties the thumbnail ring directly to the
-             phase rhythm and reinforces the colour symbolism.
+             The "on" half‑cycle glows with the current phase's
+             sacred colour; the "off" half‑cycle returns to
+             black.  This directly ties the thumbnail ring
+             to the phase rhythm and reinforces the colour
+             symbolism.  The pulse colour changes seamlessly
+             as the ritual moves through its phases.
              ═════════════════════════════════════════════════ */
           let pulseShadow = pulseOn
             ? `0 20px 40px rgba(0,0,0,1), 0 0 80px ${pulseColor}, 0 0 150px ${pulseColor}`
@@ -412,9 +509,12 @@
 
           /* ═════════════════════════════════════════════════
              ESSENTIAL: Spotlight override (#11 & #22)
-             A stronger, high‑contrast flicker in the sacred
-             colour marks the two key thumbnails as visual
-             anchors within the ring.
+             The two spotlight thumbnails receive a stronger,
+             higher‑contrast flicker in the sacred colour.
+             They serve as visual anchors – fixed reference
+             points within the spinning, pulsing ring that
+             the eye can always find.  Their indices are
+             10 (#11) and 21 (#22) in the 22‑thumbnail layout.
              ═════════════════════════════════════════════════ */
           if (spotlights.includes(i)) {
             pulseShadow = pulseOn
@@ -424,9 +524,13 @@
 
           /* ═════════════════════════════════════════════════
              ESSENTIAL: Colour‑pass override
-             A travelling wave of enhanced glow moves around
-             the ring every 8 s (meta‑rhythm), using the same
-             sacred phase colour.
+             A travelling wave of enhanced glow that moves
+             around the ring on a slower meta‑rhythm (group
+             rotates every 8 s).  The glow itself flickers at
+             the carrier frequency, while group membership
+             changes on the slower schedule.  This creates
+             a wandering highlight that draws the eye around
+             the circle.
              ═════════════════════════════════════════════════ */
           if (fl.element.classList.contains('color-pass')) {
             pulseShadow = pulseOn
@@ -439,60 +543,91 @@
         }
 
         /* ═════════════════════════════════════════════════════
-           ESSENTIAL: Paper‑flip ritual
-           Toggles the .flipped class on every thumbnail at
-           each half‑cycle of the carrier waveform.  This is a
-           Delta‑grounding collective reset – a brief, rhythmic
-           punctuation that reinforces the infraslow pulse.
+           ESSENTIAL: Paper‑flip ritual – constant 0.5 Hz
+           All 22 thumbnails flip simultaneously every 2 s
+           (0.5 Hz).  This is a dedicated infraslow anchor –
+           a gentle, rhythmic punctuation that the viewer can
+           consciously track.  Unlike the luminance overlay
+           which carries the fast entrainment frequencies, the
+           paper flip provides a slow, physical‑feeling reset
+           pulse that works consistently across all phases.
+           The flip uses a 600 ms CSS transition for a smooth,
+           deliberate motion that never feels rushed.
+
+           Using a separate flip timer (rather than tying it
+           to the carrier phase) ensures the flip rhythm is
+           steady and independent of the current entrainment
+           frequency.  The 2‑second period gives the viewer
+           time to absorb each orientation before the next
+           collective reset.
            ═════════════════════════════════════════════════════ */
-        if (carrierVal >= 0.5 && !flipState) {
+        const flipPeriod = 2000;   // 2 s = 0.5 Hz
+        const flipPhase = ((now - start) % flipPeriod) / flipPeriod;  // 0‑1 progress through flip cycle
+        const shouldFlip = flipPhase < 0.5;   // first half of cycle = flipped
+
+        if (shouldFlip && !flipState) {
           allFloaters.forEach(item => item.element.classList.add('flipped'));
           flipState = true;
-        } else if (carrierVal < 0.5 && flipState) {
+        } else if (!shouldFlip && flipState) {
           allFloaters.forEach(item => item.element.classList.remove('flipped'));
           flipState = false;
         }
 
         /* ═════════════════════════════════════════════════════
            ESSENTIAL: Luminance overlay – photic entrainment
-           This full‑screen white overlay flickers at the exact
-           frequency and waveform required for each phase,
-           delivering the brainwave entrainment signal directly
-           to the retina.  A continuous 0.05 Hz infraslow sine
-           wave modulates the brightness across all phases.
+           This full‑screen white overlay delivers the actual
+           brainwave entrainment signal.  Its opacity is set
+           to produce the exact frequency and waveform required
+           for the current phase.  A continuous 0.05 Hz infraslow
+           sine wave (infra) modulates the overall brightness
+           as a global temporal scaffold, ensuring the flicker
+           never feels static.
+
+           The overlay uses mix‑blend‑mode: overlay so it
+           gently brightens the scene without washing out the
+           dark background.  Maximum opacity is kept at 0.35
+           (reduced to 0.25 during Alignment) to avoid
+           discomfort while maintaining entrainment efficacy.
            ═════════════════════════════════════════════════════ */
-        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);
+        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);   // 0.05 Hz continuous
         let opacity = 0;
         if (globalPhase === 'receptive') {
+          // carrierVal already encodes the correct waveform (square / sine)
           opacity = carrierVal * infra * 0.35;
         } else if (globalPhase === 'alignment') {
+          // Exclusive 0.5 Hz square‑wave, lower intensity
           opacity = carrierVal * infra * 0.25;
         } else {
+          // Action: simultaneous 18 Hz Beta modulation of 36 Hz Gamma
           betaPhase = (betaPhase + 2 * Math.PI * 18 * dt) % (2 * Math.PI);
-          const betaEnv = 0.5 + 0.5 * Math.sin(betaPhase);
-          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
+          const betaEnv = 0.5 + 0.5 * Math.sin(betaPhase);               // 18 Hz envelope
+          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;      // 36 Hz square
           opacity = gammaFlicker * betaEnv * infra * 0.35;
         }
         overlay.style.opacity = opacity;
       }
       loop.prev = performance.now();
-      let flipState = false;
 
       /* ═══════════════════════════════════════════════════════════
          ESSENTIAL: Thumbnail initialisation hook
          Called by PDF.js after all thumbnail elements have been
-         created AND positioned.  It starts the master clock,
-         hides the "Manifesting…" overlay, and hands the floaters
-         and spotlight indices to the animation loop.
+         created AND positioned on the ring.  It receives the
+         complete list of floaters, the spotlight indices, and
+         timing information so it can compute when the last
+         thumbnail will appear.  It then:
+           1. Hides the "Manifesting…" overlay
+           2. Sets start = performance.now() to begin the ritual
+         This guarantees the receptive phase starts with the full
+         ring visible, not mid‑emergence.
          ═══════════════════════════════════════════════════════════ */
       window.initThumbnails = function(floaterList, spotIdx, totalCopies, staggerDelay) {
         allFloaters = floaterList;
         spotlights = spotIdx;
         spinAngles = new Array(floaterList.length).fill(0);
 
-        /* Wait for the very last thumbnail to be positioned,
+        /* Compute when the last thumbnail will be positioned,
            then add a 500 ms grace period so the viewer can
-           absorb the full ring before the phases begin. */
+           absorb the complete ring before the phases begin. */
         const emergenceMs = totalCopies * staggerDelay + 500;
         setTimeout(() => {
           document.getElementById('loading').style.display = 'none';
@@ -509,14 +644,22 @@
     // Generates a living noise texture that changes with each phase:
     //   • Receptive – full TV‑style random RGB noise (high chaos,
     //                  deep absorption, neural quieting).
+    //                  Random RGB means every pixel gets an
+    //                  independent random colour each frame,
+    //                  creating maximum visual entropy.
     //   • Alignment – true gold palette (sacred illumination,
-    //                  inner focus).
+    //                  inner focus).  Colours range from deep
+    //                  amber (#4a3500) through bright gold
+    //                  (#ffd700) to pale yellow (#fff8dc).
     //   • Action – gamma green palette (growth, manifestation,
-    //               forward momentum).
-    // A Web Worker handles pixel generation off the main thread.
-    // FPS is fixed at a stable 10 fps for all phases, matching the
-    // infraslow pacing of the ring and thumbnails.  The luminance
-    // overlay alone delivers the fast entrainment frequencies.
+    //               forward momentum).  Colours range from dark
+    //               forest (#0a1f0a) through vibrant green
+    //               (#3c783c, #60a060).
+    // A Web Worker handles pixel generation off the main thread
+    // for smooth performance.  FPS is fixed at a stable 10 fps
+    // for all phases, matching the infraslow pacing of the ring
+    // and thumbnails.  The luminance overlay alone delivers the
+    // fast entrainment frequencies (up to 36 Hz).
     // ═══════════════════════════════════════════════════════════
     (function() {
       const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
@@ -526,7 +669,7 @@
 
       function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
 
-      /* Web Worker for noise generation – keeps the main thread free */
+      /* ── Web Worker for noise generation ── */
       function createWorker() {
         const code = () => {
           self.onmessage = e => {
@@ -534,6 +677,7 @@
             const sz = w * h * 4, buf = new ArrayBuffer(sz);
             const d = new Uint8ClampedArray(buf);
             if (isTvStatic) {
+              // Full random RGB – TV static for Receptive phase
               for (let i = 0; i < sz; i += 4) {
                 d[i] = Math.random() * 256 | 0;
                 d[i+1] = Math.random() * 256 | 0;
@@ -541,6 +685,7 @@
                 d[i+3] = 255;
               }
             } else {
+              // Palette‑based noise for Alignment and Action
               for (let i = 0; i < sz; i += 4) {
                 const c = palette[Math.random() * palette.length | 0];
                 d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
@@ -603,11 +748,17 @@
 
       try { wkr = createWorker(); wkr.onmessage = onWorkerMsg; wkr.onerror = () => { wkr = null; }; } catch (e) { wkr = null; }
 
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: Static canvas tick
+         Runs at a stable 10 fps for all phases – infraslow pacing
+         that matches the ring (0.05 Hz) and thumbnail (0.05 Hz)
+         motions.  The phase is read from window.currentStaticPhase
+         every frame so the palette switches seamlessly at phase
+         boundaries.
+         ═══════════════════════════════════════════════════════════ */
       function tick(now) {
         requestAnimationFrame(tick);
-        /* Read the current phase from the global variable set by the master clock */
         if (window.currentStaticPhase) currentPhase = window.currentStaticPhase;
-        /* Stable 10 fps for all phases – infraslow pacing */
         iv = 1000 / fps;
         if (now - last >= iv) {
           last = now;
@@ -627,22 +778,53 @@
     // 22 thumbnail copies total, divided into 2 spiral groups of 11.
     // Spotlight indices: #11 (index 10) and #22 (index 21).
     //
-    // ── PDF OPEN SYNCHRONISATION ──
-    // When a thumbnail is clicked, the enlarged PDF overlay appears
-    // and the glow wrapper receives the .dream‑active class.
-    // Critically, the master clock is NOT paused or overridden.
-    // Instead, the glow layers (::before for colour, ::after for
-    // sparkle) are driven by the same colour burst computation
-    // (getBurst) and the same phase‑dependent CSS custom properties
-    // as the ring.  This means the PDF aura always matches the
-    // current ring colour and timing, regardless of when the PDF
-    // is opened.  The viewer sees one unified visual entity.
+    // ═══════════════════════════════════════════════════════════
+    // ESSENTIAL: PDF OPEN SYNCHRONISATION
+    // ═══════════════════════════════════════════════════════════
+    // When a thumbnail is clicked:
+    //   1. The full PDF page is rendered onto the enlarged canvas
+    //      (expanded‑canvas) using PDF.js.
+    //   2. The overlay div becomes visible (display: flex), creating
+    //      a dark translucent backdrop with blur behind the PDF.
+    //   3. The glow‑wrapper receives the .dream‑active class, which
+    //      activates its ::before and ::after pseudo‑elements.
     //
-    // ── PDF CLOSE SYNCHRONISATION ──
-    // Clicking the overlay background or pressing Escape hides the
-    // enlarged PDF and removes .dream‑active from the glow wrapper.
-    // The ring ritual continues exactly where it left off – no
-    // phase reset, no interruption.
+    //   CRITICALLY, the master clock is NOT paused, reset, or
+    //   overridden.  The glow layers are driven by the same
+    //   getBurst() function and the same phase‑dependent CSS
+    //   custom properties (--env‑dur) as the ring.  This means:
+    //
+    //   - If the PDF opens during Receptive, the aura glows white
+    //     and pulses with the ring's white burst timing.
+    //   - If the PDF opens during Alignment, the aura glows gold
+    //     and pulses with the ring's gold burst timing.
+    //   - If the PDF opens during Action, the aura glows green
+    //     and pulses with the ring's green burst timing.
+    //
+    //   The PDF aura is never "out of sync" – it is always a
+    //   perfect mirror of the ring's current state.
+    //
+    //   The enlarged PDF canvas itself is a static image – no
+    //   flicker, no animation touches it.  All visual entrainment
+    //   is carried by the luminance overlay and the glow layers.
+    //   The resume remains clean, readable, and professionally
+    //   presented at all times.
+    //
+    // ═══════════════════════════════════════════════════════════
+    // ESSENTIAL: PDF CLOSE SYNCHRONISATION
+    // ═══════════════════════════════════════════════════════════
+    // The PDF can be closed by:
+    //   - Clicking the dark overlay background
+    //   - Pressing the Escape key
+    // Both actions:
+    //   1. Hide the overlay div (display: none)
+    //   2. Remove .dream‑active from the glow‑wrapper, which
+    //      fades out the ::before and ::after pseudo‑elements.
+    //
+    //   The ring ritual continues exactly where it left off –
+    //   no phase reset, no state change.  The PDF can be opened
+    //   and closed repeatedly without ever interrupting the
+    //   37‑second cycle.
     // ═══════════════════════════════════════════════════════════
     (async function() {
       function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
@@ -658,7 +840,7 @@
         const glow = document.getElementById('glow-wrapper');
         const expC = document.getElementById('expanded-canvas');
 
-        const COPIES = 22, SCALE = 0.35, STAGGER = 167;   // 22 copies, emergence at 6 Hz
+        const COPIES = 22, SCALE = 0.35, STAGGER = 167;   // 22 copies, emergence at 6 Hz (Theta)
         const pageData = [], allFloaters = [];
         const spotIdx = [10, 21];   // #11 and #22 (spotlights)
         const spotSet = new Set(spotIdx);
@@ -670,8 +852,7 @@
           el.style.top  = (Math.sin(angle) * radius - h / 2) + 'px';
         }
 
-        /* Pre‑render each PDF page to an offscreen canvas so thumbnail
-           creation is just a fast drawImage call. */
+        // Pre‑render each PDF page to an offscreen canvas
         for (let p = 1; p <= pages; p++) {
           const page = await pdf.getPage(p);
           const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
@@ -695,15 +876,15 @@
             floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
             floater.dataset.page = p; floater.dataset.index = idx;
 
-            /* Spiral layering – two groups of 11 (0‑10, 11‑21) */
+            // Spiral layering – two groups of 11 (0‑10, 11‑21)
             let z = 10;
             if (idx < 11) z = 20 + idx;
             else z = 30 + (idx - 11);
             floater.style.zIndex = z;
             if (idx === 11) floater.style.zIndex = 25;   // #12 under #11
-            if (spotSet.has(idx)) floater.style.zIndex = 200;
+            if (spotSet.has(idx)) floater.style.zIndex = 200;   // spotlights on top
 
-            /* ── PDF open hook ── */
+            /* PDF open hook – see PDF OPEN SYNCHRONISATION above */
             floater.addEventListener('click', async (e) => {
               e.stopPropagation();
               const { page, viewport } = pageData[parseInt(floater.dataset.page)];
@@ -712,8 +893,6 @@
               await page.render({ canvasContext: ctx, viewport }).promise;
               overlay.style.display = 'flex';
               glow.classList.add('dream-active');
-              /* The glow layers now automatically mirror the ring's
-                 current colour and timing via the master clock loop. */
             });
 
             ringEl.appendChild(floater);
@@ -735,11 +914,10 @@
         }
         setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
-        /* Hand control to the master clock – also tells it when the
-           last thumbnail will be positioned so it can start the ritual. */
+        // Pass control to the master clock – ritual starts after emergence
         window.initThumbnails(allFloaters, spotIdx, totalCopies, STAGGER);
 
-        /* ── PDF close hooks ── */
+        /* PDF close hooks – see PDF CLOSE SYNCHRONISATION above */
         addEventListener('resize', () => allFloaters.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
         overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); });
         expC.addEventListener('click', e => e.stopPropagation());
