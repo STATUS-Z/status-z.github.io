@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    FunDarkResume — Technical Specification & Deployment Guide       ║
-║  Version 3.0.1 – PDF‑reliable edition                                             ║
+║  Version 3.0.2 – PDF‑reliable, worker‑path‑fixed edition                           ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝ -->
 <html lang="en">
 <head>
@@ -9,7 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>FunDarkResume</title>
 
-  <!-- Security & Policy Meta Tags (unchanged from elite version) -->
+  <!-- Security & Policy Meta Tags -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' blob:;
@@ -331,6 +331,7 @@
     <div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div>
   </div>
 
+  <!-- Eye Symbol -->
   <div id="eye-symbol" role="button" tabindex="0" aria-label="Astral eye – click or press Enter to view resume">
     <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -486,26 +487,47 @@
     })();
   </script>
 
-  <!-- PDF.js loader (with SRI placeholder) -->
+  <!-- PDF.js loader with source tracking (fixes worker path) -->
   <script>
+    window.PDFJS_LOCAL = true;   // default assume local
     (function(){
       const LOCAL = '/pdfjs/build/pdf.min.js';
       const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
       const CDN_INTEGRITY = 'sha384-...'; // replace with real SRI
-      function loadScript(src,cb){
+
+      function loadScript(src, cb, isCDN) {
         const e = document.createElement('script');
         e.src = src;
-        if (src === CDN) e.integrity = CDN_INTEGRITY;
-        e.onload = cb;
-        e.onerror = () => { if(src === LOCAL) loadScript(CDN, cb); else console.warn('PDF.js load failed.'); };
+        if (isCDN) e.integrity = CDN_INTEGRITY;
+        e.onload = () => cb(!isCDN);      // true if local, false if CDN
+        e.onerror = () => {
+          if (!isCDN) {
+            loadScript(CDN, cb, true);     // fallback to CDN
+          } else {
+            console.warn('PDF.js load failed from all sources.');
+            cb(false);                     // signal failure
+          }
+        };
         document.head.appendChild(e);
       }
-      let tries=0;
-      const timer=setInterval(()=>{
-        if(typeof pdfjsLib!=='undefined'){ clearInterval(timer); return; }
-        if(++tries>200){ clearInterval(timer); console.error('PDF.js timeout'); }
-      },50);
-      loadScript(LOCAL,()=>{});
+
+      // Timeout / error feedback
+      let tries = 0;
+      const timer = setInterval(() => {
+        if (typeof pdfjsLib !== 'undefined') {
+          clearInterval(timer);
+          return;
+        }
+        if (++tries > 200) {
+          clearInterval(timer);
+          console.error('PDF.js timeout');
+          showPdfError('PDF.js library could not be loaded.');
+        }
+      }, 50);
+
+      loadScript(LOCAL, (isLocal) => {
+        window.PDFJS_LOCAL = isLocal;
+      }, false);
     })();
   </script>
 
@@ -777,7 +799,7 @@
       startEntrainmentEngine(); startStaticCanvas(); startPDFRitual();
     }
 
-    // ── Eye Tracking ──
+    // ── Eye Tracking (unchanged) ──
     (function(){
       const svgRoot=document.querySelector('#eye-symbol svg');
       const eyeballGroup=document.getElementById('eyeballGroup');
@@ -848,7 +870,7 @@
       reset(); lft=performance.now(); rAFIDs.push(requestAnimationFrame(anim));
     })();
 
-    // ═══ Phase Scheduler ═══
+    // ═══ Phase Scheduler (unchanged) ═══
     class PhaseScheduler {
       constructor() { this.startTime = performance.now(); this.REC = 15000; this.ALIGN = 10000; this.ACT = 12000; this.TOTAL = this.REC + this.ALIGN + this.ACT; this.state = { phase:'receptive', sub:'alpha', freq:10 }; this._lastGlobal = 'receptive'; this.phaseTransitionTime = 0; }
       _elapsed(t) { const effectiveNow = t - totalPausedMs; let e = (effectiveNow - this.startTime) % this.TOTAL; if (e < 0) e += this.TOTAL; return e; }
@@ -868,7 +890,7 @@
       integratePhase(prevTime, now) { let cur = prevTime, dp = 0; while (cur < now) { const segEnd = Math.min(now, cur + 100); const e = this._elapsed(cur); let freq; if (e < this.REC) { if (e < 5000) freq = 10; else if (e < 10000) freq = 6; else freq = 2; } else if (e < this.REC + this.ALIGN) { freq = 0.5; } else { freq = 36; } dp += 2 * Math.PI * freq * (segEnd - cur) / 1000; cur = segEnd; } return dp; }
     }
 
-    // ── Entrainment Engine ──
+    // ── Entrainment Engine (unchanged) ──
     function startEntrainmentEngine(){
       const overlay = document.getElementById('entrainment-overlay'), ring = document.getElementById('ring'), glow = document.getElementById('glow-wrapper'), eyeSym = document.getElementById('eye-symbol');
       const scheduler = new PhaseScheduler();
@@ -927,17 +949,20 @@
       let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(resize,16); }); resize(); rAFIDs.push(requestAnimationFrame(tick));
     }
 
-    // ═══════════ PDF RITUAL – EXACT PATTERN FROM THE RELIABLE VERSION ═══════════
+    // ═══════════ PDF RITUAL (fixed worker path) ═══════════
     function startPDFRitual() {
-      // wait for pdfjsLib and start the PDF loading
-      (function waitForPdfLib() {
+      function waitForPdfLib() {
         if (typeof pdfjsLib !== 'undefined') {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+          // Set worker source based on how the main library was loaded
+          pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL ?
+            '/pdfjs/build/pdf.worker.min.js' :
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           loadAndBuildPDF();
         } else {
           setTimeout(waitForPdfLib, 50);
         }
-      })();
+      }
+      waitForPdfLib();
 
       async function loadAndBuildPDF() {
         let pdf;
@@ -945,6 +970,7 @@
           pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
         } catch (e) {
           console.error('Failed to load PDF:', e);
+          showPdfError('Resume file not found.');
           return;
         }
 
@@ -954,56 +980,43 @@
         const glow = document.getElementById('glow-wrapper');
         const expC = document.getElementById('expanded-canvas');
 
-        // ── THUMBNAIL RENDERING (identical to old version) ──
         const COPIES = 33, SCALE = 0.35, STAGGER = 167;
         const pageData = [], all = [];
 
-        // Pre‑render thumbnails at 0.35 scale, cache full‑res viewport at 2.0
         for (let p = 1; p <= pages; p++) {
           const page = await pdf.getPage(p);
           const vp = page.getViewport({ scale: SCALE });
-          const origVp = page.getViewport({ scale: 2.0 });      // cached for instant overlay
+          const origVp = page.getViewport({ scale: 2.0 });
           const tc = document.createElement('canvas');
           tc.width = vp.width; tc.height = vp.height;
           await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
           pageData[p] = { page, viewport: origVp, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
         }
 
-        // All full‑resolution pages pre‑cached – no rendering delay
         let idx = 0, totalCopies = pages * COPIES;
         for (let p = 1; p <= pages; p++) {
           const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
           for (let c = 0; c < COPIES; c++) {
-            const floater = document.createElement('div');
-            floater.className = 'floating-page';
-            const cc = document.createElement('canvas');
-            cc.width = thumbWidth; cc.height = thumbHeight;
+            const floater = document.createElement('div'); floater.className = 'floating-page';
+            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
             cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
-            const flipper = document.createElement('div');
-            flipper.className = 'flipper';
-            flipper.appendChild(cc);
-            floater.appendChild(flipper);
-            floater.style.width = thumbWidth + 'px';
-            floater.style.height = thumbHeight + 'px';
-            floater.style.left = '-9999px';
-            floater.style.top = '-9999px';
+            const flipper = document.createElement('div'); flipper.className = 'flipper';
+            flipper.appendChild(cc); floater.appendChild(flipper);
+            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
+            floater.style.left = '-9999px'; floater.style.top = '-9999px';
             const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
             floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
-            floater.dataset.page = p;
-            floater.dataset.index = idx;
+            floater.dataset.page = p; floater.dataset.index = idx;
 
-            // z‑index layering (identical to original)
             let z = 10;
             if (idx < 11) z = 20 + idx; else if (idx < 22) z = 30 + (idx - 11); else z = 40 + (idx - 22);
             floater.style.zIndex = z;
-            if (idx === 11) floater.style.zIndex = 25;
-            if (idx === 22) floater.style.zIndex = 35;
+            if (idx === 11) floater.style.zIndex = 25; if (idx === 22) floater.style.zIndex = 35;
             if (idx === 10 || idx === 21 || idx === 32) { floater.classList.add('spotlight'); floater.style.zIndex = 200; }
 
             floater.addEventListener('click', async (e) => {
               e.stopPropagation();
               const { page, viewport } = pageData[parseInt(floater.dataset.page)];
-              // Pre‑cached viewport – no getViewport call, instant render
               expC.width = viewport.width; expC.height = viewport.height;
               const ctx = expC.getContext('2d');
               await page.render({ canvasContext: ctx, viewport }).promise;
@@ -1014,12 +1027,10 @@
 
             ringEl.appendChild(floater);
             all.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
-            // Staggered positioning and visibility
             setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
-            setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);   // ← exact same delay
+            setTimeout(() => floater.classList.add('canvas-loaded'), idx * STAGGER + 200);
             idx++;
           }
-          // Free thumbCanvas memory after copies created (original behaviour)
           pageData[p].thumbCanvas = null;
         }
 
@@ -1030,7 +1041,6 @@
           el.style.top  = (Math.sin(a) * r - h / 2) + 'px';
         }
 
-        // Colour‑pass sweep (unchanged)
         const skip = new Set([10, 21, 32]);
         const eligible = all.map((_, i) => i).filter(i => !skip.has(i));
         const sizes = [2, 4, 5]; let gi = 0, pos = 0;
@@ -1041,21 +1051,30 @@
           grp.forEach(i => all[i].element.classList.add('color-pass'));
           pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
         }
-        setTimeout(() => { applyColorPass(); setInterval(() => { if (!paused) applyColorPass(); }, 8000); }, totalCopies * STAGGER + 2000);
 
-        // Paper flip (unchanged)
+        const colorInterval = setInterval(() => { if (!paused) applyColorPass(); }, 8000);
+        intervals.push(colorInterval);   // track for cleanup
+
         function flip() { all.forEach(item => item.element.classList.toggle('flipped')); }
         const flipInterval = setInterval(() => { if (!paused) flip(); }, 2000);
         intervals.push(flipInterval);
 
-        // Resize handler
         addEventListener('resize', () => all.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
 
-        // Overlay close handlers (unchanged)
         overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); });
         expC.addEventListener('click', e => e.stopPropagation());
         document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); if (window.setPdfOpen) window.setPdfOpen(false); } });
       }
+    }
+
+    function showPdfError(msg) {
+      const old = document.querySelector('.pdf-error');
+      if (old) old.remove();
+      const err = document.createElement('div');
+      err.className = 'pdf-error';
+      err.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#ff5555;padding:10px 20px;border:1px solid #ff5555;z-index:9999;border-radius:4px;font-weight:bold;';
+      err.textContent = msg; document.body.appendChild(err);
+      err.addEventListener('click', () => err.remove());
     }
 
     // ── Housekeeping (unchanged) ──
