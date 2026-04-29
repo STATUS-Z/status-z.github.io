@@ -190,7 +190,7 @@
     }
     body.alignment #glow-wrapper.dream-active::after {
       opacity: 1;
-      animation: whiteSparkle 20s step-start infinite;     /* 0.05 Hz (Infraslow) */
+      animation: whiteSparkle 2s step-start infinite;      /* 0.5 Hz (Alignment reset) */
     }
     body.action #glow-wrapper.dream-active::after {
       opacity: 1;
@@ -230,14 +230,6 @@
       position: relative; z-index: 2;
     }
 
-    .dl {
-      position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-      background: #0d1117; padding: 10px 18px; border-radius: 40px;
-      opacity: 0.4; border: 1px solid #3a4a6a; backdrop-filter: blur(8px);
-      transition: opacity 0.2s, transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .dl:hover { opacity: 1; transform: scale(1.05); }
-    .dl a { color: #d0e0ff; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; }
     #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 18px; z-index: 10; }
   </style>
 </head>
@@ -249,7 +241,7 @@
   <div id="overlay">
     <div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div>
   </div>
-  <div class="dl"><a href="/pdf/resume.pdf" target="_blank">🔒 open hyperlinked pdf</a></div>
+  <!-- Download link button removed -->
 
   <script>
     window.PDFJS_LOCAL = true;
@@ -272,31 +264,50 @@
     // a precise 37‑second cycle (15 + 10 + 12 seconds) and updates every
     // frequency‑dependent parameter (ring rotation, ring burst, thumbnail
     // strobes, luminance overlay, glow aura) in perfect phase‑coherence.
-
-    // ── Phase‑coherent luminance entrainment engine ──
+    //
+    // -----------------------------------------------------------
+    // Architectural overview (neurophysiological basis):
+    // -----------------------------------------------------------
+    // Total loop: 37 s, following a continuous 0.05 Hz infraslow modulation.
+    //
+    // Phase 1 – Receptive (0–15 s):
+    //   • 0‑5 s  : Alpha  10 Hz – relaxed alertness, DMN engagement.
+    //   • 5‑10 s : Theta   6 Hz – creative insight, hippocampal dialogue.
+    //   • 10‑15 s: Delta   2 Hz – neural repair, slow‑wave synchronisation.
+    //
+    // Phase 2 – Alignment (15–25 s):
+    //   • Carrier: 0.5 Hz square‑wave flicker (no fast frequencies).
+    //   • Purpose: phase‑reset, cortical excitability synchronisation.
+    //
+    // Phase 3 – Action (25–37 s):
+    //   • Ramp 3→36 Hz over 2 s, then steady 36 Hz Gamma.
+    //   • Superimposed 18 Hz Beta envelope → PAC (beta phase modulates gamma amplitude).
+    //   • Drives focused action, cognitive binding, motor readiness.
+    //
+    // Continuous: 0.05 Hz infraslow brightness modulation acts as global scaffold.
+    // -----------------------------------------------------------
+    // ESSENTIAL: Phase‑coherent luminance entrainment engine
+    // -----------------------------------------------------------
     (function() {
-      // references to main DOM elements
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
       const glowWrapper = document.getElementById('glow-wrapper');
 
-      // exact phase durations (milliseconds)
-      const RECEPTIVE = 15000, ALIGN = 10000, ACTION = 12000;
-      const CYCLE_TOTAL = RECEPTIVE + ALIGN + ACTION;
+      // Precise phase durations (ms)
+      const RECEPTIVE = 15000, ALIGNMENT = 10000, ACTION = 12000;
+      const CYCLE_TOTAL = RECEPTIVE + ALIGNMENT + ACTION;
 
       let start = performance.now();
       let pdfOpen = false;            // becomes true when a thumbnail is clicked
-      let carrierPhase = 0;          // continuous phase of the current flicker frequency
-      let global = 'receptive';      // current overall phase
-      let sub = 'alpha';             // sub‑phase inside Receptive
-      let freq = 10;                 // current carrier frequency (Hz)
+      let carrierPhase = 0;          // continuous phase of the main flicker carrier (used during Receptive & Action)
+      let betaPhase = 0;             // separate phase accumulator for 18 Hz Beta envelope during Action
+      let globalPhase = 'receptive'; // current phase
+      let subPhase = 'alpha';        // sub‑phase inside Receptive
+      let freq = 10;                 // main carrier frequency (Hz)
 
-      // ═════════════════════════════════════════════════════════
-      // ESSENTIAL: Colour burst lookup tables
-      // ═════════════════════════════════════════════════════════
-      // The same lookup tables are used for both the ring::after element
-      // and the glow‑wrapper::before element, guaranteeing they always display
-      // the identical colour at the identical moment.
+      /* -----------------------------------------------------------
+         ESSENTIAL: Colour burst lookup tables for ring & PDF glow
+         ----------------------------------------------------------- */
       const colorSteps = {
         receptive: [
           { upTo: 0.7537, bg: '#000', shadow: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
@@ -337,99 +348,136 @@
         return steps[steps.length - 1];
       }
 
-      // update current phase and frequency based on elapsed time
-      function update(now) {
-        const el = (now - start) % CYCLE_TOTAL;
-        if (el < RECEPTIVE) {
-          global = 'receptive';
-          if (el < 5000) { sub = 'alpha'; freq = 10; }
-          else if (el < 10000) { sub = 'theta'; freq = 7; }
-          else { sub = 'delta'; freq = 3; }
-        } else if (el < RECEPTIVE + ALIGN) {
-          global = 'alignment'; sub = null;
+      // Update current phase and main carrier frequency based on elapsed time
+      function updatePhase(now) {
+        const elapsed = (now - start) % CYCLE_TOTAL;
+        if (elapsed < RECEPTIVE) {
+          globalPhase = 'receptive';
+          if (elapsed < 5000) {
+            subPhase = 'alpha';
+            freq = 10;   // Alpha 10 Hz
+          } else if (elapsed < 10000) {
+            subPhase = 'theta';
+            freq = 6;    // Theta 6 Hz (corrected from 7 Hz)
+          } else {
+            subPhase = 'delta';
+            freq = 2;    // Delta 2 Hz (corrected from 3 Hz)
+          }
+        } else if (elapsed < RECEPTIVE + ALIGNMENT) {
+          globalPhase = 'alignment';
+          subPhase = null;
+          freq = 0.5;    // not used for carrier, but indicative
         } else {
-          global = 'action'; sub = null;
-          const actEl = el - RECEPTIVE - ALIGN;
-          // smooth frequency ramp from 3 Hz to 36 Hz during the first 2 seconds of Action
-          freq = actEl < 2000 ? 3 + (actEl / 2000) * 33 : 36;
+          globalPhase = 'action';
+          subPhase = null;
+          const actionElapsed = elapsed - RECEPTIVE - ALIGNMENT;
+          if (actionElapsed < 2000) {
+            // Smooth ramp 3 Hz → 36 Hz over 2 seconds
+            freq = 3 + (actionElapsed / 2000) * 33;
+          } else {
+            freq = 36;
+          }
         }
       }
 
-      // apply phase‑dependent CSS variables and body class
-      function applyRing() {
-        document.body.className = global;
-        if (global === 'receptive') {
-          ring.style.setProperty('--env-dur','2s');
-          ring.style.setProperty('--strobe-dur','0.5s');
-          glowWrapper.style.setProperty('--env-dur','2s');
-        } else if (global === 'alignment') {
-          ring.style.setProperty('--env-dur','5s');
-          ring.style.setProperty('--strobe-dur','2s');
-          glowWrapper.style.setProperty('--env-dur','5s');
+      // Apply phase‑dependent CSS variables and body class
+      function applyRingSettings() {
+        document.body.className = globalPhase;
+        if (globalPhase === 'receptive') {
+          ring.style.setProperty('--env-dur', '2s');
+          ring.style.setProperty('--strobe-dur', '0.5s');
+          glowWrapper.style.setProperty('--env-dur', '2s');
+        } else if (globalPhase === 'alignment') {
+          ring.style.setProperty('--env-dur', '5s');
+          ring.style.setProperty('--strobe-dur', '2s');
+          glowWrapper.style.setProperty('--env-dur', '5s');
         } else {
-          ring.style.setProperty('--env-dur','0.5s');
-          ring.style.setProperty('--strobe-dur','0.0278s');
-          glowWrapper.style.setProperty('--env-dur','0.5s');
+          ring.style.setProperty('--env-dur', '0.5s');
+          ring.style.setProperty('--strobe-dur', '0.0278s');
+          glowWrapper.style.setProperty('--env-dur', '0.5s');
         }
       }
 
-      // ═══════════════════════════════════════════════════════════
+      // -----------------------------------------------------------
       // ESSENTIAL: Main animation loop
-      // ═══════════════════════════════════════════════════════════
+      // -----------------------------------------------------------
       function loop(now) {
         requestAnimationFrame(loop);
 
-        // when PDF is open, force entire page into Action phase
-        if (pdfOpen) { global = 'action'; sub = null; freq = 36; }
-        else update(now);
+        // When PDF is open, override phase to Action
+        if (pdfOpen) {
+          globalPhase = 'action';
+          subPhase = null;
+          freq = 36;
+        } else {
+          updatePhase(now);
+        }
 
-        applyRing();
+        applyRingSettings();
 
-        // compute time delta for phase accumulation
+        // Delta time for phase accumulation (clamped to avoid jumps)
         const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
         loop.prev = now;
+
+        // Always update the carrier phase (may not be used during alignment, but kept continuous)
         carrierPhase = (carrierPhase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // ═══════════════════════════════════════════════════════════
-        // ESSENTIAL: Ring and glow colour synchronization
-        // ═══════════════════════════════════════════════════════════
-        // The ring and the large PDF glow are driven by the same
-        // burst‑window progress.  Whenever the PDF is open,
-        // glowWrapper::before receives exactly the same colour
-        // and shadow as ring::after, appearing as one unified entity.
-        const burstDurationSec = global === 'receptive' ? 2 : (global === 'alignment' ? 5 : 0.5);
+        // -----------------------------------------------------------
+        // ESSENTIAL: Ring and glow colour synchronisation
+        // -----------------------------------------------------------
+        const burstDurationSec = globalPhase === 'receptive' ? 2
+                               : globalPhase === 'alignment' ? 5
+                               : 0.5;
         const burstElapsed = (now - start) % (burstDurationSec * 1000);
         const burstProgress = burstElapsed / (burstDurationSec * 1000);
-        const burst = getBurstColor(global, burstProgress);
+        const burst = getBurstColor(globalPhase, burstProgress);
 
         ring.style.setProperty('background', burst.bg);
         ring.style.setProperty('box-shadow', burst.shadow);
 
-        // synchronise glow wrapper colour and shadow (large aura behind PDF)
         glowWrapper.style.setProperty('background', burst.bg);
-        glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
+        glowWrapper.style.setProperty('box-shadow',
+          '0 0 4000px ' + burst.bg + ', 0 0 6000px ' + burst.bg);
 
-        // ═══════════════════════════════════════════════════════════
-        // ESSENTIAL: Luminance overlay – the main brainwave carrier
-        // ═══════════════════════════════════════════════════════════
-        let flicker = 0;
-        const intensity = 1.0;
-        if (global === 'receptive') {
-          if (sub === 'delta') flicker = 0.5 + 0.5 * Math.sin(carrierPhase);
-          else flicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * 0.35 * intensity;
-        } else if (global === 'alignment') {
-          overlay.style.opacity = 0.25 * intensity;
-        } else {
-          flicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
-          overlay.style.opacity = flicker * 0.35 * intensity;
+        // -----------------------------------------------------------
+        // ESSENTIAL: Luminance overlay – brainwave carrier
+        // -----------------------------------------------------------
+        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000); // 0.05 Hz continuous
+        let opacity = 0;
+
+        if (globalPhase === 'receptive') {
+          let flicker;
+          if (subPhase === 'delta') {
+            // Delta: sinusoidal dimming at 2 Hz
+            flicker = 0.5 + 0.5 * Math.sin(carrierPhase);
+          } else {
+            // Alpha or Theta: square wave
+            flicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
+          }
+          opacity = flicker * infra * 0.35;
+
+        } else if (globalPhase === 'alignment') {
+          // Alignment: 0.5 Hz square‑wave flicker (period 2000 ms)
+          const alignFlicker = (Math.floor(now / 1000) % 2 === 0) ? 1 : 0;
+          opacity = alignFlicker * infra * 0.25;
+
+        } else if (globalPhase === 'action') {
+          // Action: Gamma 36 Hz flicker with 18 Hz Beta amplitude modulation
+          // Beta envelope (sinusoidal, 0–1)
+          betaPhase = (betaPhase + 2 * Math.PI * 18 * dt) % (2 * Math.PI);
+          const betaEnv = 0.5 + 0.5 * Math.sin(betaPhase);
+
+          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
+          opacity = gammaFlicker * betaEnv * infra * 0.35;
         }
+
+        overlay.style.opacity = opacity;
       }
 
       loop.prev = performance.now();
       requestAnimationFrame(loop);
 
-      // allow PDF open/close to toggle the pdfOpen flag
+      // Expose pdfOpen toggle to the PDF thumbnail click handler
       window.setPdfOpen = v => pdfOpen = v;
     })();
 
@@ -505,7 +553,6 @@
 
       function tick(now) {
         requestAnimationFrame(tick);
-        // adjust fps to match the current global phase body class
         if (document.body.classList.contains('action')) fps = 36;
         else if (document.body.classList.contains('alignment')) fps = 10;
         else fps = 10;
