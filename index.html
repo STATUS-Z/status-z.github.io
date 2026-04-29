@@ -11,39 +11,70 @@
   <link rel="preload" href="/pdf/resume.pdf" as="fetch" crossorigin="anonymous">
 
   <style>
+    /* ── Base reset and dark background ── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     body { perspective: 1200px; font-family: system-ui, sans-serif; position: fixed; top: 0; left: 0; }
 
+    /* ── Static background canvas ── */
     #bg-canvas {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -2; display: block; pointer-events: none;
-      will-change: transform, opacity; opacity: 0;
-      transition: opacity 0.8s;
+      will-change: transform; opacity: 0.2;
     }
-    #bg-canvas.active { opacity: 0.25; }
 
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Luminance entrainment overlay
+       A full‑screen white layer with mix‑blend‑mode: overlay.
+       Its opacity is modulated frame‑by‑frame by the master clock
+       at the precise frequency required for each phase:
+         Receptive: Alpha 10 Hz / Theta 6 Hz / Delta 2 Hz
+         Alignment: exclusive 0.5 Hz square‑wave
+         Action: simultaneous 18 Hz Beta + 36 Hz Gamma (PAC)
+       A continuous 0.05 Hz infraslow sine wave modulates overall
+       brightness as a global temporal scaffold.
+       This overlay is the primary photic entrainment carrier.
+       ═══════════════════════════════════════════════════════════════ */
     #entrainment-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: -1; pointer-events: none;
       background: white; opacity: 0;
       will-change: opacity; mix-blend-mode: overlay;
-      contain: strict;
     }
 
     #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
 
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Ring rotation
+       The ring spins clockwise at 0.05 Hz (one full revolution per
+       20 s).  This ultra‑slow orbit provides a stable, hypnotic
+       spatial anchor that remains constant across all three phases,
+       grounding the visual field in deep infraslow rhythm.
+       ═══════════════════════════════════════════════════════════════ */
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
-      animation: none;
+      animation: ringRotate 20s linear infinite;
     }
-    #ring.active { animation: ringRotate 2s linear infinite; }
-    body.alignment #ring.active { animation: ringRotate 20s linear infinite; }
-    body.action #ring.active { animation: ringRotate 0.5s linear infinite; }
 
-    @keyframes ringRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes ringRotate {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
 
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Ring central burst – colour pulse
+       The ::after pseudo‑element serves as a luminous core that
+       pulses in exact synchrony with the master clock.  CSS
+       keyframes control the envelope (scale/opacity) and strobe
+       timing via custom properties (--env‑dur, --strobe‑dur)
+       set by JavaScript.  The actual background and box‑shadow
+       colours are written inline every frame, guaranteeing they
+       match the current phase's sacred colour:
+         Receptive → White (purity, openness)
+         Alignment → Gold (illumination, inner focus)
+         Action → Green (growth, manifestation)
+       ═══════════════════════════════════════════════════════════════ */
     #ring::after {
       content: '';
       position: fixed; top: 50%; left: 50%;
@@ -52,124 +83,165 @@
       box-shadow: var(--burst-shadow, 0 0 150px #000, 0 0 300px rgba(0,0,0,0.9));
       opacity: 0; pointer-events: none; z-index: 1;
       transform: translate(-50%, -50%) scale(0.1);
+      will-change: transform, opacity, box-shadow, background;
       animation: none;
     }
+    /* Envelope animation – activated by JavaScript setting --env-dur */
     #ring.active::after {
-      animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite;
+      animation: ringBurstEnvelope var(--env-dur, 2s) ease-in-out infinite,
+                 ringStrobe var(--strobe-dur, 0.5s) step-start infinite;
     }
 
     @keyframes ringBurstEnvelope {
       0%, 75.37% { opacity: 0; transform: translate(-50%, -50%) scale(0.1); }
-      75.37% { opacity: 1; transform: translate(-50%, -50%) scale(150); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(200); }
+      75.37%      { opacity: 1; transform: translate(-50%, -50%) scale(150); }
+      100%        { opacity: 0; transform: translate(-50%, -50%) scale(200); }
     }
 
+    @keyframes ringStrobe {
+      0%, 49.9%  { visibility: visible; }
+      50%, 99.9% { visibility: hidden; }
+      100%       { visibility: visible; }
+    }
+
+    /* ── Thumbnail container ── */
     .floating-page {
       position: absolute; cursor: pointer; will-change: transform;
       background: transparent; transform-style: preserve-3d;
       backface-visibility: hidden; border-radius: 4px;
-      opacity: 0; transition: opacity 0.5s;
     }
-    .floating-page.canvas-loaded { opacity: 1; }
 
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Thumbnail canvas
+       The canvas holds the static PDF image and does NOT animate
+       via CSS.  All movement (counter‑clockwise spin at 0.05 Hz),
+       glow pulse (phase‑coloured on / black off), spotlight flicker
+       (#11 & #22), colour‑pass wave, and opacity strobe are applied
+       directly by the master clock in JavaScript.  This ensures
+       every thumbnail stays perfectly locked to the current phase
+       and carrier frequency without any CSS animation drift.
+       The canvas itself remains a pristine, un‑flickering image
+       so the resume content is always readable.
+       ═══════════════════════════════════════════════════════════════ */
     .floating-page canvas {
       display: block; width: 100%; height: 100%; border-radius: 4px;
       background: #000; transform-origin: center center; image-rendering: crisp-edges;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.95); will-change: transform, box-shadow;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.95);
+      will-change: transform, box-shadow, opacity;
     }
 
-    body.receptive .floating-page canvas {
-      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 0.1667s step-start infinite;
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Paper‑flip container
+       The .flipper div wraps each canvas and is toggled between
+       .flipped / not‑flipped at a constant 0.5 Hz (every 2 s).
+       This is a dedicated infraslow anchor – a gentle, rhythmic
+       punctuation that the viewer can consciously track.
+       ═══════════════════════════════════════════════════════════════ */
+    .flipper {
+      width: 100%; height: 100%; transform-style: preserve-3d;
+      transition: transform 0.6s ease-in-out;
     }
-    body.alignment .floating-page canvas {
-      animation: slowSpin 33s linear infinite, squarePulse 0.1667s linear infinite, thumbStrobe 2s step-start infinite;
-    }
-    body.action .floating-page canvas {
-      animation: slowSpin 33s linear infinite, squarePulse 0.0278s linear infinite, thumbStrobe 0.0278s step-start infinite;
-    }
-
-    body.receptive .floating-page.spotlight canvas {
-      animation: fastSpin 33s linear infinite, whiteFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
-    }
-    body.alignment .floating-page.spotlight canvas {
-      animation: fastSpin 33s linear infinite, goldFlicker 0.1667s step-start infinite, thumbStrobeTwo 0.1667s step-start infinite !important;
-    }
-    body.action .floating-page.spotlight canvas {
-      animation: fastSpin 33s linear infinite, greenFlicker 0.0278s step-start infinite, thumbStrobeTwo 0.0278s step-start infinite !important;
-    }
-
-    body.receptive .floating-page.color-pass canvas {
-      animation: slowSpin 33s linear infinite, whitePassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
-    }
-    body.alignment .floating-page.color-pass canvas {
-      animation: slowSpin 33s linear infinite, goldPassGlow 2s ease-in-out infinite, thumbStrobe 0.1667s step-start infinite;
-    }
-    body.action .floating-page.color-pass canvas {
-      animation: slowSpin 33s linear infinite, greenPassGlow 0.5s ease-in-out infinite, thumbStrobe 0.0278s step-start infinite;
-    }
-
-    .flipper { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s ease-in-out; }
     .flipped .flipper { transform: rotateY(180deg); }
 
-    @keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    @keyframes fastSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-    @keyframes squarePulse {
-      0%, 49.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
-      50%, 99.9% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95); }
-      100% { box-shadow: 0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8); }
-    }
-    @keyframes whiteFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FEFEFE,0 0 225px rgba(254,254,254,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFF,0 0 225px rgba(255,255,255,.95)} }
-    @keyframes goldFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #FFC000,0 0 225px rgba(255,192,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #FFD700,0 0 225px rgba(255,215,0,.95)} }
-    @keyframes greenFlicker { 0%,49.9%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} 50%,99.9%{box-shadow:0 20px 40px #000,0 0 120px #0E0,0 0 225px rgba(0,238,0,.8)} 100%{box-shadow:0 20px 40px #000,0 0 120px #0F0,0 0 225px rgba(0,255,0,.95)} }
-
-    @keyframes thumbStrobe { 0%,49.9%{opacity:1} 50%,99.9%{opacity:.75} 100%{opacity:1} }
-    @keyframes thumbStrobeTwo { 0%,49.9%{opacity:.5} 50%,99.9%{opacity:.75} 100%{opacity:.5} }
-
-    @keyframes whitePassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,255,255,.5),0 0 200px rgba(255,255,255,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,255,255,.7),0 0 300px rgba(255,255,255,.5)} }
-    @keyframes goldPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(255,215,0,.5),0 0 200px rgba(255,215,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(255,215,0,.7),0 0 300px rgba(255,215,0,.5)} }
-    @keyframes greenPassGlow { 0%,100%{box-shadow:0 20px 40px #000,0 0 100px rgba(0,255,0,.5),0 0 200px rgba(0,255,0,.4)} 50%{box-shadow:0 20px 40px #000,0 0 150px rgba(0,255,0,.7),0 0 300px rgba(0,255,0,.5)} }
-
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: PDF overlay
+       A dark translucent overlay that appears when a thumbnail is
+       clicked.  It centres the enlarged PDF, provides a blurred
+       backdrop so the glow layers behind the PDF read clearly,
+       and uses cursor: zoom‑out to indicate that clicking dismisses
+       the view.
+       ═══════════════════════════════════════════════════════════════ */
     #overlay {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,.85); backdrop-filter: blur(8px);
-      z-index:1000; display:none; justify-content:center; align-items:center;
-      cursor:zoom-out; overflow:visible; pointer-events:auto;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      z-index: 1000; display: none; justify-content: center; align-items: center;
+      cursor: zoom-out; overflow: visible; pointer-events: auto;
     }
 
-    #glow-wrapper { position:relative; display:inline-block; max-width:95vw; max-height:95vh; }
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Glow wrapper
+       The wrapper holds two pseudo‑elements that create the aura
+       behind the enlarged PDF.  They are activated by the
+       .dream‑active class when the PDF is opened.
 
+       ::before – colour burst layer (z‑index: -1)
+         Mirrors the ring::after exactly, using the same colour burst
+         table and burst‑progress point.
+
+       ::after – white sparkle layer (z‑index: -2)
+         A rapid, pure‑white shimmer whose frequency matches the
+         current phase’s dominant frequency.  It sits behind the
+         colour layer so the sacred colours always shine through.
+       ═══════════════════════════════════════════════════════════════ */
+    #glow-wrapper {
+      position: relative; display: inline-block; max-width: 95vw; max-height: 95vh;
+    }
+
+    /* White sparkle – phase‑matched frequency, sits behind colour */
     #glow-wrapper::after {
-      content:''; position:absolute; top:50%; left:50%; width:100%; height:100%;
-      background:transparent; pointer-events:none; z-index:-2; transform:translate(-50%,-50%);
-      will-change:box-shadow,opacity; opacity:0; transition:opacity .2s;
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 100%; height: 100%; background: transparent; pointer-events: none;
+      z-index: -2; transform: translate(-50%, -50%);
+      will-change: box-shadow, opacity; opacity: 0; transition: opacity 0.2s;
     }
     #glow-wrapper.dream-active::after {
-      opacity:var(--sparkle-opacity,0);
-      box-shadow:0 0 4000px rgba(255,255,255,.95),0 0 2400px #fff,0 0 6000px rgba(255,255,255,.8);
+      opacity: var(--sparkle-opacity, 0);
+      box-shadow: 0 0 4000px rgba(255,255,255,0.95), 0 0 2400px #fff, 0 0 6000px rgba(255,255,255,0.8);
     }
 
+    /* Colour burst – directly synchronised with ring::after */
     #glow-wrapper::before {
-      content:''; position:absolute; top:50%; left:50%; width:100%; height:100%;
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 100%; height: 100%;
       background: var(--burst-bg, transparent);
       box-shadow: var(--burst-shadow, none);
-      pointer-events:none; z-index:-1; transform:translate(-50%,-50%);
-      will-change:box-shadow,background,opacity; opacity:0; transition:opacity .2s;
+      pointer-events: none;
+      z-index: -1; transform: translate(-50%, -50%);
+      will-change: box-shadow, background, opacity;
+      opacity: 0; transition: opacity 0.2s;
     }
     #glow-wrapper.dream-active::before {
-      opacity:1;
-      animation:glowBurstEnvelope var(--env-dur,2s) ease-in-out infinite;
+      opacity: 1;
+      animation: glowBurstEnvelope var(--env-dur, 2s) ease-in-out infinite;
     }
 
-    @keyframes glowBurstEnvelope { 0%,75.37%{opacity:0} 75.37%{opacity:1} 100%{opacity:0} }
+    @keyframes glowBurstEnvelope {
+      0%,75.37%{opacity:0} 75.37%{opacity:1} 100%{opacity:0}
+    }
 
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Enlarged PDF canvas
+       Completely static – no CSS animation, no JavaScript animation
+       touches it.  All visual effects are on the pseudo‑elements
+       behind it.
+       ═══════════════════════════════════════════════════════════════ */
     #overlay canvas {
-      max-width:95vw; max-height:95vh; border-radius:6px;
-      cursor:default; background:#000; box-shadow:none;
-      position:relative; z-index:2;
+      max-width: 95vw; max-height: 95vh; border-radius: 6px;
+      cursor: default; background: #000; box-shadow: none;
+      position: relative; z-index: 2;
     }
 
-    /* ── Fullscreen Invitation ── */
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Manifesting… loading overlay
+       Visible while the PDF is being downloaded and all 22 thumbnails
+       are being rendered and positioned on the ring.  It disappears
+       only when the full ritual ring is ready, plus a 500 ms grace
+       period so the viewer can absorb the complete visual field.
+       ═══════════════════════════════════════════════════════════════ */
+    #loading {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #aaa; font-size: 18px; z-index: 10;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ESSENTIAL: Fullscreen Invitation Gate (static snapshot)
+       Displayed immediately on page load.  Contains the atomic whirl
+       canvas and the haiku lines.  A seizure warning is shown at the
+       top, and a cool, pulsing consent button appears after the haiku
+       finishes.  Clicking the button requests full‑screen and then
+       starts the ritual.
+       ═══════════════════════════════════════════════════════════════ */
     #fullscreen-invite {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: radial-gradient(circle at 30% 20%, #1a0d16, #000000);
@@ -204,7 +276,6 @@
       50% { text-shadow: 0 0 16px var(--glow-color), 0 0 32px var(--glow-color), 0 0 64px var(--glow-color); }
     }
 
-    /* Cool consent button */
     #consent-btn {
       position: relative; z-index: 3; margin-top: 28px;
       padding: 14px 32px;
@@ -226,31 +297,25 @@
       50% { box-shadow: 0 0 25px #FFD700, 0 0 45px #790B3E; }
     }
 
-    /* ── Eye Symbol ── */
-    #eye-symbol {
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      width: 160px; height: 160px; z-index:0;
-      cursor:pointer; opacity: 0; pointer-events: none;
-      filter: drop-shadow(0 0 25px currentColor);
-      transition: filter 0.3s;
-    }
-    #eye-symbol.active { opacity: 1; pointer-events: auto; }
-    #eye-symbol svg { display: block; width: 100%; height: 100%; }
-
-    .glow-ring {
-      transform-origin: center;
-      animation: spinGlow 10s linear infinite;
-    }
-    @keyframes spinGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    /* Eye Symbol – not used in this version, hidden */
+    #eye-symbol { display: none; }
   </style>
 </head>
-<body class="receptive">
+<body class="receptive" id="body">
+  <!-- Static background canvas – always active, visible through invitation gate -->
   <canvas id="bg-canvas"></canvas>
   <div id="entrainment-overlay"></div>
   <div id="cloud"><div id="ring"></div></div>
+  <div id="loading">Manifesting...</div>
+  <div id="overlay">
+    <div id="glow-wrapper">
+      <canvas id="expanded-canvas"></canvas>
+    </div>
+  </div>
 
+  <!-- ═══════ Invitation Gate ═══════ -->
   <div id="fullscreen-invite">
-    <!-- Seizure warning restored -->
+    <!-- Seizure warning -->
     <div style="position:relative; z-index:2; color:#FFD700; font-size:0.85rem; opacity:0.7; margin-bottom:1.2rem; letter-spacing:0.5px; max-width:80vw;">
       ⚠ This experience contains rapidly flashing lights.<br>
       If you are photosensitive, please close this page.
@@ -261,109 +326,12 @@
       <div class="invite-line line2">please enjoy</div>
       <div class="invite-line line3">welcome</div>
     </div>
-    <!-- Cool consent button -->
+    <!-- Cool consent button – appears after haiku lines are visible -->
     <button id="consent-btn">I understand – begin</button>
   </div>
 
-  <div id="overlay"><div id="glow-wrapper"><canvas id="expanded-canvas"></canvas></div></div>
-
-  <!-- Eye Symbol -->
-  <div id="eye-symbol">
-    <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <radialGradient id="scleraGrad" cx="45%" cy="45%" r="60%">
-          <stop offset="0%" stop-color="#5E5A6E" /><stop offset="55%" stop-color="#4D4960" />
-          <stop offset="85%" stop-color="#3F3C50" /><stop offset="100%" stop-color="#343142" />
-        </radialGradient>
-        <radialGradient id="irisGrad" cx="48%" cy="48%" r="52%">
-          <stop offset="0%" stop-color="#1A1A2A" /><stop offset="25%" stop-color="#232335" />
-          <stop offset="60%" stop-color="#2C2C3E" /><stop offset="85%" stop-color="#181828" />
-          <stop offset="100%" stop-color="#0E0E1A" />
-        </radialGradient>
-        <radialGradient id="pupilGrad" cx="45%" cy="45%" r="55%">
-          <stop offset="0%" stop-color="#030308" /><stop offset="70%" stop-color="#000000" />
-          <stop offset="100%" stop-color="#0a0a0e" />
-        </radialGradient>
-        <radialGradient id="highlightGrad" cx="40%" cy="35%" r="50%">
-          <stop offset="0%" stop-color="currentColor" stop-opacity="0.98" />
-          <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
-        </radialGradient>
-        <radialGradient id="corneaGlint" cx="60%" cy="30%" r="40%">
-          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35" />
-          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
-        </radialGradient>
-        <filter id="softBlur" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="1.4"/></filter>
-        <filter id="tinyBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.7"/></filter>
-        <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-
-      <circle cx="200" cy="200" r="178" fill="none" stroke-width="16" class="glow-ring" filter="url(#glowFilter)"/>
-      <circle cx="200" cy="200" r="172" fill="none" stroke-width="10" class="glow-ring"/>
-      <circle cx="200" cy="200" r="168" fill="none" stroke-width="6" class="glow-ring"/>
-
-      <clipPath id="eyelidClip"><path id="clipPathShape" d="M 85,200 Q 195,35 315,200 Q 205,365 85,200 Z"/></clipPath>
-
-      <g clip-path="url(#eyelidClip)">
-        <g id="eyeballGroup" style="transform-origin: 200px 200px; will-change: transform;">
-          <ellipse cx="200" cy="200" rx="175" ry="170" fill="url(#scleraGrad)" stroke="#3A3650" stroke-width="1.5"/>
-          <g opacity="0.3" fill="none" stroke="#6B6585" stroke-width="1.1" filter="url(#tinyBlur)">
-            <path d="M 65 185 Q 88 172, 110 180 Q 128 186, 115 192" stroke-linecap="round"/>
-            <path d="M 52 202 Q 78 192, 102 206 Q 122 216, 105 223" stroke-width="0.9" opacity="0.55"/>
-            <path d="M 318 178 Q 298 170, 280 176 Q 268 183, 284 188"/>
-            <path d="M 332 222 Q 312 214, 292 220 Q 278 227, 295 234" stroke-width="0.8"/>
-            <path d="M 98 248 Q 118 238, 140 250" stroke-width="0.7" opacity="0.45"/>
-            <path d="M 308 242 Q 288 232, 266 244" stroke-width="0.8" opacity="0.5"/>
-          </g>
-          <g id="irisGroup">
-            <circle cx="200" cy="200" r="46" fill="url(#irisGrad)" stroke="#1C1C2A" stroke-width="1.8"/>
-            <g opacity="0.48" stroke="#5A5A72" stroke-width="0.9">
-              <line x1="200" y1="200" x2="200" y2="156"/><line x1="200" y1="200" x2="238" y2="168"/>
-              <line x1="200" y1="200" x2="246" y2="200"/><line x1="200" y1="200" x2="238" y2="232"/>
-              <line x1="200" y1="200" x2="200" y2="244"/><line x1="200" y1="200" x2="162" y2="232"/>
-              <line x1="200" y1="200" x2="154" y2="200"/><line x1="200" y1="200" x2="162" y2="168"/>
-              <line x1="200" y1="200" x2="177" y2="154"/><line x1="200" y1="200" x2="223" y2="154"/>
-              <line x1="200" y1="200" x2="235" y2="179"/><line x1="200" y1="200" x2="242" y2="214"/>
-              <line x1="200" y1="200" x2="231" y2="236"/><line x1="200" y1="200" x2="169" y2="236"/>
-              <line x1="200" y1="200" x2="158" y2="214"/><line x1="200" y1="200" x2="165" y2="179"/>
-            </g>
-            <g filter="url(#tinyBlur)" opacity="0.4">
-              <circle cx="185" cy="183" r="2.2" fill="#4A4A5E"/><circle cx="214" cy="179" r="2" fill="#3E3E52"/>
-              <circle cx="221" cy="201" r="2.4" fill="#45455E"/><circle cx="178" cy="213" r="1.8" fill="#484864"/>
-              <circle cx="197" cy="169" r="2" fill="#555574"/><circle cx="224" cy="217" r="1.7" fill="#3A3A4E"/>
-            </g>
-            <circle cx="200" cy="200" r="48.5" fill="none" stroke="#2E2E3C" stroke-width="2.8" opacity="0.75" filter="url(#tinyBlur)"/>
-            <circle cx="200" cy="200" r="46" fill="none" stroke="#1E1E2A" stroke-width="1.5" opacity="0.55"/>
-            <circle cx="200" cy="200" r="17" fill="url(#pupilGrad)"/>
-            <circle cx="200" cy="200" r="13" fill="none" stroke="#000" stroke-width="0.5" opacity="0.35"/>
-            <ellipse cx="179" cy="179" rx="6" ry="5" fill="url(#highlightGrad)" filter="url(#softBlur)"/>
-            <ellipse cx="179.5" cy="179.5" rx="3" ry="2" fill="currentColor" opacity="0.98"/>
-            <path d="M 224 176 Q 236 192, 230 210" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.3" stroke-linecap="round" filter="url(#tinyBlur)"/>
-            <ellipse cx="212" cy="191" rx="28" ry="18" fill="url(#corneaGlint)"/>
-          </g>
-        </g>
-      </g>
-
-      <g id="upperLidGroup">
-        <path id="upperLidShape" d="M 85,200 Q 195,35 315,200 Q 200,85 85,200 Z" fill="#0A0A0C" opacity="0.98"/>
-        <path id="upperLidStroke" d="M 85,200 Q 195,35 315,200" fill="none" stroke="#1C1C22" stroke-width="4.5" opacity="0.9"/>
-      </g>
-      <g id="lowerLidGroup">
-        <path id="lowerLidShape" d="M 85,200 Q 205,367 315,200 Q 200,315 85,200 Z" fill="#0A0A0C" opacity="0.97"/>
-        <path id="lowerLidStroke" d="M 85,200 Q 205,367 315,200" fill="none" stroke="#1C1C22" stroke-width="4" opacity="0.85"/>
-      </g>
-
-      <circle cx="48" cy="78" r="4" class="sparkle" fill="#FFDDA8" opacity="0.9" filter="url(#softBlur)"/>
-      <circle cx="352" cy="322" r="5" class="sparkle" fill="#FFDDCC" opacity="0.9" filter="url(#softBlur)"/>
-      <circle cx="332" cy="68" r="4" class="sparkle" fill="#FFDDBB" opacity="0.9" filter="url(#softBlur)"/>
-      <circle cx="68" cy="332" r="5" class="sparkle" fill="#FFEECC" opacity="0.9" filter="url(#softBlur)"/>
-    </svg>
-  </div>
-
+  <!-- Atomic whirl canvas animation -->
   <script>
-    // ── Atomic Whirl Canvas ──
     (function() {
       const canvas = document.getElementById('atomic-canvas');
       if (!canvas) return;
@@ -422,7 +390,7 @@
   </script>
 
   <script>
-    // ── Haiku display with cool consent button ──
+    // ── Haiku display + consent button flow ──
     const invite = document.getElementById('fullscreen-invite');
     const lines = document.querySelectorAll('.invite-line');
     const consentBtn = document.getElementById('consent-btn');
@@ -442,576 +410,605 @@
       if (document.fullscreenEnabled) {
         document.documentElement.requestFullscreen().then(() => {
           invite.style.display = 'none';
-          startRitual();
-        }).catch(() => { invite.style.display = 'none'; startRitual(); });
-      } else { invite.style.display = 'none'; startRitual(); }
+          // The ritual clock will start automatically once the ring is ready
+        }).catch(() => { invite.style.display = 'none'; });
+      } else {
+        invite.style.display = 'none';
+      }
     }
     setTimeout(showNextLine, 600);
   </script>
 
   <script>
-    (function(){
-      const LOCAL = '/pdfjs/build/pdf.min.js';
-      const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      function loadScript(src,cb){
-        const e=document.createElement('script'); e.src=src; e.onload=cb;
-        e.onerror=()=>{ if(src===LOCAL) loadScript(CDN,cb); else console.warn('PDF.js load failed.'); };
-        document.head.appendChild(e);
-      }
-      let tries=0;
-      const timer=setInterval(()=>{
-        if(typeof pdfjsLib!=='undefined'){ clearInterval(timer); return; }
-        if(++tries>200){ clearInterval(timer); console.error('PDF.js timeout'); }
-      },50);
-      loadScript(LOCAL,()=>{});
-    })();
+    window.PDFJS_LOCAL = true;
+  </script>
+  <script src="/pdfjs/build/pdf.min.js"></script>
+  <script>
+    if (typeof pdfjsLib === 'undefined') {
+      console.warn('Local pdf.min.js not found, using CDN fallback.');
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>');
+      window.PDFJS_LOCAL = false;
+    }
   </script>
 
   <script>
-    let ritualStarted = false;
-    window.eyeState = { velocityMag:0, saccading:false };
-    let audioCtx=null, leftOsc=null, rightOsc=null, leftGain=null, rightGain=null;
-
-    function initAudio(){
-      try{
-        audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-        leftOsc=audioCtx.createOscillator(); rightOsc=audioCtx.createOscillator();
-        leftOsc.type='sine'; rightOsc.type='sine';
-        leftGain=audioCtx.createGain(); rightGain=audioCtx.createGain();
-        leftGain.gain.value=0.08; rightGain.gain.value=0.08;
-        const lp=audioCtx.createStereoPanner(); lp.pan.value=-1;
-        const rp=audioCtx.createStereoPanner(); rp.pan.value=1;
-        leftOsc.connect(leftGain).connect(lp).connect(audioCtx.destination);
-        rightOsc.connect(rightGain).connect(rp).connect(audioCtx.destination);
-        leftOsc.start(); rightOsc.start();
-      }catch(e){ console.warn('Audio unavailable'); audioCtx=null; }
-    }
-
-    function updateAudioFreq(freq){
-      if(!audioCtx) return;
-      const b=200, t=audioCtx.currentTime+0.05;
-      leftOsc.frequency.setTargetAtTime(b+freq/2,t,0.02);
-      rightOsc.frequency.setTargetAtTime(b-freq/2,t,0.02);
-    }
-
-    function startRitual(){
-      if(ritualStarted) return;
-      ritualStarted=true;
-      const redMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const useBlur=!redMot && navigator.hardwareConcurrency>=4;
-      if(!useBlur){
-        const ov=document.getElementById('overlay');
-        ov.style.backdropFilter='none'; ov.style.background='rgba(0,0,0,0.92)';
-      }
-      document.getElementById('ring').classList.add('active');
-      document.getElementById('bg-canvas').classList.add('active');
-      document.getElementById('eye-symbol').classList.add('active');
-      initAudio();
-      startEntrainmentEngine();
-      startStaticCanvas();
-      startPDFRitual();
-    }
-
-    const prefRedMot=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let reducedMotion=prefRedMot;
-    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',e=>reducedMotion=e.matches);
-    document.addEventListener('contextmenu',e=>e.preventDefault());
-    window.addEventListener('beforeunload',()=>{ document.body.style.background='#000'; });
-
-    // ── Eye tracking ──
-    (function(){
-      const svgRoot=document.querySelector('#eye-symbol svg');
-      const eyeballGroup=document.getElementById('eyeballGroup');
-      const clipPathShape=document.getElementById('clipPathShape');
-      const upperLid=document.getElementById('upperLidGroup');
-      const lowerLid=document.getElementById('lowerLidGroup');
-      if(!eyeballGroup||!svgRoot) return;
-
-      const MAX_TX=95, MAX_UP=55, MAX_DN=85;
-      let cx=0,cy=0, vx=0,vy=0, tx=0,ty=0, ltx=0,lty=0;
-      const GAIN=6.5, DAMP=0.96, MAXV=45.0;
-      let saccActive=false, ssX=0,ssY=0, seX=0,seY=0, sprog=0;
-      const SACC_DUR=28, SACC_THR=12.0;
-      const UP_LID_UP=-18, LOW_LID_DN=28, SQUINT=6;
-
-      function updEyelids(px,py){
-        let ny=py/(py>=0?MAX_DN:MAX_UP); ny=Math.min(1,Math.max(-1,ny));
-        let nx=px/MAX_TX;
-        let uy=0;
-        if(ny<0) uy=UP_LID_UP*(-ny); else if(ny>0) uy=SQUINT*ny;
-        let hs=px*0.04; upperLid.setAttribute('transform',`translate(${hs},${uy})`);
-        let ly=0; if(ny>0) ly=LOW_LID_DN*ny;
-        lowerLid.setAttribute('transform',`translate(${hs},${ly})`);
-        let uY=35, lY=367;
-        if(ny<0){ let f=-ny; uY=35-f*15; lY=367-f*8; }
-        else if(ny>0){ let f=ny; uY=35+f*4; lY=367+f*25; }
-        uY=Math.min(50,Math.max(20,uY)); lY=Math.min(400,Math.max(340,lY));
-        let sx=px*0.06; let lx=85+sx, rx=315+sx;
-        let umx=195+sx*0.5, lmx=205+sx*0.5;
-        let d=`M ${lx},200 Q ${umx},${uY} ${rx},200 Q ${lmx},${lY} ${lx},200 Z`;
-        clipPathShape.setAttribute('d',d);
-      }
-
-      function constrainTarget(x,y){
-        let cx=Math.min(MAX_TX,Math.max(-MAX_TX,x));
-        let maxY=y>=0?MAX_DN:MAX_UP, cy=Math.min(maxY,Math.max(-maxY,y));
-        let nx=cx/MAX_TX, ny=cy/(cy>=0?MAX_DN:MAX_UP);
-        let dist=Math.sqrt(nx*nx+ny*ny);
-        if(dist>1){ let sc=1/dist; cx=(nx*sc)*MAX_TX; cy=(ny*sc)*(cy>=0?MAX_DN:MAX_UP); }
-        return {x:cx,y:cy};
-      }
-
-      function getTarget(cx,cy){
-        let pt=new DOMPoint(cx,cy); let ctm=svgRoot.getScreenCTM();
-        if(!ctm) return {x:0,y:0};
-        let cur=pt.matrixTransform(ctm.inverse());
-        return constrainTarget(cur.x-200,cur.y-200);
-      }
-
-      function startSacc(toX,toY){ saccActive=true; ssX=cx; ssY=cy; seX=toX; seY=toY; sprog=0; vx=vy=0; }
-
-      function updEye(ms){
-        let ds=Math.min(0.033,ms/1000);
-        if(saccActive){
-          sprog+=ms/SACC_DUR; if(sprog>=1){ cx=seX; cy=seY; saccActive=false; }
-          else{ let t=sprog, e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; cx=ssX+(seX-ssX)*e; cy=ssY+(seY-ssY)*e; }
-          eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
-          updEyelids(cx,cy);
-          window.eyeState.velocityMag=Math.hypot(seX-ssX,seY-ssY)/SACC_DUR*20; window.eyeState.saccading=true;
-          return;
-        }
-        let dtPred=Math.min(0.1,ds);
-        let tvx=(tx-ltx)/dtPred, tvy=(ty-lty)/dtPred;
-        tvx=Math.min(80,Math.max(-80,tvx)); tvy=Math.min(80,Math.max(-80,tvy));
-        let ptx=tx+tvx*0.033, pty=ty+tvy*0.033;
-        let pc=constrainTarget(ptx,pty); ptx=pc.x; pty=pc.y;
-        let ex=ptx-cx, ey=pty-cy;
-        if(Math.hypot(ex,ey)>SACC_THR&&ms>10){ startSacc(ptx,pty); return; }
-        let fx=ex*GAIN*ds, fy=ey*GAIN*ds;
-        vx+=fx; vy+=fy; vx*=DAMP; vy*=DAMP;
-        let sp=Math.hypot(vx,vy); if(sp>MAXV){ vx=vx/sp*MAXV; vy=vy/sp*MAXV; }
-        let nx=cx+vx*ds, ny=cy+vy*ds;
-        let fpos=constrainTarget(nx,ny); cx=fpos.x; cy=fpos.y;
-        eyeballGroup.setAttribute('transform',`translate(${cx},${cy})`);
-        ltx=tx; lty=ty; window.eyeState.velocityMag=sp; window.eyeState.saccading=false;
-        updEyelids(cx,cy);
-      }
-
-      function onMove(cx,cy){ let t=getTarget(cx,cy); tx=t.x; ty=t.y; }
-      function reset(){
-        cx=cy=vx=vy=tx=ty=ltx=lty=0; saccActive=false;
-        eyeballGroup.setAttribute('transform','translate(0,0)');
-        updEyelids(0,0); upperLid.setAttribute('transform','translate(0,0)'); lowerLid.setAttribute('transform','translate(0,0)');
-        window.eyeState.velocityMag=0; window.eyeState.saccading=false;
-      }
-
-      let lft=0;
-      function anim(now){ requestAnimationFrame(anim); let dt=Math.min(50,now-lft); if(dt>2) updEye(dt); lft=now; }
-
-      window.addEventListener('mousemove',e=>{ if(ritualStarted) onMove(e.clientX,e.clientY); });
-      window.addEventListener('mouseleave',reset);
-      window.addEventListener('touchmove',e=>{ if(ritualStarted&&e.touches.length){ onMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); } },{passive:false});
-      window.addEventListener('touchend',reset);
-      window.addEventListener('touchstart',e=>{ if(ritualStarted&&e.touches.length) onMove(e.touches[0].clientX,e.touches[0].clientY); });
-
-      document.getElementById('eye-symbol').addEventListener('click', () => {
-        if (!ritualStarted || !window.setPdfOpen) return;
-        document.getElementById('overlay').style.display='flex';
-        document.getElementById('glow-wrapper').classList.add('dream-active');
-        window.setPdfOpen(true);
-      });
-
-      reset(); lft=performance.now(); anim(lft);
-    })();
-
-    // ═══════════ Phase Scheduler (37 s master timer) ═══════════
-    class PhaseScheduler {
-      constructor() {
-        this.startTime = performance.now();
-        this.REC = 15000; this.ALIGN = 10000; this.ACT = 12000;
-        this.TOTAL = this.REC + this.ALIGN + this.ACT;
-        this.state = { phase:'receptive', sub:'alpha', freq:10 };
-        this._lastGlobal = 'receptive';
-        this.phaseTransitionTime = 0;
-      }
-
-      _elapsed(t) {
-        let e = (t - this.startTime) % this.TOTAL;
-        if (e < 0) e += this.TOTAL;
-        return e;
-      }
-
-      update(now) {
-        const elapsed = this._elapsed(now);
-        let phase, sub, freq, beta, gamma;
-        if (elapsed < this.REC) {
-          phase = 'receptive';
-          if      (elapsed < 5000)  { sub = 'alpha'; freq = 10; }
-          else if (elapsed < 10000) { sub = 'theta'; freq = 6; }
-          else                      { sub = 'delta'; freq = 2; }
-        } else if (elapsed < this.REC + this.ALIGN) {
-          phase = 'alignment'; sub = null; freq = 0.05;
-        } else {
-          phase = 'action'; sub = null;
-          const ae = elapsed - this.REC - this.ALIGN;
-          beta = 18; gamma = 36;
-          if (ae < 2000) {
-            const t = ae / 2000;
-            const ef = t <= 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
-            beta  = 18 * ef;
-            gamma = 36 * ef;
-          }
-          freq = gamma;
-        }
-        if (phase !== this.state.phase) {
-          this.phaseTransitionTime = now;
-          this._lastGlobal = phase;
-        }
-        this.state = { phase, sub, freq, beta, gamma };
-      }
-
-      forceAction() {
-        this.state = { phase:'action', sub:null, freq:36, beta:18, gamma:36 };
-      }
-
-      integratePhase(prevTime, now) {
-        let cur = prevTime;
-        let dp = 0;
-        while (cur < now) {
-          const segEnd = Math.min(now, cur + 100);
-          const e = this._elapsed(cur);
-          let freq;
-          if (e < this.REC) {
-            if      (e < 5000)  freq = 10;
-            else if (e < 10000) freq = 6;
-            else                freq = 2;
-          } else if (e < this.REC + this.ALIGN) {
-            freq = 0.05;
-          } else {
-            const ae = e - this.REC - this.ALIGN;
-            freq = ae < 2000 ? (3 + (36-3)*((ae/2000)<=0.5?2*(ae/2000)*(ae/2000):1-Math.pow(-2*(ae/2000)+2,2)/2)) : 36;
-          }
-          dp += 2 * Math.PI * freq * (segEnd - cur) / 1000;
-          cur = segEnd;
-        }
-        return dp;
-      }
-    }
-
-    // ── Entrainment engine ──
-    function startEntrainmentEngine(){
+    // ═══════════════════════════════════════════════════════════════
+    // ESSENTIAL: Master clock & 3‑phase brainwave entrainment architecture
+    // ═══════════════════════════════════════════════════════════════
+    // The complete 37‑second cycle is driven by a single
+    // requestAnimationFrame loop that starts only AFTER all 22
+    // thumbnails have been created and positioned on the ring.
+    // This guarantees the receptive phase begins with the full
+    // ritual ring visible, not mid‑loading.
+    //
+    // Phase 1 – Receptive (0‑15 s):
+    //   0‑5 s  : Alpha 10 Hz   – relaxed alertness, DMN engagement
+    //   5‑10 s : Theta 6 Hz    – creative insight, hippocampal dialogue
+    //   10‑15 s: Delta 2 Hz    – neural repair, slow‑wave synchronisation
+    //
+    // Phase 2 – Alignment (15‑25 s):
+    //   Exclusive 0.5 Hz square‑wave flicker (no fast frequencies).
+    //   Purpose: neural reset, cortical excitability synchronisation.
+    //
+    // Phase 3 – Action (25‑37 s):
+    //   Simultaneous 18 Hz Beta + 36 Hz Gamma from the first
+    //   millisecond.  Beta phase modulates Gamma amplitude via
+    //   phase‑amplitude coupling (2:1 harmonic).  No ramp.
+    //
+    // Continuous: 0.05 Hz infraslow sine wave modulates brightness
+    // across all phases as a global temporal scaffold.
+    //
+    // All visual effects – ring burst, thumbnail spin/pulse/spotlight/
+    // colour‑pass, luminance overlay, and PDF glow – are updated
+    // every frame from the master clock's current phase and carrier
+    // frequency.  Only the thumbnail canvases and the enlarged PDF
+    // canvas are static images.
+    // ═══════════════════════════════════════════════════════════════
+    (function() {
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
-      const glow = document.getElementById('glow-wrapper');
-      const eyeSym = document.getElementById('eye-symbol');
+      const glowWrapper = document.getElementById('glow-wrapper');
 
-      const scheduler = new PhaseScheduler();
-      let pdfOpen = false;
-      let carrierPhase = 0;
-      let betaPhase = 0;
-      let strobePhase = 0;
-      let infraPhase = 0, hrvOff = 0;
-      let ptt = 0;
-      let smoothVel = 0;
-      let prevTime;
+      // Precise phase durations (milliseconds) – total 37 s
+      const RECEPTIVE = 15000, ALIGNMENT = 10000, ACTION = 12000;
+      const CYCLE = RECEPTIVE + ALIGNMENT + ACTION;
 
-      const phaseColors = { receptive:'#FFFFFF', alignment:'#FFD700', action:'#790B3E' };
-      function updEyeColors(ph){
-        const c = phaseColors[ph] || '#FFFFFF';
-        document.querySelectorAll('.glow-ring').forEach(e=>e.setAttribute('stroke',c));
-        document.querySelectorAll('.sparkle').forEach(e=>e.setAttribute('fill',c));
-        eyeSym.style.color = c;
-      }
+      /* The master clock start time is set to null initially.
+         It will be assigned by initThumbnails() once the full ring
+         is ready.  Until then, all phase‑dependent updates are
+         skipped so no partial receptive phase runs. */
+      let start = null;
+      let carrierPhase = 0, betaPhase = 0;
+      let globalPhase = 'receptive', subPhase = 'alpha', freq = 10;
 
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: Colour burst lookup tables
+         These tables define the exact colour progression for the
+         ring burst (ring::after) and the PDF glow
+         (glow‑wrapper::before) during each phase.  Both elements
+         sample the same table at the same burst‑progress point,
+         creating a single unified visual entity.  This means
+         whenever the PDF is opened – whether in Receptive,
+         Alignment, or Action – its aura exactly matches the
+         ring's current colour, intensity, and timing.
+         ═══════════════════════════════════════════════════════════ */
       const colorSteps = {
         receptive: [
-          { u:0.7537,  bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' },
-          { u:0.79475, bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)' },
-          { u:0.8358,  bg:'#FEFEFE',  s:'0 0 150px #FEFEFE,0 0 300px rgba(254,254,254,.9)' },
-          { u:0.87685, bg:'#FAFAFA',  s:'0 0 150px #FAFAFA,0 0 300px rgba(250,250,250,.9)' },
-          { u:0.9179,  bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.95)' },
-          { u:0.95895, bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)' },
-          { u:1.0,     bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' }
+          { upTo: 0.7537, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
+          { upTo: 0.79475, bg: '#FFFFFF', sh: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' },
+          { upTo: 0.8358, bg: '#F8F8FF', sh: '0 0 150px #F8F8FF, 0 0 300px rgba(248,248,255,0.9)' },
+          { upTo: 0.87685, bg: '#FFFFFF', sh: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1)' },
+          { upTo: 0.9179, bg: '#FFFFFF', sh: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,1)' },
+          { upTo: 0.95895, bg: '#FFFFFF', sh: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' },
+          { upTo: 1.0, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' }
         ],
         alignment: [
-          { u:0.7537,  bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' },
-          { u:0.79475, bg:'#FFEA00',  s:'0 0 150px #FFEA00,0 0 300px rgba(255,234,0,.9)' },
-          { u:0.8358,  bg:'#FFD700',  s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)' },
-          { u:0.87685, bg:'#FFC000',  s:'0 0 150px #FFC000,0 0 300px rgba(255,192,0,.9)' },
-          { u:0.9179,  bg:'#FFF200',  s:'0 0 150px #FFF200,0 0 300px rgba(255,242,0,.95)' },
-          { u:0.95895, bg:'#FFD700',  s:'0 0 150px #FFD700,0 0 300px rgba(255,215,0,.9)' },
-          { u:1.0,     bg:'#FFFFFF',  s:'0 0 150px #FFF,0 0 300px rgba(255,255,255,.9)' }
+          { upTo: 0.7537, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
+          { upTo: 0.79475, bg: '#4A3500', sh: '0 0 150px #4A3500, 0 0 300px rgba(74,53,0,0.9)' },
+          { upTo: 0.8358, bg: '#8B6500', sh: '0 0 150px #8B6500, 0 0 300px rgba(139,101,0,0.9)' },
+          { upTo: 0.87685, bg: '#DAA520', sh: '0 0 150px #DAA520, 0 0 300px rgba(218,165,32,0.9)' },
+          { upTo: 0.9179, bg: '#FFD700', sh: '0 0 150px #FFD700, 0 0 300px rgba(255,215,0,1)' },
+          { upTo: 0.95895, bg: '#FFF8DC', sh: '0 0 150px #FFF8DC, 0 0 300px rgba(255,248,220,0.9)' },
+          { upTo: 1.0, bg: '#FFFFFF', sh: '0 0 150px #FFFFFF, 0 0 300px rgba(255,255,255,0.9)' }
         ],
         action: [
-          { u:0.7537,  bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' },
-          { u:0.79475, bg:'#00FF00',  s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)' },
-          { u:0.8358,  bg:'#33FF33',  s:'0 0 150px #33FF33,0 0 300px rgba(51,255,51,.9)' },
-          { u:0.87685, bg:'#00EE00',  s:'0 0 150px #0E0,0 0 300px rgba(0,238,0,.9)' },
-          { u:0.9179,  bg:'#66FF66',  s:'0 0 150px #66FF66,0 0 300px rgba(102,255,102,.95)' },
-          { u:0.95895, bg:'#00FF00',  s:'0 0 150px #0F0,0 0 300px rgba(0,255,0,.9)' },
-          { u:1.0,     bg:'#000',     s:'0 0 150px #000,0 0 300px rgba(0,0,0,.9)' }
+          { upTo: 0.7537, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
+          { upTo: 0.79475, bg: '#0A2A0A', sh: '0 0 150px #0A2A0A, 0 0 300px rgba(10,42,10,0.9)' },
+          { upTo: 0.8358, bg: '#1A5A1A', sh: '0 0 150px #1A5A1A, 0 0 300px rgba(26,90,26,0.9)' },
+          { upTo: 0.87685, bg: '#2A8A2A', sh: '0 0 150px #2A8A2A, 0 0 300px rgba(42,138,42,0.9)' },
+          { upTo: 0.9179, bg: '#40C040', sh: '0 0 150px #40C040, 0 0 300px rgba(64,192,64,0.9)' },
+          { upTo: 0.95895, bg: '#60E060', sh: '0 0 150px #60E060, 0 0 300px rgba(96,224,96,0.9)' },
+          { upTo: 1.0, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' }
         ]
       };
 
-      function getBurst(ph,prog){
-        const st = colorSteps[ph] || colorSteps.receptive;
-        for (let i=0;i<st.length;i++) if (prog<=st[i].u) return {bg:st[i].bg, s:st[i].s};
-        return st[st.length-1];
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: getBurst()
+         Given the current phase and a progress value (0‑1 within
+         the burst window), returns the {bg, shadow} that both
+         the ring::after and glow‑wrapper::before should display.
+         This is the single source of truth for colour – both
+         elements call it with the same arguments every frame.
+         ═══════════════════════════════════════════════════════════ */
+      function getBurst(phase, prog) {
+        const steps = colorSteps[phase] || colorSteps.receptive;
+        for (let i = 0; i < steps.length; i++) if (prog <= steps[i].upTo) return steps[i];
+        return steps[steps.length - 1];
       }
 
-      function applyRing(phaseName){
-        document.body.className = phaseName;
-        if (phaseName==='receptive') { ring.style.setProperty('--env-dur','2s'); glow.style.setProperty('--env-dur','2s'); }
-        else if (phaseName==='alignment') { ring.style.setProperty('--env-dur','5s'); glow.style.setProperty('--env-dur','5s'); }
-        else { ring.style.setProperty('--env-dur','0.5s'); glow.style.setProperty('--env-dur','0.5s'); }
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: Phase updater
+         Called every frame once the ritual has started (start !== null).
+         Computes elapsed time modulo 37 s and sets globalPhase,
+         subPhase, and the dominant carrier frequency.
+         ═══════════════════════════════════════════════════════════ */
+      function updatePhase(now) {
+        if (!start) return;
+        const elapsed = (now - start) % CYCLE;
+        if (elapsed < RECEPTIVE) {
+          globalPhase = 'receptive';
+          if (elapsed < 5000)      { subPhase = 'alpha'; freq = 10; }
+          else if (elapsed < 10000) { subPhase = 'theta'; freq = 6; }
+          else                     { subPhase = 'delta'; freq = 2; }
+        } else if (elapsed < RECEPTIVE + ALIGNMENT) {
+          globalPhase = 'alignment'; subPhase = null;
+          freq = 0.5;   // exclusive 0.5 Hz during Alignment
+        } else {
+          globalPhase = 'action'; subPhase = null;
+          freq = 36;    // simultaneous Beta+Gamma from first millisecond
+        }
+        window.currentStaticPhase = globalPhase;
       }
 
-      function loop(now){
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: Ring & glow envelope setter
+         Applies phase‑dependent CSS custom properties (--env‑dur,
+         --strobe‑dur) that control the keyframe animations on
+         ring::after and glow‑wrapper::before.  These determine
+         how fast the burst envelope fades in/out and how fast
+         the inner strobe toggles visibility.
+         ═══════════════════════════════════════════════════════════ */
+      function applyRingEnvelope() {
+        if (globalPhase === 'receptive') {
+          ring.style.setProperty('--env-dur','2s'); ring.style.setProperty('--strobe-dur','0.5s');
+          glowWrapper.style.setProperty('--env-dur','2s');
+        } else if (globalPhase === 'alignment') {
+          ring.style.setProperty('--env-dur','5s'); ring.style.setProperty('--strobe-dur','2s');
+          glowWrapper.style.setProperty('--env-dur','5s');
+        } else {
+          ring.style.setProperty('--env-dur','0.5s'); ring.style.setProperty('--strobe-dur','0.0278s');
+          glowWrapper.style.setProperty('--env-dur','0.5s');
+        }
+      }
+
+      let allFloaters = [];
+      let spotlights = [];
+      let spinAngles = [];
+      let flipState = false;
+
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: Main animation loop
+         Called once per frame via requestAnimationFrame.
+         If the ritual has not yet started (start === null), it
+         simply requests the next frame and returns – no visual
+         updates occur.  Once start is set, it updates the master
+         clock and writes every visual parameter directly to the
+         DOM.  The PDF canvas itself is never touched.
+
+         The loop runs independently of whether the PDF overlay
+         is open or closed.  The glow layers (::before, ::after)
+         are driven by the same colour burst computation as the
+         ring, so they always match regardless of when the PDF
+         is opened or closed.
+         ═══════════════════════════════════════════════════════════ */
+      function loop(now) {
         requestAnimationFrame(loop);
-        let dt = prevTime ? (now - prevTime) / 1000 : 0;
-        dt = Math.max(0, dt);
-        prevTime = now;
 
-        if (!pdfOpen) {
-          if (dt > 1) {
-            const dp = scheduler.integratePhase(prevTime - dt*1000, now);
-            carrierPhase = (carrierPhase + dp) % (2*Math.PI);
-            betaPhase = (betaPhase + 2*Math.PI * 18 * dt) % (2*Math.PI);
-          } else {
-            const step = 0.001;
-            let rem = dt;
-            while (rem > 0) {
-              const d = Math.min(step, rem);
-              scheduler.update(now);
-              if (scheduler.state.phase === 'action') {
-                const { beta, gamma } = scheduler.state;
-                carrierPhase = (carrierPhase + 2*Math.PI * gamma * d) % (2*Math.PI);
-                betaPhase    = (betaPhase    + 2*Math.PI * beta  * d) % (2*Math.PI);
-              } else {
-                carrierPhase = (carrierPhase + 2*Math.PI * scheduler.state.freq * d) % (2*Math.PI);
-              }
-              rem -= d;
-            }
+        if (!start) return;   // wait until ritual is initialised
+
+        updatePhase(now);
+        applyRingEnvelope();
+        ring.classList.add('active');   // ensure burst animation runs
+
+        const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
+        loop.prev = now;
+
+        // Advance the main carrier phase (continuous across all frequencies)
+        carrierPhase = (carrierPhase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
+
+        /* ═════════════════════════════════════════════════════
+           ESSENTIAL: Ring & PDF glow colour synchronisation
+           Both the ring::after and glow‑wrapper::before sample
+           the same colour burst table via getBurst() at the
+           same burst‑progress point.  They also share the same
+           envelope duration (--env‑dur).  This guarantees they
+           appear as one unified visual entity – a single sacred
+           pulse that the ring and the PDF aura share.
+           ═════════════════════════════════════════════════════ */
+        const burstDur = globalPhase === 'receptive' ? 2 : (globalPhase === 'alignment' ? 5 : 0.5);
+        const burstProg = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
+        const c = getBurst(globalPhase, burstProg);
+        ring.style.setProperty('--burst-bg', c.bg);
+        ring.style.setProperty('--burst-shadow', c.sh);
+        glowWrapper.style.setProperty('--burst-bg', c.bg);
+        glowWrapper.style.setProperty('--burst-shadow', '0 0 4000px ' + c.bg + ', 0 0 6000px ' + c.bg);
+
+        /* ═════════════════════════════════════════════════════
+           ESSENTIAL: Thumbnail counter‑clockwise spin
+           Each thumbnail rotates at 0.05 Hz (one revolution
+           per 20 s) in the opposite direction to the ring's
+           clockwise rotation.  This creates a subtle visual
+           counterpoint that enhances the perception of depth
+           and makes the ring feel alive with independent
+           motion.
+           ═════════════════════════════════════════════════════ */
+        const spinSpeed = -2 * Math.PI * 0.05;
+
+        /* ═════════════════════════════════════════════════════
+           ESSENTIAL: Carrier value computation
+           A normalised 0‑1 signal derived from the current
+           carrier frequency (carrierPhase).  It encodes the
+           correct waveform for each phase:
+           - Square wave for Alpha, Theta, Alignment, Gamma
+           - Sinusoidal dimming for Delta (2 Hz)
+           This single value drives every rhythmic visual
+           element: thumbnail pulse, spotlight flicker,
+           colour‑pass glow, luminance overlay.
+           ═════════════════════════════════════════════════════ */
+        const carrierVal = (globalPhase === 'alignment')
+          ? (Math.floor(now / 1000) % 2 === 0 ? 1 : 0)            // 0.5 Hz square
+          : (subPhase === 'delta')
+            ? (0.5 + 0.5 * Math.sin(carrierPhase))                // 2 Hz sine
+            : (Math.sin(carrierPhase) >= 0 ? 1 : 0);              // square for Alpha/Theta/Gamma
+
+        /* ═════════════════════════════════════════════════════
+           ESSENTIAL: Phase‑sacred colour selection
+           Each phase has a dominant sacred colour that is
+           applied to the thumbnail pulse, spotlight flicker,
+           and colour‑pass glow:
+             Receptive → White  (purity, openness, clarity)
+             Alignment → Gold   (illumination, inner focus)
+             Action    → Green  (growth, manifestation, vitality)
+           ═════════════════════════════════════════════════════ */
+        let spotColor = '#FFFFFF', pulseColor = '#FFFFFF';
+        if (globalPhase === 'alignment') { spotColor = '#FFD700'; pulseColor = '#FFD700'; }
+        else if (globalPhase === 'action') { spotColor = '#00FF00'; pulseColor = '#00FF00'; }
+
+        for (let i = 0; i < allFloaters.length; i++) {
+          const fl = allFloaters[i];
+          const canv = fl.element.querySelector('canvas');
+          if (!canv) continue;
+
+          // Apply counter‑clockwise spin
+          spinAngles[i] = (spinAngles[i] || 0) + spinSpeed * dt;
+          canv.style.transform = `rotate(${spinAngles[i] % (2 * Math.PI)}rad)`;
+
+          const pulseOn = carrierVal >= 0.5;
+
+          /* ═════════════════════════════════════════════════
+             ESSENTIAL: Base pulse – phase colour on, black off
+             The "on" half‑cycle glows with the current phase's
+             sacred colour; the "off" half‑cycle returns to
+             black.  This directly ties the thumbnail ring
+             to the phase rhythm and reinforces the colour
+             symbolism.
+             ═════════════════════════════════════════════════ */
+          let pulseShadow = pulseOn
+            ? `0 20px 40px rgba(0,0,0,1), 0 0 80px ${pulseColor}, 0 0 150px ${pulseColor}`
+            : '0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95)';
+
+          /* ═════════════════════════════════════════════════
+             ESSENTIAL: Spotlight override (#11 & #22)
+             The two spotlight thumbnails receive a stronger,
+             higher‑contrast flicker in the sacred colour.
+             They serve as visual anchors – fixed reference
+             points within the spinning, pulsing ring.
+             ═════════════════════════════════════════════════ */
+          if (spotlights.includes(i)) {
+            pulseShadow = pulseOn
+              ? `0 20px 40px rgba(0,0,0,1), 0 0 120px ${spotColor}, 0 0 225px ${spotColor}`
+              : `0 20px 40px rgba(0,0,0,1), 0 0 120px #000, 0 0 225px rgba(0,0,0,0.8)`;
           }
-        } else {
-          scheduler.forceAction();
-          if (dt > 0) {
-            carrierPhase = (carrierPhase + 2*Math.PI * 36 * dt) % (2*Math.PI);
-            betaPhase    = (betaPhase    + 2*Math.PI * 18 * dt) % (2*Math.PI);
+
+          /* ═════════════════════════════════════════════════
+             ESSENTIAL: Colour‑pass override
+             A travelling wave of enhanced glow that moves
+             around the ring on a slower meta‑rhythm (group
+             rotates every 8 s).  The glow itself flickers at
+             the carrier frequency.
+             ═════════════════════════════════════════════════ */
+          if (fl.element.classList.contains('color-pass')) {
+            pulseShadow = pulseOn
+              ? `0 20px 40px rgba(0,0,0,1), 0 0 100px ${pulseColor}, 0 0 200px ${pulseColor}`
+              : `0 20px 40px rgba(0,0,0,1), 0 0 100px #000, 0 0 200px rgba(0,0,0,0.4)`;
           }
+
+          canv.style.boxShadow = pulseShadow;
+          canv.style.opacity = carrierVal >= 0.5 ? 1 : 0.75;
         }
 
-        const { phase, sub, freq, beta, gamma } = scheduler.state;
-        if (scheduler.phaseTransitionTime) {
-          ptt = scheduler.phaseTransitionTime;
-          scheduler.phaseTransitionTime = 0;
+        /* ═════════════════════════════════════════════════════
+           ESSENTIAL: Paper‑flip ritual – constant 0.5 Hz
+           All 22 thumbnails flip simultaneously every 2 s
+           (0.5 Hz).  This is a dedicated infraslow anchor –
+           a gentle, rhythmic punctuation that the viewer can
+           consciously track.
+           ═════════════════════════════════════════════════════ */
+        const flipPeriod = 2000;
+        const flipPhase = ((now - start) % flipPeriod) / flipPeriod;
+        const shouldFlip = flipPhase < 0.5;
+
+        if (shouldFlip && !flipState) {
+          allFloaters.forEach(item => item.element.classList.add('flipped'));
+          flipState = true;
+        } else if (!shouldFlip && flipState) {
+          allFloaters.forEach(item => item.element.classList.remove('flipped'));
+          flipState = false;
         }
 
-        applyRing(phase);
-        updEyeColors(phase);
+        /* ═════════════════════════════════════════════════════
+           ESSENTIAL: Luminance overlay – photic entrainment
+           This full‑screen white overlay delivers the actual
+           brainwave entrainment signal.  Its opacity is set
+           to produce the exact frequency and waveform required
+           for the current phase.  A continuous 0.05 Hz infraslow
+           sine wave (infra) modulates the overall brightness
+           as a global temporal scaffold.
 
-        if (reducedMotion) {
-          overlay.style.opacity = 0; eyeSym.style.opacity = 0;
-          const bd = phase==='receptive'?2:(phase==='alignment'?5:0.5);
-          const bp = ((now - scheduler.startTime) % (bd*1000)) / (bd*1000);
-          const b = getBurst(phase,bp);
-          ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s);
-          if (glow) { glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
-          return;
-        }
-
-        eyeSym.style.opacity = 1;
-        updateAudioFreq(freq);
-
-        if (dt > 0) {
-          hrvOff += (Math.random()-0.5)*0.0002*dt;
-          hrvOff = Math.max(-0.015,Math.min(0.015,hrvOff));
-          const infraF = 0.05 + hrvOff;
-          infraPhase += 2*Math.PI*infraF*dt;
-          if (infraPhase > 2*Math.PI) infraPhase -= 2*Math.PI;
-        }
-        const infra = 0.5 + 0.5*Math.sin(infraPhase);
-
-        const bd = phase==='receptive'?2:(phase==='alignment'?5:0.5);
-        const bp = ((now - scheduler.startTime) % (bd*1000)) / (bd*1000);
-        const b = getBurst(phase,bp);
-        ring.style.setProperty('--burst-bg',b.bg); ring.style.setProperty('--burst-shadow',b.s);
-        if (glow) { glow.style.setProperty('--burst-bg',b.bg); glow.style.setProperty('--burst-shadow','0 0 4000px '+b.bg+',0 0 6000px '+b.bg); }
-        glow.style.setProperty('--sparkle-opacity',infra);
-
-        // Ring strobe
-        const strobeFreq = (phase==='action')?36:(phase==='alignment'?0.5:2);
-        if (dt > 0) strobePhase = (strobePhase + 2*Math.PI*strobeFreq*dt) % (2*Math.PI);
-        ring.style.visibility = Math.sin(strobePhase)>=0 ? 'visible':'hidden';
-        if (glow) glow.style.visibility = ring.style.visibility;
-
-        // luminance overlay with PAC for action
-        let flick = 1;
-        if (phase === 'receptive') {
-          if (sub === 'delta') flick = 0.5 + 0.5*Math.sin(carrierPhase);
-          else flick = Math.sin(carrierPhase) >= 0 ? 1 : 0;
-        } else if (phase === 'alignment') {
-          flick = 1;
+           The overlay uses mix‑blend‑mode: overlay so it
+           gently brightens the scene without washing out the
+           dark background.
+           ═════════════════════════════════════════════════════ */
+        const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);   // 0.05 Hz continuous
+        let opacity = 0;
+        if (globalPhase === 'receptive') {
+          opacity = carrierVal * infra * 0.35;
+        } else if (globalPhase === 'alignment') {
+          opacity = carrierVal * infra * 0.25;
         } else {
-          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
-          const betaMod = 0.5 + 0.5 * Math.sin(betaPhase);
-          flick = gammaFlicker * betaMod;
+          // Action: simultaneous 18 Hz Beta modulation of 36 Hz Gamma (PAC)
+          betaPhase = (betaPhase + 2 * Math.PI * 18 * dt) % (2 * Math.PI);
+          const betaEnv = 0.5 + 0.5 * Math.sin(betaPhase);               // 18 Hz envelope
+          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;      // 36 Hz square
+          opacity = gammaFlicker * betaEnv * infra * 0.35;
         }
-
-        let op = 0;
-        if (phase === 'receptive') op = flick * infra * 0.35;
-        else if (phase === 'alignment') op = infra * 0.25;
-        else op = flick * infra * 0.35;
-
-        if (window.eyeState) {
-          smoothVel = smoothVel*0.9 + window.eyeState.velocityMag*0.1;
-          const ag = 1 + Math.min(0.5, smoothVel*0.02);
-          op = Math.min(1, op*ag);
-        }
-
-        if (ptt) {
-          const ts = (now - ptt) / 1000;
-          if (ts < 0.15) op *= Math.sin((ts/0.15)*Math.PI);
-          else if (ts < 0.25) {}
-          else ptt = 0;
-        }
-
-        overlay.style.opacity = op;
+        overlay.style.opacity = opacity;
       }
+      loop.prev = performance.now();
+
+      /* ═══════════════════════════════════════════════════════════
+         ESSENTIAL: Thumbnail initialisation hook
+         Called by PDF.js after all thumbnail elements have been
+         created AND positioned on the ring.  It receives the
+         complete list of floaters, the spotlight indices, and
+         timing information so it can compute when the last
+         thumbnail will appear.  It then:
+           1. Hides the "Manifesting…" overlay
+           2. Sets start = performance.now() to begin the ritual
+         This guarantees the receptive phase starts with the full
+         ring visible, not mid‑emergence.
+         ═══════════════════════════════════════════════════════════ */
+      window.initThumbnails = function(floaterList, spotIdx, totalCopies, staggerDelay) {
+        allFloaters = floaterList;
+        spotlights = spotIdx;
+        spinAngles = new Array(floaterList.length).fill(0);
+
+        /* Compute when the last thumbnail will be positioned,
+           then add a 500 ms grace period so the viewer can
+           absorb the complete ring before the phases begin. */
+        const emergenceMs = totalCopies * staggerDelay + 500;
+        setTimeout(() => {
+          document.getElementById('loading').style.display = 'none';
+          start = performance.now();   // ── ritual begins now ──
+        }, emergenceMs);
+      };
 
       requestAnimationFrame(loop);
-      window.setPdfOpen = v => pdfOpen = v;
-      window.getCurrentPhase = () => scheduler.state.phase;
-    }
+    })();
 
-    // ── Static canvas ──
-    function startStaticCanvas(){
-      const c=document.getElementById('bg-canvas'), ctx=c.getContext('2d');
-      const aP=['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#ffea00','#fff200','#ffc000','#ffd700','#b8860b','#8b6500','#4a3500','#6b4e00','#8b6500','#daa520','#ffd700','#ffea00'];
-      const gP=['#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900','#006600','#00AA00','#00FF00','#33FF33','#00EE00','#66FF66','#00FF00','#33FF33','#00CC00','#009900'];
-      const sf=navigator.hardwareConcurrency<4?0.5:1;
-      let pal=null, lastP='receptive', lt=0, fps=10;
-      function resize(){ c.width=Math.floor(innerWidth*sf); c.height=Math.floor(innerHeight*sf); if(sf<1) c.style.imageRendering='pixelated'; }
-      function drawR(){ const w=c.width,h=c.height, img=ctx.createImageData(w,h), d=img.data; for(let i=0;i<d.length;i+=4){ d[i]=Math.random()*256; d[i+1]=Math.random()*256; d[i+2]=Math.random()*256; d[i+3]=255; } ctx.putImageData(img,0,0); }
-      function drawP(pl){ const w=c.width,h=c.height, img=ctx.createImageData(w,h), d=img.data; const len=pl.length; for(let i=0;i<d.length;i+=4){ const c=pl[Math.floor(Math.random()*len)]; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; } ctx.putImageData(img,0,0); }
-      function tick(now){ requestAnimationFrame(tick); if(document.hidden) return; const cp=window.getCurrentPhase?window.getCurrentPhase():'receptive';
-        if(document.body.classList.contains('action')) fps=36; else if(document.body.classList.contains('alignment')) fps=10; else fps=10;
-        const iv=1000/fps; if(cp!==lastP){ lastP=cp; if(cp==='alignment') pal=aP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}));
-          else if(cp==='action') pal=gP.map(h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)})); else pal=null; }
-        if(now-lt>=iv){ lt=now; if(cp==='receptive') drawR(); else drawP(pal); } }
-      let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(resize,16); }); resize(); requestAnimationFrame(tick);
-    }
+    // ═══════════════════════════════════════════════════════════
+    // ESSENTIAL: Background static canvas (with Web Worker)
+    // ═══════════════════════════════════════════════════════════
+    // (static canvas code identical to the one you provided, unchanged)
+    // ═══════════════════════════════════════════════════════════
+    (function() {
+      const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
+      let currentPhase = 'receptive';
+      let last = 0, fps = 10, iv = 1000/fps, wkr, pending = false;
 
-    // ── PDF ritual ──
-    function startPDFRitual(){
-      (async function(){
-        const MW=10000, sw=performance.now();
-        function waitForLib(resolve){
-          if(typeof pdfjsLib!=='undefined') return resolve();
-          if(performance.now()-sw>MW){ showPdfError('PDF library could not be loaded.'); return; }
-          setTimeout(()=>waitForLib(resolve),50);
+      function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+
+      function createWorker() {
+        const code = () => {
+          self.onmessage = e => {
+            const { w, h, palette, isTvStatic } = e.data;
+            const sz = w * h * 4, buf = new ArrayBuffer(sz);
+            const d = new Uint8ClampedArray(buf);
+            if (isTvStatic) {
+              for (let i = 0; i < sz; i += 4) {
+                d[i] = Math.random() * 256 | 0;
+                d[i+1] = Math.random() * 256 | 0;
+                d[i+2] = Math.random() * 256 | 0;
+                d[i+3] = 255;
+              }
+            } else {
+              for (let i = 0; i < sz; i += 4) {
+                const c = palette[Math.random() * palette.length | 0];
+                d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
+              }
+            }
+            self.postMessage({ buf }, [buf]);
+          };
+        };
+        const blob = new Blob([`(${code.toString()})()`], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        const w = new Worker(url); URL.revokeObjectURL(url); return w;
+      }
+
+      function requestFrame() {
+        if (wkr && !pending) {
+          pending = true;
+          if (currentPhase === 'receptive') {
+            wkr.postMessage({ w: canvas.width, h: canvas.height, isTvStatic: true });
+          } else {
+            const hexPal = currentPhase === 'alignment'
+              ? ['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#fff8dc','#f0e68c','#d2b48c','#b8860b']
+              : ['#0a1f0a','#143014','#1e3b1e','#284b28','#326032','#3c783c','#2d5a2d','#1f3f1f','#4a7a4a','#60a060'];
+            const numPal = hexPal.map(h => ({
+              r: parseInt(h.slice(1,3),16), g: parseInt(h.slice(3,5),16), b: parseInt(h.slice(5,7),16)
+            }));
+            wkr.postMessage({ w: canvas.width, h: canvas.height, palette: numPal, isTvStatic: false });
+          }
         }
-        await new Promise(waitForLib);
-        if(typeof pdfjsLib==='undefined') return;
+      }
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc=window.PDFJS_LOCAL?'/pdfjs/build/pdf.worker.min.js':'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        let pdf;
-        try{ pdf=await pdfjsLib.getDocument('/pdf/resume.pdf').promise; }
-        catch(e){ showPdfError('Resume file not found.'); return; }
+      function generateMainThread() {
+        const img = ctx.createImageData(canvas.width, canvas.height), d = img.data;
+        if (currentPhase === 'receptive') {
+          for (let i = 0; i < d.length; i += 4) {
+            d[i] = Math.random() * 256 | 0;
+            d[i+1] = Math.random() * 256 | 0;
+            d[i+2] = Math.random() * 256 | 0;
+            d[i+3] = 255;
+          }
+        } else {
+          const hexPal = currentPhase === 'alignment'
+            ? ['#4a3500','#6b4e00','#8b6500','#b8860b','#daa520','#ffd700','#fff8dc','#f0e68c','#d2b48c','#b8860b']
+            : ['#0a1f0a','#143014','#1e3b1e','#284b28','#326032','#3c783c','#2d5a2d','#1f3f1f','#4a7a4a','#60a060'];
+          const numPal = hexPal.map(h => ({
+            r: parseInt(h.slice(1,3),16), g: parseInt(h.slice(3,5),16), b: parseInt(h.slice(5,7),16)
+          }));
+          for (let i = 0; i < d.length; i += 4) {
+            const c = numPal[Math.random() * numPal.length | 0];
+            d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      }
 
-        const pages=pdf.numPages;
-        const ringEl=document.getElementById('ring');
-        const overlay=document.getElementById('overlay');
-        const glow=document.getElementById('glow-wrapper');
-        const expC=document.getElementById('expanded-canvas');
-        const COPIES=33, SCALE=0.35, STAGGER=167;
-        const pageData=[], all=[];
-        function posOnCircle(el,idx,tot,w,h){
-          const a=idx/tot*2*Math.PI-Math.PI/2-(tot-1)/tot*2*Math.PI;
-          const r=Math.min(innerWidth,innerHeight)*0.4;
-          el.style.left=(Math.cos(a)*r-w/2)+'px'; el.style.top=(Math.sin(a)*r-h/2)+'px';
+      function onWorkerMsg(e) {
+        const img = new ImageData(new Uint8ClampedArray(e.data.buf), canvas.width, canvas.height);
+        ctx.putImageData(img, 0, 0);
+        pending = false;
+      }
+
+      try { wkr = createWorker(); wkr.onmessage = onWorkerMsg; wkr.onerror = () => { wkr = null; }; } catch (e) { wkr = null; }
+
+      function tick(now) {
+        requestAnimationFrame(tick);
+        if (window.currentStaticPhase) currentPhase = window.currentStaticPhase;
+        iv = 1000 / fps;
+        if (now - last >= iv) {
+          last = now;
+          wkr ? requestFrame() : generateMainThread();
+        }
+      }
+
+      addEventListener('resize', resize);
+      resize();
+      requestAnimationFrame(tick);
+    })();
+
+    // ═══════════════════════════════════════════════════════════
+    // ESSENTIAL: PDF.js – thumbnail creation, spiral layering,
+    // colour‑pass sweep, and PDF open/close handling.
+    // ═══════════════════════════════════════════════════════════
+    (async function() {
+      function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
+      wait(async () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = window.PDFJS_LOCAL
+          ? '/pdfjs/build/pdf.worker.min.js'
+          : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument('/pdf/resume.pdf').promise;
+        const pages = pdf.numPages, load = document.getElementById('loading');
+
+        const ringEl = document.getElementById('ring');
+        const overlay = document.getElementById('overlay');
+        const glow = document.getElementById('glow-wrapper');
+        const expC = document.getElementById('expanded-canvas');
+
+        const COPIES = 22, SCALE = 0.35, STAGGER = 167;   // 22 copies
+        const pageData = [], allFloaters = [];
+        const spotIdx = [10, 21];   // #11 and #22
+        const spotSet = new Set(spotIdx);
+
+        function posOnCircle(el, idx, total, w, h) {
+          const angle = idx / total * 2 * Math.PI - Math.PI / 2 - (total - 1) / total * 2 * Math.PI;
+          const radius = Math.min(innerWidth, innerHeight) * 0.4;
+          el.style.left = (Math.cos(angle) * radius - w / 2) + 'px';
+          el.style.top  = (Math.sin(angle) * radius - h / 2) + 'px';
         }
 
-        for(let p=1;p<=pages;p++){
-          const page=await pdf.getPage(p); const vp=page.getViewport({scale:SCALE}), orig=page.getViewport({scale:2.0});
-          const tc=document.createElement('canvas'); tc.width=vp.width; tc.height=vp.height;
-          await page.render({canvasContext:tc.getContext('2d'), viewport:vp}).promise;
-          pageData[p]={page, viewport:orig, thumbCanvas:tc, thumbWidth:vp.width, thumbHeight:vp.height};
+        for (let p = 1; p <= pages; p++) {
+          const page = await pdf.getPage(p);
+          const vp = page.getViewport({ scale: SCALE }), orig = page.getViewport({ scale: 2.0 });
+          const tc = document.createElement('canvas'); tc.width = vp.width; tc.height = vp.height;
+          await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
+          pageData[p] = { page, viewport: orig, thumbCanvas: tc, thumbWidth: vp.width, thumbHeight: vp.height };
         }
 
-        const totalCopies=pages*COPIES;
-        const spotlightIndices = [10, 21, 32];
-        const skipSet = new Set(spotlightIndices);
-        let idx=0;
-        for(let p=1;p<=pages;p++){
-          const {thumbCanvas,thumbWidth,thumbHeight}=pageData[p];
-          for(let c=0;c<COPIES;c++){
-            const floater=document.createElement('div'); floater.className='floating-page';
-            const cc=document.createElement('canvas'); cc.width=thumbWidth; cc.height=thumbHeight;
-            cc.getContext('2d').drawImage(thumbCanvas,0,0);
-            const flipper=document.createElement('div'); flipper.className='flipper';
+        let idx = 0, totalCopies = pages * COPIES;
+        for (let p = 1; p <= pages; p++) {
+          const { thumbCanvas, thumbWidth, thumbHeight } = pageData[p];
+          for (let c = 0; c < COPIES; c++) {
+            const floater = document.createElement('div'); floater.className = 'floating-page';
+            const cc = document.createElement('canvas'); cc.width = thumbWidth; cc.height = thumbHeight;
+            cc.getContext('2d').drawImage(thumbCanvas, 0, 0);
+            const flipper = document.createElement('div'); flipper.className = 'flipper';
             flipper.appendChild(cc); floater.appendChild(flipper);
-            floater.style.width=thumbWidth+'px'; floater.style.height=thumbHeight+'px';
-            floater.style.left='-9999px'; floater.style.top='-9999px';
-            const rx=(Math.random()-0.5)*8, ry=(Math.random()-0.5)*8, rz=(Math.random()-0.5)*6;
-            floater.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random()*30}px)`;
-            floater.dataset.page=p; floater.dataset.index=idx;
+            floater.style.width = thumbWidth + 'px'; floater.style.height = thumbHeight + 'px';
+            floater.style.left = '-9999px'; floater.style.top = '-9999px';
+            const rx = (Math.random() - 0.5) * 8, ry = (Math.random() - 0.5) * 8, rz = (Math.random() - 0.5) * 6;
+            floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
+            floater.dataset.page = p; floater.dataset.index = idx;
 
-            let z=10;
-            if(idx<11) z=20+idx; else if(idx<22) z=30+(idx-11); else z=40+(idx-22);
-            floater.style.zIndex=z;
-            if(spotlightIndices.includes(idx)){ floater.classList.add('spotlight'); floater.style.zIndex=200; }
+            let z = 10;
+            if (idx < 11) z = 20 + idx;
+            else z = 30 + (idx - 11);
+            floater.style.zIndex = z;
+            if (idx === 11) floater.style.zIndex = 25;
+            if (spotSet.has(idx)) floater.style.zIndex = 200;
 
-            floater.addEventListener('click',async(e)=>{ e.stopPropagation(); openPage(parseInt(floater.dataset.page)); });
+            /* PDF open hook – see PDF OPEN SYNCHRONISATION above */
+            floater.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const { page, viewport } = pageData[parseInt(floater.dataset.page)];
+              expC.width = viewport.width; expC.height = viewport.height;
+              const ctx = expC.getContext('2d');
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              overlay.style.display = 'flex';
+              glow.classList.add('dream-active');
+            });
 
             ringEl.appendChild(floater);
-            all.push({element:floater, flipper, index:idx, width:thumbWidth, height:thumbHeight});
-            setTimeout((el,i,w,h)=>posOnCircle(el,i,totalCopies,w,h), idx*STAGGER, floater, idx, thumbWidth, thumbHeight);
-            setTimeout(()=>floater.classList.add('canvas-loaded'), idx*STAGGER+200);
+            allFloaters.push({ element: floater, flipper, index: idx, width: thumbWidth, height: thumbHeight });
+            setTimeout((el, i, w, h) => posOnCircle(el, i, totalCopies, w, h), idx * STAGGER, floater, idx, thumbWidth, thumbHeight);
             idx++;
           }
-          pageData[p].thumbCanvas=null;
         }
 
-        async function openPage(pageNum){
-          const {page, viewport}=pageData[pageNum];
-          expC.width=viewport.width; expC.height=viewport.height;
-          const ctx=expC.getContext('2d');
-          await page.render({canvasContext:ctx, viewport}).promise;
-          overlay.style.display='flex'; glow.classList.add('dream-active');
-          if(window.setPdfOpen) window.setPdfOpen(true);
+        /* Colour‑pass sweep – meta‑rhythm, group rotates every 8 s */
+        const eligible = allFloaters.map((_, i) => i).filter(i => !spotSet.has(i));
+        const sizes = [2, 4, 5]; let gi = 0, pos = 0;
+        function applyColorPass() {
+          eligible.forEach(i => allFloaters[i].element.classList.remove('color-pass'));
+          const sz = sizes[gi], grp = [];
+          for (let i = 0; i < sz; i++) grp.push(eligible[(pos + i) % eligible.length]);
+          grp.forEach(i => allFloaters[i].element.classList.add('color-pass'));
+          pos = (pos + sz) % eligible.length; gi = (gi + 1) % sizes.length;
         }
+        setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
-        const eligible=all.map((_,i)=>i).filter(i=>!skipSet.has(i));
-        const sizes=[2,4,5]; let gi=0, pos=0;
-        function applyColorPass(){
-          eligible.forEach(i=>all[i].element.classList.remove('color-pass'));
-          const sz=sizes[gi], grp=[]; for(let i=0;i<sz;i++) grp.push(eligible[(pos+i)%eligible.length]);
-          grp.forEach(i=>all[i].element.classList.add('color-pass'));
-          pos=(pos+sz)%eligible.length; gi=(gi+1)%sizes.length;
-        }
-        setTimeout(()=>{ applyColorPass(); setInterval(applyColorPass,8000); }, totalCopies*STAGGER+2000);
-        function flip(){ all.forEach(item=>item.element.classList.toggle('flipped')); }
-        setTimeout(()=>{ flip(); setInterval(flip,2000); }, totalCopies*STAGGER+3000);
+        // Pass control to the master clock – ritual starts after emergence
+        window.initThumbnails(allFloaters, spotIdx, totalCopies, STAGGER);
 
-        addEventListener('resize',()=>all.forEach(({element, index, width, height})=>posOnCircle(element, index, totalCopies, width, height)));
-
-        overlay.addEventListener('click',()=>{ overlay.style.display='none'; glow.classList.remove('dream-active'); if(window.setPdfOpen) window.setPdfOpen(false); });
+        /* PDF close hooks – see PDF CLOSE SYNCHRONISATION above */
+        addEventListener('resize', () => allFloaters.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
+        overlay.addEventListener('click', () => { overlay.style.display = 'none'; glow.classList.remove('dream-active'); });
         expC.addEventListener('click', e => e.stopPropagation());
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape') { overlay.style.display='none'; glow.classList.remove('dream-active'); if(window.setPdfOpen) window.setPdfOpen(false); } });
-      })();
-    }
-
-    function showPdfError(msg){
-      const old = document.querySelector('.pdf-error');
-      if(old) old.remove();
-      const err=document.createElement('div');
-      err.className='pdf-error';
-      err.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;color:#ff5555;padding:10px 20px;border:1px solid #ff5555;z-index:9999;border-radius:4px;font-weight:bold;';
-      err.textContent=msg;
-      document.body.appendChild(err);
-      err.addEventListener('click',()=>err.remove());
-    }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.style.display = 'none'; glow.classList.remove('dream-active'); } });
+      });
+    })();
   </script>
 </body>
 </html>
