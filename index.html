@@ -24,9 +24,16 @@
 
     #cloud { position: relative; width: 100vw; height: 100vh; overflow: visible; }
 
+    /* Ring rotates at 0.05 Hz (one revolution every 20 seconds) */
     #ring {
       position: absolute; top: 50%; left: 50%; width: 0; height: 0;
       transform-origin: center center; isolation: isolate; will-change: transform;
+      animation: ringRotate 20s linear infinite;
+    }
+
+    @keyframes ringRotate {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
     }
 
     #ring::after {
@@ -45,6 +52,7 @@
       backface-visibility: hidden; border-radius: 4px;
     }
 
+    /* Thumbnail canvas – no CSS animation; spin/pulse handled by JS */
     .floating-page canvas {
       display: block; width: 100%; height: 100%; border-radius: 4px;
       background: #000; transform-origin: center center; image-rendering: crisp-edges;
@@ -121,24 +129,17 @@
     // All visual effects are driven by the master clock’s current frequency.
     // Only the canvas images themselves remain static.
     (function() {
-      // ----- DOM elements -----
       const overlay = document.getElementById('entrainment-overlay');
       const ring = document.getElementById('ring');
       const glowWrapper = document.getElementById('glow-wrapper');
 
-      // ----- Phase constants (ms) -----
       const RECEPTIVE = 15000, ALIGNMENT = 10000, ACTION = 12000;
-      const CYCLE = RECEPTIVE + ALIGNMENT + ACTION;   // 37 s
+      const CYCLE = RECEPTIVE + ALIGNMENT + ACTION;
 
-      // ----- State variables -----
       let start = performance.now();
-      let carrierPhase = 0;            // dominant frequency phase accumulator
-      let betaPhase = 0;              // 18 Hz Beta phase accumulator
-      let globalPhase = 'receptive';
-      let subPhase = 'alpha';
-      let freq = 10;                  // dominant frequency (Hz)
+      let carrierPhase = 0, betaPhase = 0;
+      let globalPhase = 'receptive', subPhase = 'alpha', freq = 10;
 
-      // ----- Ring & glow colour burst tables -----
       const colorSteps = {
         receptive: [
           { upTo: 0.7537, bg: '#000', sh: '0 0 150px #000, 0 0 300px rgba(0,0,0,0.9)' },
@@ -175,7 +176,6 @@
         return steps[steps.length - 1];
       }
 
-      // ----- Update phase and carrier frequency (called every frame) -----
       function updatePhase(now) {
         const elapsed = (now - start) % CYCLE;
         if (elapsed < RECEPTIVE) {
@@ -185,15 +185,14 @@
           else                     { subPhase = 'delta'; freq = 2; }
         } else if (elapsed < RECEPTIVE + ALIGNMENT) {
           globalPhase = 'alignment'; subPhase = null;
-          freq = 0.5;               // 0.5 Hz during Alignment
+          freq = 0.5;
         } else {
           globalPhase = 'action'; subPhase = null;
-          // Simultaneous Beta+Gamma from the first millisecond – no ramp
-          freq = 36;
+          freq = 36;   // simultaneous Beta+Gamma from first millisecond
         }
+        window.currentStaticPhase = globalPhase;   // let static canvas know the current phase
       }
 
-      // ----- Apply phase‑dependent ring burst & glow envelope durations -----
       function applyRingEnvelope() {
         document.body.className = globalPhase;
         if (globalPhase === 'receptive') {
@@ -208,26 +207,22 @@
         }
       }
 
-      // ----- Thumbnail & spotlight arrays (filled by PDF.js) -----
       let allFloaters = [];
       let spotlights = [];
       let spinAngles = [];
 
-      // ----- Main animation loop -----
       function loop(now) {
         requestAnimationFrame(loop);
 
-        // 1. Master clock update
         updatePhase(now);
         applyRingEnvelope();
 
         const dt = Math.min(0.1, (now - (loop.prev || now)) / 1000);
         loop.prev = now;
 
-        // Maintain a separate phase accumulator for the dominant frequency (used for all visuals)
         carrierPhase = (carrierPhase + 2 * Math.PI * freq * dt) % (2 * Math.PI);
 
-        // 2. Ring colour burst (synchronised with ring::after and PDF glow)
+        // Ring & PDF glow colour burst (synchronised)
         const burstDur = globalPhase === 'receptive' ? 2 : (globalPhase === 'alignment' ? 5 : 0.5);
         const burstProg = ((now - start) % (burstDur * 1000)) / (burstDur * 1000);
         const c = getBurst(globalPhase, burstProg);
@@ -236,16 +231,16 @@
         glowWrapper.style.setProperty('background', c.bg);
         glowWrapper.style.setProperty('box-shadow', '0 0 4000px ' + c.bg + ', 0 0 6000px ' + c.bg);
 
-        // 3. Ring rotation (angular velocity proportional to carrier frequency)
-        const ringOmega = 2 * Math.PI * freq * 0.1;
-        ring.style.transform = `rotate(${(ringOmega * now / 1000) % (2 * Math.PI)}rad)`;
+        // Ring rotation is CSS-driven at 0.05 Hz; no JS update needed
 
-        // 4. Thumbnails – spin, pulse, spotlight, colour‑pass (all driven by carrierPhase)
+        // Thumbnails – ALL spin at 0.05 Hz (infraslow)
+        const spinSpeed = 2 * Math.PI * 0.05;   // 0.05 Hz
+
         const carrierVal = (globalPhase === 'alignment')
-          ? (Math.floor(now / 1000) % 2 === 0 ? 1 : 0)            // 0.5 Hz square
+          ? (Math.floor(now / 1000) % 2 === 0 ? 1 : 0)
           : (subPhase === 'delta')
-            ? (0.5 + 0.5 * Math.sin(carrierPhase))                // 2 Hz sine
-            : (Math.sin(carrierPhase) >= 0 ? 1 : 0);              // square wave for Alpha/Theta/Gamma
+            ? (0.5 + 0.5 * Math.sin(carrierPhase))
+            : (Math.sin(carrierPhase) >= 0 ? 1 : 0);
 
         let spotColor = '#FFFFFF';
         if (globalPhase === 'alignment') spotColor = '#FFD700';
@@ -256,25 +251,20 @@
           const canv = fl.element.querySelector('canvas');
           if (!canv) continue;
 
-          // Spin rate proportional to current carrier frequency
-          const spinSpeed = 2 * Math.PI * freq / 60;
           spinAngles[i] = (spinAngles[i] || 0) + spinSpeed * dt;
           canv.style.transform = `rotate(${spinAngles[i] % (2 * Math.PI)}rad)`;
 
-          // Base pulse (white/black) – carrierVal already encodes the correct waveform
           const pulseWhite = carrierVal >= 0.5;
           let pulseShadow = pulseWhite
             ? '0 20px 40px rgba(0,0,0,1), 0 0 80px #fff, 0 0 150px rgba(255,255,255,0.8)'
             : '0 20px 40px rgba(0,0,0,1), 0 0 80px #000, 0 0 150px rgba(0,0,0,0.95)';
 
-          // Spotlight override
           if (spotlights.includes(i)) {
             pulseShadow = pulseWhite
               ? `0 20px 40px rgba(0,0,0,1), 0 0 120px ${spotColor}, 0 0 225px ${spotColor}`
               : `0 20px 40px rgba(0,0,0,1), 0 0 120px #000, 0 0 225px rgba(0,0,0,0.8)`;
           }
 
-          // Colour‑pass override (divine wave)
           if (fl.element.classList.contains('color-pass')) {
             let passColor = '#FFFFFF';
             if (globalPhase === 'alignment') passColor = '#FFD700';
@@ -288,7 +278,7 @@
           canv.style.opacity = carrierVal >= 0.5 ? 1 : 0.75;
         }
 
-        // 5. Paper‑flip ritual – toggles at every half‑cycle of carrierVal
+        // Paper‑flip ritual – toggles at every half‑cycle of carrierVal
         if (carrierVal >= 0.5 && !flipState) {
           allFloaters.forEach(item => item.element.classList.add('flipped'));
           flipState = true;
@@ -297,17 +287,17 @@
           flipState = false;
         }
 
-        // 6. Luminance overlay – the actual brainwave carrier
+        // Luminance overlay – brainwave carrier
         const infra = 0.5 + 0.5 * Math.sin(2 * Math.PI * now / 20000);   // continuous 0.05 Hz
         let opacity = 0;
         if (globalPhase === 'receptive') {
           opacity = carrierVal * infra * 0.35;
         } else if (globalPhase === 'alignment') {
           opacity = carrierVal * infra * 0.25;
-        } else {   // Action – simultaneous 18 Hz Beta + 36 Hz Gamma
+        } else {
           betaPhase = (betaPhase + 2 * Math.PI * 18 * dt) % (2 * Math.PI);
-          const betaEnv = 0.5 + 0.5 * Math.sin(betaPhase);               // 18 Hz envelope
-          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;      // 36 Hz square
+          const betaEnv = 0.5 + 0.5 * Math.sin(betaPhase);
+          const gammaFlicker = Math.sin(carrierPhase) >= 0 ? 1 : 0;
           opacity = gammaFlicker * betaEnv * infra * 0.35;
         }
         overlay.style.opacity = opacity;
@@ -315,7 +305,6 @@
       loop.prev = performance.now();
       let flipState = false;
 
-      // ----- Initialise after PDF.js has created all thumbnails -----
       window.initThumbnails = function(floaterList, spotIdx) {
         allFloaters = floaterList;
         spotlights = spotIdx;
@@ -326,56 +315,111 @@
     })();
 
     // ═══════════════════════════════════════════════════════════
-    // ESSENTIAL: Background static canvas (sacred palette, Web Worker)
+    // ESSENTIAL: Background static canvas (phase‑coloured, Web Worker)
     // ═══════════════════════════════════════════════════════════
     (function() {
       const canvas = document.getElementById('bg-canvas'), ctx = canvas.getContext('2d');
-      const palette = [
-        '#0a1f0a', '#143014', '#1e3b1e', '#284b28', '#326032', '#3c783c',
-        '#4a3500', '#6b4e00', '#8b6500', '#b8860b', '#daa520', '#ffd700',
-        '#ffffe0', '#fff8dc', '#fdf5e6'
-      ];
-      const numPal = palette.map(h => ({ r: parseInt(h.slice(1,3),16), g: parseInt(h.slice(3,5),16), b: parseInt(h.slice(5,7),16) }));
-      let last=0, fps=10, iv=1000/fps, wkr, pending=false;
+
+      // Phase‑specific palettes
+      const palettes = {
+        receptive: [
+          '#f8f8ff', '#ffffff', '#f0f0f0', '#e8e8e8', '#fdfdfd',
+          '#f5f5f5', '#fafafa', '#fefefe', '#f0f0ff', '#f8f8f8'
+        ],
+        alignment: [
+          '#4a3500', '#6b4e00', '#8b6500', '#b8860b', '#daa520',
+          '#ffd700', '#fff8dc', '#f0e68c', '#d2b48c', '#b8860b'
+        ],
+        action: [
+          '#0a1f0a', '#143014', '#1e3b1e', '#284b28', '#326032',
+          '#3c783c', '#2d5a2d', '#1f3f1f', '#4a7a4a', '#60a060'
+        ]
+      };
+
+      let currentPhase = 'receptive';
+      let last = 0, fps = 10, iv = 1000/fps, wkr, pending = false;
 
       function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
 
       function createWorker() {
-        const code = () => { self.onmessage = e => {
-          const { w, h, p } = e.data, sz = w * h * 4, buf = new ArrayBuffer(sz);
-          const d = new Uint8ClampedArray(buf);
-          for (let i=0; i<sz; i+=4) { const c = p[Math.random()*p.length|0]; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; }
-          self.postMessage({ buf }, [buf]);
-        }};
-        const blob = new Blob([`(${code.toString()})()`], { type:'application/javascript' });
+        const code = () => {
+          self.onmessage = e => {
+            const { w, h, p } = e.data, sz = w * h * 4, buf = new ArrayBuffer(sz);
+            const d = new Uint8ClampedArray(buf);
+            for (let i = 0; i < sz; i += 4) {
+              const c = p[Math.random() * p.length | 0];
+              d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
+            }
+            self.postMessage({ buf }, [buf]);
+          };
+        };
+        const blob = new Blob([`(${code.toString()})()`], { type: 'application/javascript' });
         const url = URL.createObjectURL(blob);
         const w = new Worker(url); URL.revokeObjectURL(url); return w;
       }
 
-      function request() { if (wkr && !pending) { pending=true; wkr.postMessage({ w:canvas.width, h:canvas.height, p:numPal }); } }
-      function mainThread() {
+      function requestFrame() {
+        if (wkr && !pending) {
+          pending = true;
+          const hexPal = palettes[currentPhase] || palettes.receptive;
+          const numPal = hexPal.map(h => ({
+            r: parseInt(h.slice(1,3),16),
+            g: parseInt(h.slice(3,5),16),
+            b: parseInt(h.slice(5,7),16)
+          }));
+          wkr.postMessage({ w: canvas.width, h: canvas.height, p: numPal });
+        }
+      }
+
+      function generateMainThread() {
+        const hexPal = palettes[currentPhase] || palettes.receptive;
+        const numPal = hexPal.map(h => ({
+          r: parseInt(h.slice(1,3),16),
+          g: parseInt(h.slice(3,5),16),
+          b: parseInt(h.slice(5,7),16)
+        }));
         const img = ctx.createImageData(canvas.width, canvas.height), d = img.data;
-        for (let i=0; i<d.length; i+=4) { const c = numPal[Math.random()*numPal.length|0]; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; }
+        for (let i = 0; i < d.length; i += 4) {
+          const c = numPal[Math.random() * numPal.length | 0];
+          d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = 255;
+        }
         ctx.putImageData(img, 0, 0);
       }
-      function onMsg(e) { const img = new ImageData(new Uint8ClampedArray(e.data.buf), canvas.width, canvas.height); ctx.putImageData(img,0,0); pending=false; }
 
-      try { wkr = createWorker(); wkr.onmessage = onMsg; wkr.onerror = () => { wkr = null; }; } catch (e) { wkr = null; }
+      function onWorkerMsg(e) {
+        const img = new ImageData(new Uint8ClampedArray(e.data.buf), canvas.width, canvas.height);
+        ctx.putImageData(img, 0, 0);
+        pending = false;
+      }
+
+      try {
+        wkr = createWorker();
+        wkr.onmessage = onWorkerMsg;
+        wkr.onerror = () => { wkr = null; };
+      } catch (e) { wkr = null; }
 
       function tick(now) {
         requestAnimationFrame(tick);
-        fps = document.body.classList.contains('action') ? 36 : (document.body.classList.contains('alignment') ? 10 : 10);
+        // Update phase from global variable set by master clock
+        if (window.currentStaticPhase) currentPhase = window.currentStaticPhase;
+
+        // Synchronise FPS with phase: Action = 36 fps, Receptive/Alignment = 10 fps
+        fps = (currentPhase === 'action') ? 36 : 10;
         iv = 1000 / fps;
-        if (now - last >= iv) { last = now; wkr ? request() : mainThread(); }
+        if (now - last >= iv) {
+          last = now;
+          wkr ? requestFrame() : generateMainThread();
+        }
       }
+
       addEventListener('resize', resize);
       resize();
       requestAnimationFrame(tick);
     })();
 
     // ═══════════════════════════════════════════════════════════
-    // ESSENTIAL: PDF.js – thumbnail generation, layout, and click handler.
-    // All animation is handled by the master clock; the PDF canvas is static.
+    // ESSENTIAL: PDF.js – thumbnail generation (22 copies), spiral
+    // grouping (2 sets of 11), spotlight indices (#11 & #22), colour‑pass.
     // ═══════════════════════════════════════════════════════════
     (async function() {
       function wait(cb) { typeof pdfjsLib !== 'undefined' ? cb() : setTimeout(() => wait(cb), 50); }
@@ -392,9 +436,9 @@
         const glow = document.getElementById('glow-wrapper');
         const expC = document.getElementById('expanded-canvas');
 
-        const COPIES = 33, SCALE = 0.35, STAGGER = 167;
+        const COPIES = 22, SCALE = 0.35, STAGGER = 167;   // 22 copies, emergence at 6 Hz
         const pageData = [], allFloaters = [];
-        const spotIdx = [10, 21, 32];
+        const spotIdx = [10, 21];   // #11 and #22
         const spotSet = new Set(spotIdx);
 
         function posOnCircle(el, idx, total, w, h) {
@@ -427,13 +471,12 @@
             floater.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translateZ(${Math.random() * 30}px)`;
             floater.dataset.page = p; floater.dataset.index = idx;
 
+            // Two groups of 11 (0‑10, 11‑21)
             let z = 10;
             if (idx < 11) z = 20 + idx;
-            else if (idx < 22) z = 30 + (idx - 11);
-            else z = 40 + (idx - 22);
+            else z = 30 + (idx - 11);
             floater.style.zIndex = z;
-            if (idx === 11) floater.style.zIndex = 25;
-            if (idx === 22) floater.style.zIndex = 35;
+            if (idx === 11) floater.style.zIndex = 25;   // #12 under #11
             if (spotSet.has(idx)) floater.style.zIndex = 200;
 
             floater.addEventListener('click', async (e) => {
@@ -452,9 +495,8 @@
           }
         }
 
-        // Colour‑pass sweep (group rotation every 8 seconds – meta‑rhythm, the glow itself follows the master clock)
-        const skip = new Set(spotIdx);
-        const eligible = allFloaters.map((_, i) => i).filter(i => !skip.has(i));
+        // Colour‑pass sweep (skips spotlights)
+        const eligible = allFloaters.map((_, i) => i).filter(i => !spotSet.has(i));
         const sizes = [2, 4, 5]; let gi = 0, pos = 0;
         function applyColorPass() {
           eligible.forEach(i => allFloaters[i].element.classList.remove('color-pass'));
@@ -465,7 +507,6 @@
         }
         setTimeout(() => { applyColorPass(); setInterval(applyColorPass, 8000); }, totalCopies * STAGGER + 2000);
 
-        // Hand over to the master clock for animation
         window.initThumbnails(allFloaters, spotIdx);
 
         addEventListener('resize', () => allFloaters.forEach(({ element, index, width, height }) => posOnCircle(element, index, totalCopies, width, height)));
